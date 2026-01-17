@@ -1,0 +1,540 @@
+// Service Worker con versionado automático
+const APP_VERSION = '5.5.2'; // Fix crítico: Forzar actualización de notifications.js
+const CACHE_NAME = `galloli-v${APP_VERSION}`;
+const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
+
+// Archivos para cache estático - SE ACTUALIZARÁN AUTOMÁTICAMENTE
+let STATIC_CACHE_URLS = [];
+
+// Función para obtener recursos dinámicamente
+async function getStaticResources() {
+    try {
+        // Recursos locales
+        const resources = [
+            '/',
+            '/index.html',
+            '/css/styles.css',
+            '/js/logo.js',
+            '/js/pdf-generator.js',
+            '/js/utils.js',
+            '/js/db.js',
+            '/js/modules.js',
+            '/js/app.js',
+            '/js/offline-maps.js',
+            '/js/creditos.js',
+            '/js/notifications.js',
+            '/js/wasm-notifications.js',
+            '/manifest.json'
+        ];
+
+        // Agregar recursos de CDN
+        const cdnResources = [
+            'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        ];
+
+        return [...resources, ...cdnResources];
+    } catch (error) {
+        console.error('[Service Worker] Error obteniendo recursos:', error.message);
+        return [];
+    }
+}
+
+// Función para verificar actualizaciones
+async function checkForUpdates() {
+    try {
+        // Intentar cargar version.json solo si existe
+        const response = await fetch('/version.json?v=' + Date.now(), { 
+            method: 'HEAD' 
+        });
+        
+        if (!response.ok) {
+            // Si no existe version.json, no hacer nada
+            return false;
+        }
+        
+        const dataResponse = await fetch('/version.json?v=' + Date.now());
+        const data = await dataResponse.json();
+        
+        if (data.version !== APP_VERSION) {
+            console.log('[Service Worker] Nueva versión disponible:', data.version);
+            
+            // Notificar a la app principal
+            self.clients.matchAll().then(clients => {
+                clients.forEach(client => {
+                    client.postMessage({
+                        type: 'NEW_VERSION_AVAILABLE',
+                        version: data.version
+                    });
+                });
+            });
+            
+            return true;
+        }
+        return false;
+    } catch (error) {
+        // Silenciar error si version.json no existe
+        return false;
+    }
+}
+
+// Instalación del Service Worker
+self.addEventListener('install', async (event) => {
+    console.log(`[Service Worker] Instalando versión ${APP_VERSION}...`);
+    
+    // FORZAR ACTIVACIÓN INMEDIATA
+    self.skipWaiting();
+    
+    event.waitUntil(
+        (async () => {
+            // Obtener recursos dinámicamente
+            STATIC_CACHE_URLS = await getStaticResources();
+            
+            const cache = await caches.open(CACHE_NAME);
+            console.log('[Service Worker] Cacheando recursos estáticos:', STATIC_CACHE_URLS.length, 'archivos');
+            
+            // Cachear recursos críticos inmediatamente
+            const criticalResources = [
+                '/',
+                '/index.html',
+                '/css/styles.css',
+                '/js/utils.js',
+                '/js/db.js'
+            ];
+            
+            // Cachear uno por uno para evitar fallos
+            for (const url of criticalResources) {
+                try {
+                    await cache.add(url);
+                } catch (e) {
+                    console.warn(`[Service Worker] No se pudo cachear ${url}:`, e);
+                }
+            }
+            
+            console.log('[Service Worker] Instalación completada');
+        })()
+    );
+});
+
+// Activación y limpieza de caches viejos
+self.addEventListener('activate', (event) => {
+    console.log(`[Service Worker] Activando versión ${APP_VERSION}...`);
+    
+    event.waitUntil(
+        (async () => {
+            // Limpiar caches viejos PRIMERO
+            const cacheKeys = await caches.keys();
+            await Promise.all(
+                cacheKeys.map(async (cacheName) => {
+                    // Eliminar caches que no sean de la versión actual
+                    if (cacheName !== CACHE_NAME && cacheName !== DATA_CACHE_NAME) {
+                        console.log('[Service Worker] Eliminando cache viejo:', cacheName);
+                        await caches.delete(cacheName);
+                    }
+                })
+            );
+            
+            // Reclamar clientes inmediatamente - FORZAR CONTROL
+            await self.clients.claim();
+            
+            // Recargar todas las páginas abiertas
+            const clients = await self.clients.matchAll({ type: 'window' });
+            clients.forEach(client => {
+                client.postMessage({
+                    type: 'SW_UPDATED',
+                    version: APP_VERSION
+                });
+            });
+            
+            console.log('[Service Worker] Activación completada - Versión', APP_VERSION);
+            
+            // Cachear el resto de recursos en segundo plano
+            self.cacheRemainingResources();
+        })()
+    );
+});
+
+// Método para cachear recursos restantes en segundo plano
+self.cacheRemainingResources = async function() {
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        const alreadyCached = await cache.keys();
+        const alreadyCachedUrls = alreadyCached.map(request => request.url);
+        
+        const resourcesToCache = STATIC_CACHE_URLS.filter(url => 
+            !alreadyCachedUrls.includes(self.location.origin + url) && 
+            !alreadyCachedUrls.includes(url)
+        );
+        
+        if (resourcesToCache.length > 0) {
+            console.log('[Service Worker] Cacheando recursos adicionales:', resourcesToCache.length, 'archivos');
+            
+            for (const url of resourcesToCache) {
+                try {
+                    await cache.add(url);
+                } catch (error) {
+                    console.warn(`[Service Worker] Error cacheando ${url}:`, error.message);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[Service Worker] Error cacheando recursos adicionales:', error);
+    }
+};
+
+// Estrategia de cache: Stale-While-Revalidate
+self.addEventListener('fetch', (event) => {
+    // Ignorar solicitudes no GET
+    if (event.request.method !== 'GET') return;
+    
+    const url = new URL(event.request.url);
+    
+    // Ignorar solicitudes a APIs externas (excepto CDNs conocidas)
+    if (url.hostname !== self.location.hostname && 
+        !url.hostname.includes('cdnjs.cloudflare.com') &&
+        !url.hostname.includes('fonts.googleapis.com') &&
+        !url.hostname.includes('unpkg.com') &&
+        !url.hostname.includes('nominatim.openstreetmap.org')) {
+        return;
+    }
+    
+    event.respondWith(
+        (async () => {
+            // Primero intentar desde cache
+            const cachedResponse = await caches.match(event.request);
+            
+            // Si está en cache y es un recurso estático, devolverlo inmediatamente
+            if (cachedResponse) {
+                console.log('[Service Worker] Sirviendo desde cache:', url.pathname);
+                
+                // Actualizar el cache en segundo plano (stale-while-revalidate)
+                event.waitUntil(
+                    (async () => {
+                        try {
+                            const networkResponse = await fetch(event.request);
+                            const cache = await caches.open(CACHE_NAME);
+                            await cache.put(event.request, networkResponse.clone());
+                            console.log('[Service Worker] Cache actualizado:', url.pathname);
+                        } catch (error) {
+                            // Silencioso en fallo de red
+                        }
+                    })()
+                );
+                
+                return cachedResponse;
+            }
+            
+            // Si no está en cache, ir a la red
+            try {
+                const networkResponse = await fetch(event.request);
+                
+                // Solo cachear respuestas exitosas
+                if (networkResponse.status === 200) {
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(event.request, networkResponse.clone());
+                    console.log('[Service Worker] Nuevo recurso cacheado:', url.pathname);
+                }
+                
+                return networkResponse;
+            } catch (error) {
+                console.error('[Service Worker] Error de red:', error);
+                
+                // Para páginas HTML, devolver la página offline
+                if (event.request.headers.get('accept')?.includes('text/html')) {
+                    return caches.match('/offline.html') || 
+                           new Response('<h1>Estás sin conexión</h1><p>La aplicación GallOli requiere conexión a internet.</p>', {
+                               headers: { 'Content-Type': 'text/html' }
+                           });
+                }
+                
+                throw error;
+            }
+        })()
+    );
+});
+
+// Mensajes del Service Worker
+self.addEventListener('message', (event) => {
+    console.log('[Service Worker] Mensaje recibido:', event.data);
+    
+    switch (event.data.type) {
+        case 'SKIP_WAITING':
+            self.skipWaiting();
+            break;
+            
+        case 'UPDATE_CACHE':
+            self.cacheRemainingResources();
+            break;
+            
+        case 'CLEAR_CACHE':
+            caches.delete(CACHE_NAME).then(() => {
+                console.log('[Service Worker] Cache limpiado');
+            });
+            break;
+            
+        case 'GET_VERSION':
+            event.ports[0].postMessage({ version: APP_VERSION });
+            break;
+            
+        case 'CHECK_UPDATE':
+            checkForUpdates().then(hasUpdate => {
+                event.ports[0].postMessage({ hasUpdate });
+            });
+            break;
+            
+        case 'SET_DEV_MODE':
+            // Manejar modo desarrollo
+            console.log('[Service Worker] Modo desarrollo:', event.data.devMode);
+            break;
+            
+        case 'WASM_NOTIFICATION':
+            // Manejar notificaciones WASM
+            handleWASMNotification(event.data);
+            break;
+            
+        case 'SCHEDULE_NOTIFICATION':
+            // Programar notificación
+            scheduleNotification(event.data);
+            break;
+    }
+});
+
+// Sincronización en segundo plano
+self.addEventListener('sync', (event) => {
+    console.log('[Service Worker] Sincronización:', event.tag);
+    
+    if (event.tag === 'sync-data') {
+        event.waitUntil(syncData());
+    }
+});
+
+async function syncData() {
+    // Implementar lógica de sincronización aquí
+    console.log('[Service Worker] Sincronizando datos...');
+}
+
+// Notificaciones push persistentes
+self.addEventListener('push', (event) => {
+    console.log('[Service Worker] Push recibido');
+    
+    const data = event.data?.json() || {
+        title: 'GallOli',
+        body: 'Nueva actualización disponible',
+        icon: './icons/icon-192x192.png'
+    };
+    
+    event.waitUntil(
+        self.registration.showNotification(data.title, {
+            body: data.body,
+            icon: data.icon || './icons/icon-192x192.png',
+            badge: data.badge || './icons/icon-72x72.png',
+            vibrate: data.vibrate || [200, 100, 200],
+            requireInteraction: data.requireInteraction || false,
+            silent: data.silent || false,
+            tag: data.tag || 'galloli-notification',
+            data: {
+                url: data.url || './',
+                timestamp: Date.now(),
+                action: data.action
+            },
+            actions: data.actions || [
+                { action: 'open', title: 'Abrir' },
+                { action: 'dismiss', title: 'Cerrar' }
+            ]
+        })
+    );
+});
+
+// Alarmas periódicas para notificaciones programadas
+self.addEventListener('periodicsync', (event) => {
+    if (event.tag === 'check-reminders') {
+        event.waitUntil(checkScheduledReminders());
+    }
+});
+
+async function checkScheduledReminders() {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    
+    // Backup reminder (8 PM)
+    if (hour === 20 && minute === 0) {
+        await self.registration.showNotification('💾 Recordatorio de Backup', {
+            body: 'No olvides crear un backup de tus datos hoy',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/badge-72x72.png',
+            tag: 'backup-reminder',
+            requireInteraction: false,
+            silent: false,
+            vibrate: [200, 100, 200],
+            actions: [
+                { action: 'open', title: 'Abrir App' }
+            ]
+        });
+    }
+    
+    // Merma reminder (6 PM)
+    if (hour === 18 && minute === 0) {
+        await self.registration.showNotification('🧮 Recordatorio de Merma', {
+            body: 'Recuerda calcular la merma del día',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/badge-72x72.png',
+            tag: 'merma-reminder',
+            requireInteraction: false,
+            silent: false,
+            vibrate: [200, 100, 200],
+            actions: [
+                { action: 'open', title: 'Abrir App' }
+            ]
+        });
+    }
+    
+    // Diezmos reminder (9 PM)
+    if (hour === 21 && minute === 0) {
+        await self.registration.showNotification('🙏 Recordatorio de Diezmos', {
+            body: 'Revisa y guarda los diezmos del día',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/badge-72x72.png',
+            tag: 'diezmos-reminder',
+            requireInteraction: false,
+            silent: false,
+            vibrate: [200, 100, 200],
+            actions: [
+                { action: 'open', title: 'Abrir App' }
+            ]
+        });
+    }
+}
+
+self.addEventListener('notificationclick', (event) => {
+    console.log('[Service Worker] Notificación clickeada:', event.action);
+    
+    event.notification.close();
+    
+    // Si el usuario presionó "dismiss", no hacer nada
+    if (event.action === 'dismiss') {
+        return;
+    }
+    
+    const urlToOpen = event.notification.data?.url || './';
+    const action = event.notification.data?.action;
+    
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then(clientList => {
+                // Si hay una ventana abierta, enfocarla
+                for (const client of clientList) {
+                    if (client.url.includes(self.location.origin) && 'focus' in client) {
+                        return client.focus().then(client => {
+                            // Enviar acción a la app
+                            if (action) {
+                                client.postMessage({
+                                    type: 'NOTIFICATION_ACTION',
+                                    action: action
+                                });
+                            }
+                            return client;
+                        });
+                    }
+                }
+                // Si no hay ventana abierta, abrir una nueva
+                if (clients.openWindow) {
+                    return clients.openWindow(urlToOpen);
+                }
+            })
+    );
+});
+
+// Manejo de errores
+self.addEventListener('error', (event) => {
+    console.error('[Service Worker] Error:', event.error?.message || event.message);
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+    console.error('[Service Worker] Promesa rechazada:', event.reason?.message || event.reason);
+    event.preventDefault(); // Prevenir que se propague
+});
+
+// Funciones auxiliares para WASM Notifications
+async function handleWASMNotification(data) {
+    try {
+        const { title, body, options = {} } = data;
+        
+        await self.registration.showNotification(title, {
+            body,
+            icon: options.icon || '/icons/icon-192x192.png',
+            badge: options.badge || '/icons/badge-72x72.png',
+            tag: options.tag || 'wasm-notification',
+            requireInteraction: options.requireInteraction !== false,
+            vibrate: options.vibrate || [200, 100, 200],
+            data: {
+                ...options.data,
+                wasmProcessed: true,
+                timestamp: Date.now()
+            },
+            actions: options.actions || [
+                { action: 'open', title: '📱 Abrir App' },
+                { action: 'dismiss', title: '❌ Descartar' }
+            ]
+        });
+        
+        console.log('[Service Worker] WASM notification sent:', title);
+    } catch (error) {
+        console.error('[Service Worker] Error sending WASM notification:', error);
+    }
+}
+
+async function scheduleNotification(data) {
+    const { title, body, delay, options = {} } = data;
+    
+    setTimeout(async () => {
+        await handleWASMNotification({ title, body, options });
+    }, delay);
+    
+    console.log(`[Service Worker] Notification scheduled for ${delay}ms:`, title);
+}
+
+// Notificaciones inteligentes basadas en actividad del usuario
+let userActivity = {
+    lastActive: Date.now(),
+    isActive: true,
+    notificationsSent: 0
+};
+
+// Detectar actividad del usuario
+self.addEventListener('message', (event) => {
+    if (event.data.type === 'USER_ACTIVITY') {
+        userActivity.lastActive = Date.now();
+        userActivity.isActive = true;
+    }
+});
+
+// Verificar inactividad cada 5 minutos
+setInterval(() => {
+    const now = Date.now();
+    const inactiveTime = now - userActivity.lastActive;
+    
+    // Si el usuario ha estado inactivo por más de 30 minutos
+    if (inactiveTime > 30 * 60 * 1000) {
+        userActivity.isActive = false;
+        
+        // Enviar recordatorio si no se han enviado muchas notificaciones
+        if (userActivity.notificationsSent < 3) {
+            self.registration.showNotification('🐔 GallOli te extraña', {
+                body: 'No olvides registrar tus ventas del día',
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/badge-72x72.png',
+                tag: 'inactivity-reminder',
+                requireInteraction: false,
+                vibrate: [100, 50, 100]
+            });
+            
+            userActivity.notificationsSent++;
+        }
+    } else {
+        userActivity.isActive = true;
+        userActivity.notificationsSent = 0; // Reset counter when active
+    }
+}, 5 * 60 * 1000); // Cada 5 minutos

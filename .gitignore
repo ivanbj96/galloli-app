@@ -1,0 +1,37 @@
+# Ignorar todo por defecto
+*
+
+# Permitir solo archivos del proyecto
+!.gitignore
+!.deployignore
+!deploy.bat
+!README.md
+!wrangler.toml
+!index.html
+!manifest.json
+!sw.js
+!test-notifications.html
+
+# Permitir directorios del proyecto
+!css/
+!css/**
+!icons/
+!icons/**
+!js/
+!js/**
+
+# Ignorar directorios del sistema
+.git/
+.vscode/
+.kiro/
+.wrangler/
+.stfolder/
+node_modules/
+
+# Archivos del sistema
+desktop.ini
+Thumbs.db
+*.lnk
+*.tmp
+*.log
+*.bak

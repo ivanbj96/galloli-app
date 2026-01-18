@@ -3029,9 +3029,9 @@ const BackupModule = {
             localStorage.setItem('lastTelegramBackup', new Date().toISOString());
             
             // Notificación de éxito
-            if (typeof NotificationsModule !== 'undefined') {
+            if (typeof PushNotifications !== 'undefined') {
                 try {
-                    NotificationsModule.notifyTelegramBackupSuccess(backup.filename).catch(err => {
+                    PushNotifications.notifyBackupSuccess(backup.filename).catch(err => {
                         console.warn('No se pudo enviar notificación:', err);
                     });
                 } catch (err) {
@@ -3042,9 +3042,9 @@ const BackupModule = {
             return result;
         } catch (error) {
             // Notificación de error
-            if (typeof NotificationsModule !== 'undefined') {
+            if (typeof PushNotifications !== 'undefined') {
                 try {
-                    NotificationsModule.notifyTelegramBackupError(error.message).catch(err => {
+                    PushNotifications.notifyBackupError(error.message).catch(err => {
                         console.warn('No se pudo enviar notificación de error:', err);
                     });
                 } catch (err) {

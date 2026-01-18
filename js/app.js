@@ -3073,29 +3073,23 @@ async importConfig(file) {
     async initPushNotifications() {
         console.log('🔔 Inicializando notificaciones push...');
         
-        if (!('serviceWorker' in navigator)) {
-            console.log('❌ Service Worker no soportado');
-            return false;
-        }
-
-        if (!('Notification' in window)) {
-            console.log('❌ Notificaciones no soportadas');
+        if (typeof PushNotifications === 'undefined') {
+            console.error('❌ PushNotifications no está definido');
             return false;
         }
 
         try {
-            // Esperar a que el service worker esté listo
-            await navigator.serviceWorker.ready;
-            console.log('✅ Service Worker listo');
+            const initialized = await PushNotifications.init();
             
-            // Solicitar permisos después de 5 segundos
-            setTimeout(() => {
-                this.requestNotificationPermission();
-            }, 5000);
-
-            return true;
+            if (initialized) {
+                console.log('✅ Sistema de notificaciones inicializado');
+                return true;
+            } else {
+                console.warn('⚠️ No se pudieron inicializar las notificaciones');
+                return false;
+            }
         } catch (error) {
-            console.error('❌ Error inicializando push notifications:', error);
+            console.error('❌ Error inicializando notificaciones:', error);
             return false;
         }
     },
@@ -4465,8 +4459,8 @@ async importConfig(file) {
 
     // Verificar merma pendiente manualmente
     async checkMermaPending() {
-        if (typeof NotificationsModule !== 'undefined') {
-            const hasPending = await NotificationsModule.checkPendingMerma();
+        if (typeof PushNotifications !== 'undefined') {
+            const hasPending = await PushNotifications.checkMermaPending();
             if (!hasPending) {
                 Utils.showNotification('✅ No hay merma pendiente', 'success', 3000);
             }
@@ -4477,8 +4471,8 @@ async importConfig(file) {
 
     // Verificar créditos pendientes manualmente
     async checkCreditsPending() {
-        if (typeof NotificationsModule !== 'undefined') {
-            const hasPending = await NotificationsModule.checkPendingCredits();
+        if (typeof PushNotifications !== 'undefined') {
+            const hasPending = await PushNotifications.checkCreditsPending();
             if (!hasPending) {
                 Utils.showNotification('✅ No hay créditos pendientes', 'success', 3000);
             }
@@ -4489,25 +4483,8 @@ async importConfig(file) {
 
     // Probar todas las notificaciones
     async testAllNotifications() {
-        if (typeof NotificationsModule !== 'undefined') {
-            Utils.showLoading(true);
-            
-            // Notificación de merma
-            await NotificationsModule.checkPendingMerma();
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Notificación de créditos
-            await NotificationsModule.checkPendingCredits();
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Notificación de backup
-            await NotificationsModule.showNotification(
-                '💾 Prueba de Backup',
-                'Esta es una notificación de prueba de backup',
-                { tag: 'test-backup', requireInteraction: false }
-            );
-            
-            Utils.showLoading(false);
+        if (typeof PushNotifications !== 'undefined') {
+            await PushNotifications.test();
             Utils.showNotification('Notificaciones de prueba enviadas', 'success', 3000);
         } else {
             Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);

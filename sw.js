@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '5.5.3'; // Fix: Renombrado notifications.js a notifications-v2.js para evitar cache
+const APP_VERSION = '6.0.0'; // Sistema de notificaciones completamente nuevo
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -22,7 +22,7 @@ async function getStaticResources() {
             '/js/app.js',
             '/js/offline-maps.js',
             '/js/creditos.js',
-            '/js/notifications-v2.js',
+            '/js/push-notifications.js',
             '/js/wasm-notifications.js',
             '/manifest.json'
         ];

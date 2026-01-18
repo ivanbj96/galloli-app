@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.1.0'; // Notificaciones automáticas con acciones interactivas
+const APP_VERSION = '6.1.1'; // Fix: Botones de notificaciones con logs detallados
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -542,45 +542,64 @@ setInterval(() => {
 
 // Manejador de clics en acciones de notificaciones
 self.addEventListener('notificationclick', (event) => {
-    console.log('[Service Worker] Notificación clickeada:', event.action);
+    console.log('[Service Worker] ========================================');
+    console.log('[Service Worker] 🔔 NOTIFICACIÓN CLICKEADA');
+    console.log('[Service Worker] Acción:', event.action);
+    console.log('[Service Worker] Tag:', event.notification.tag);
+    console.log('[Service Worker] Datos:', event.notification.data);
+    console.log('[Service Worker] ========================================');
     
     event.notification.close();
     
     const data = event.notification.data || {};
+    const action = event.action || 'open';
     
-    // Abrir la app
+    // Si es dismiss, no hacer nada
+    if (action === 'dismiss') {
+        console.log('[Service Worker] ❌ Acción dismiss - cerrando notificación');
+        return;
+    }
+    
+    // Abrir la app y enviar la acción
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
+                console.log('[Service Worker] 🔍 Clientes encontrados:', clientList.length);
+                
                 // Si ya hay una ventana abierta, enfocarla
                 for (const client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        return client.focus().then(client => {
+                        console.log('[Service Worker] ✅ Enfocando cliente existente');
+                        console.log('[Service Worker] 📤 Enviando mensaje:', { type: 'notification-action', action, data });
+                        
+                        return client.focus().then(focusedClient => {
                             // Enviar mensaje con la acción
-                            client.postMessage({
+                            focusedClient.postMessage({
                                 type: 'notification-action',
-                                action: event.action,
+                                action: action,
                                 data: data
                             });
-                            return client;
+                            console.log('[Service Worker] ✅ Mensaje enviado correctamente');
+                            return focusedClient;
                         });
                     }
                 }
                 
-                // Si no hay ventana abierta, abrir una nueva
+                // Si no hay ventana abierta, abrir una nueva con la acción en la URL
+                console.log('[Service Worker] 🆕 Abriendo nueva ventana con acción:', action);
                 if (clients.openWindow) {
-                    return clients.openWindow('/').then(client => {
-                        // Esperar un poco y enviar el mensaje
-                        setTimeout(() => {
-                            client.postMessage({
-                                type: 'notification-action',
-                                action: event.action,
-                                data: data
-                            });
-                        }, 1000);
-                        return client;
-                    });
+                    const url = new URL(self.location.origin);
+                    url.searchParams.set('action', action);
+                    if (data.clientId) url.searchParams.set('clientId', data.clientId);
+                    if (data.clientName) url.searchParams.set('clientName', data.clientName);
+                    if (data.totalDebt) url.searchParams.set('totalDebt', data.totalDebt);
+                    
+                    console.log('[Service Worker] 🌐 URL:', url.toString());
+                    return clients.openWindow(url.toString());
                 }
+            })
+            .catch(error => {
+                console.error('[Service Worker] ❌ Error manejando click:', error);
             })
     );
 });

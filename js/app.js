@@ -63,6 +63,9 @@ const App = {
             ConfigModule.applyLogo();
             ConfigModule.updateDynamicManifest();
         }, 500);
+        
+        // Procesar acción de notificación desde URL
+        this.checkNotificationActionFromURL();
     },
 
     // Cargar datos
@@ -132,10 +135,44 @@ const App = {
         
         // Escuchar mensajes del Service Worker (acciones de notificaciones)
         navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('========================================');
+            console.log('📨 MENSAJE RECIBIDO DEL SERVICE WORKER');
+            console.log('Tipo:', event.data?.type);
+            console.log('Acción:', event.data?.action);
+            console.log('Datos:', event.data?.data);
+            console.log('========================================');
+            
             if (event.data && event.data.type === 'notification-action') {
+                console.log('✅ Procesando acción de notificación...');
                 this.handleNotificationAction(event.data.action, event.data.data);
             }
         });
+    },
+    
+    // Verificar si hay una acción de notificación en la URL
+    checkNotificationActionFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        const clientId = urlParams.get('clientId');
+        const clientName = urlParams.get('clientName');
+        const totalDebt = urlParams.get('totalDebt');
+        
+        if (action) {
+            console.log('🔔 Acción de notificación desde URL:', action);
+            console.log('📋 Parámetros:', { clientId, clientName, totalDebt });
+            
+            // Limpiar la URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            
+            // Procesar la acción después de que la app esté lista
+            setTimeout(() => {
+                this.handleNotificationAction(action, {
+                    clientId: clientId,
+                    clientName: clientName,
+                    totalDebt: totalDebt ? parseFloat(totalDebt) : 0
+                });
+            }, 1500);
+        }
     },
 
     // Cargar página
@@ -4500,52 +4537,74 @@ async importConfig(file) {
 
     // Manejar acciones de notificaciones
     async handleNotificationAction(action, data) {
-        console.log('🔔 Acción de notificación:', action, data);
+        console.log('========================================');
+        console.log('🔔 PROCESANDO ACCIÓN DE NOTIFICACIÓN');
+        console.log('Acción:', action);
+        console.log('Datos:', data);
+        console.log('========================================');
+        
+        // Si no hay acción o es 'open', solo abrir la app
+        if (!action || action === 'open' || action === 'dismiss') {
+            console.log('ℹ️ Acción básica, no requiere procesamiento');
+            return;
+        }
         
         switch(action) {
             case 'calculate':
                 // Ir a página de merma
+                console.log('📊 Navegando a página de merma');
                 this.loadPage('merma');
-                Utils.showNotification('Calcula la merma del día', 'info', 3000);
+                Utils.showNotification('📊 Calcula la merma del día', 'info', 3000);
                 break;
                 
             case 'pay-full':
                 // Pagar deuda completa del cliente
+                console.log('💵 Pago completo para cliente:', data.clientId);
                 if (data.clientId) {
                     this.loadPage('creditos');
-                    setTimeout(() => {
-                        const confirmed = confirm(`¿Pagar toda la deuda de ${data.clientName}?\nTotal: ${Utils.formatCurrency(data.totalDebt)}`);
+                    setTimeout(async () => {
+                        const confirmed = await Utils.showConfirm(
+                            `¿Pagar toda la deuda de ${data.clientName}?\nTotal: ${Utils.formatCurrency(data.totalDebt)}`,
+                            'Confirmar Pago Completo',
+                            'Pagar',
+                            'Cancelar'
+                        );
                         if (confirmed) {
+                            Utils.showNotification(`💵 Procesando pago de ${data.clientName}`, 'info', 3000);
                             // Aquí iría la lógica de pago completo
-                            Utils.showNotification(`Procesando pago de ${data.clientName}`, 'info', 3000);
                         }
-                    }, 500);
+                    }, 1000);
                 }
                 break;
                 
             case 'pay-partial':
                 // Hacer abono parcial
+                console.log('💰 Abono parcial para cliente:', data.clientId);
                 if (data.clientId) {
                     this.loadPage('creditos');
-                    Utils.showNotification(`Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
+                    setTimeout(() => {
+                        Utils.showNotification(`💰 Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
+                    }, 1000);
                 }
                 break;
                 
             case 'view':
                 // Ver detalles de créditos
+                console.log('�️ Ver detalles de créditos');
                 this.loadPage('creditos');
                 break;
                 
             case 'backup-now':
                 // Crear backup
+                console.log('💾 Crear backup');
                 this.loadPage('backup');
                 setTimeout(() => {
-                    Utils.showNotification('Crea tu backup desde esta página', 'info', 3000);
-                }, 500);
+                    Utils.showNotification('💾 Crea tu backup desde esta página', 'info', 3000);
+                }, 1000);
                 break;
                 
             default:
-                console.log('Acción no manejada:', action);
+                console.log('⚠️ Acción no manejada:', action);
         }
     }
 };

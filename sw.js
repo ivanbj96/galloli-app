@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.1.1'; // Fix: Botones de notificaciones con logs detallados
+const APP_VERSION = '6.1.2'; // Fix: Eliminado manejador duplicado de notificationclick
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -407,45 +407,6 @@ async function checkScheduledReminders() {
         });
     }
 }
-
-self.addEventListener('notificationclick', (event) => {
-    console.log('[Service Worker] Notificación clickeada:', event.action);
-    
-    event.notification.close();
-    
-    // Si el usuario presionó "dismiss", no hacer nada
-    if (event.action === 'dismiss') {
-        return;
-    }
-    
-    const urlToOpen = event.notification.data?.url || './';
-    const action = event.notification.data?.action;
-    
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then(clientList => {
-                // Si hay una ventana abierta, enfocarla
-                for (const client of clientList) {
-                    if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        return client.focus().then(client => {
-                            // Enviar acción a la app
-                            if (action) {
-                                client.postMessage({
-                                    type: 'NOTIFICATION_ACTION',
-                                    action: action
-                                });
-                            }
-                            return client;
-                        });
-                    }
-                }
-                // Si no hay ventana abierta, abrir una nueva
-                if (clients.openWindow) {
-                    return clients.openWindow(urlToOpen);
-                }
-            })
-    );
-});
 
 // Manejo de errores
 self.addEventListener('error', (event) => {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.1.2'; // Fix: Eliminado manejador duplicado de notificationclick
+const APP_VERSION = '6.1.3'; // Fix: Usar event.action en lugar de data.action para botones
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -505,18 +505,18 @@ setInterval(() => {
 self.addEventListener('notificationclick', (event) => {
     console.log('[Service Worker] ========================================');
     console.log('[Service Worker] 🔔 NOTIFICACIÓN CLICKEADA');
-    console.log('[Service Worker] Acción:', event.action);
+    console.log('[Service Worker] event.action:', event.action);
     console.log('[Service Worker] Tag:', event.notification.tag);
-    console.log('[Service Worker] Datos:', event.notification.data);
+    console.log('[Service Worker] event.notification.data:', event.notification.data);
     console.log('[Service Worker] ========================================');
     
     event.notification.close();
     
-    const data = event.notification.data || {};
-    const action = event.action || 'open';
+    const notificationData = event.notification.data || {};
+    const buttonAction = event.action || 'open'; // La acción del botón clickeado
     
     // Si es dismiss, no hacer nada
-    if (action === 'dismiss') {
+    if (buttonAction === 'dismiss') {
         console.log('[Service Worker] ❌ Acción dismiss - cerrando notificación');
         return;
     }
@@ -531,14 +531,18 @@ self.addEventListener('notificationclick', (event) => {
                 for (const client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
                         console.log('[Service Worker] ✅ Enfocando cliente existente');
-                        console.log('[Service Worker] 📤 Enviando mensaje:', { type: 'notification-action', action, data });
+                        console.log('[Service Worker] 📤 Enviando mensaje:', { 
+                            type: 'notification-action', 
+                            action: buttonAction, 
+                            data: notificationData 
+                        });
                         
                         return client.focus().then(focusedClient => {
-                            // Enviar mensaje con la acción
+                            // Enviar mensaje con la acción del botón Y los datos de la notificación
                             focusedClient.postMessage({
                                 type: 'notification-action',
-                                action: action,
-                                data: data
+                                action: buttonAction, // La acción del botón (pay-full, pay-partial, etc)
+                                data: notificationData // Los datos de la notificación (clientId, clientName, etc)
                             });
                             console.log('[Service Worker] ✅ Mensaje enviado correctamente');
                             return focusedClient;
@@ -547,13 +551,13 @@ self.addEventListener('notificationclick', (event) => {
                 }
                 
                 // Si no hay ventana abierta, abrir una nueva con la acción en la URL
-                console.log('[Service Worker] 🆕 Abriendo nueva ventana con acción:', action);
+                console.log('[Service Worker] 🆕 Abriendo nueva ventana con acción:', buttonAction);
                 if (clients.openWindow) {
                     const url = new URL(self.location.origin);
-                    url.searchParams.set('action', action);
-                    if (data.clientId) url.searchParams.set('clientId', data.clientId);
-                    if (data.clientName) url.searchParams.set('clientName', data.clientName);
-                    if (data.totalDebt) url.searchParams.set('totalDebt', data.totalDebt);
+                    url.searchParams.set('action', buttonAction);
+                    if (notificationData.clientId) url.searchParams.set('clientId', notificationData.clientId);
+                    if (notificationData.clientName) url.searchParams.set('clientName', notificationData.clientName);
+                    if (notificationData.totalDebt) url.searchParams.set('totalDebt', notificationData.totalDebt);
                     
                     console.log('[Service Worker] 🌐 URL:', url.toString());
                     return clients.openWindow(url.toString());

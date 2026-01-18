@@ -129,6 +129,13 @@ const App = {
                 }
             }
         });
+        
+        // Escuchar mensajes del Service Worker (acciones de notificaciones)
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'notification-action') {
+                this.handleNotificationAction(event.data.action, event.data.data);
+            }
+        });
     },
 
     // Cargar página
@@ -4488,6 +4495,57 @@ async importConfig(file) {
             Utils.showNotification('Notificaciones de prueba enviadas', 'success', 3000);
         } else {
             Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
+        }
+    },
+
+    // Manejar acciones de notificaciones
+    async handleNotificationAction(action, data) {
+        console.log('🔔 Acción de notificación:', action, data);
+        
+        switch(action) {
+            case 'calculate':
+                // Ir a página de merma
+                this.loadPage('merma');
+                Utils.showNotification('Calcula la merma del día', 'info', 3000);
+                break;
+                
+            case 'pay-full':
+                // Pagar deuda completa del cliente
+                if (data.clientId) {
+                    this.loadPage('creditos');
+                    setTimeout(() => {
+                        const confirmed = confirm(`¿Pagar toda la deuda de ${data.clientName}?\nTotal: ${Utils.formatCurrency(data.totalDebt)}`);
+                        if (confirmed) {
+                            // Aquí iría la lógica de pago completo
+                            Utils.showNotification(`Procesando pago de ${data.clientName}`, 'info', 3000);
+                        }
+                    }, 500);
+                }
+                break;
+                
+            case 'pay-partial':
+                // Hacer abono parcial
+                if (data.clientId) {
+                    this.loadPage('creditos');
+                    Utils.showNotification(`Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
+                }
+                break;
+                
+            case 'view':
+                // Ver detalles de créditos
+                this.loadPage('creditos');
+                break;
+                
+            case 'backup-now':
+                // Crear backup
+                this.loadPage('backup');
+                setTimeout(() => {
+                    Utils.showNotification('Crea tu backup desde esta página', 'info', 3000);
+                }, 500);
+                break;
+                
+            default:
+                console.log('Acción no manejada:', action);
         }
     }
 };

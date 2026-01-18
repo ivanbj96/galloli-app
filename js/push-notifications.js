@@ -2,6 +2,7 @@
 const PushNotifications = {
     swRegistration: null,
     permission: 'default',
+    checkInterval: null,
 
     // Inicializar el sistema
     async init() {
@@ -28,9 +29,19 @@ const PushNotifications = {
         }
 
         // Solicitar permisos
-        await this.requestPermission();
+        const granted = await this.requestPermission();
         
-        return this.permission === 'granted';
+        if (granted) {
+            // Verificar tareas pendientes inmediatamente
+            setTimeout(() => this.checkAllPendingTasks(), 3000);
+            
+            // Verificar cada 5 minutos
+            this.checkInterval = setInterval(() => {
+                this.checkAllPendingTasks();
+            }, 5 * 60 * 1000);
+        }
+        
+        return granted;
     },
 
     // Solicitar permisos
@@ -62,6 +73,20 @@ const PushNotifications = {
             console.error('❌ Error solicitando permisos:', error);
             return false;
         }
+    },
+
+    // Verificar todas las tareas pendientes
+    async checkAllPendingTasks() {
+        console.log('🔍 Verificando tareas pendientes...');
+        
+        // Verificar merma
+        await this.checkMermaPending();
+        
+        // Verificar créditos por cliente
+        await this.checkCreditsByClient();
+        
+        // Verificar backup
+        await this.checkBackupPending();
     },
 
     // Mostrar notificación
@@ -98,7 +123,6 @@ const PushNotifications = {
         const today = new Date().toISOString().split('T')[0];
         
         if (typeof MermaModule === 'undefined' || typeof SalesModule === 'undefined') {
-            console.warn('⚠️ Módulos no disponibles');
             return false;
         }
 
@@ -112,7 +136,12 @@ const PushNotifications = {
                 {
                     tag: 'merma-urgent',
                     requireInteraction: true,
-                    vibrate: [500, 200, 500, 200, 500]
+                    vibrate: [500, 200, 500, 200, 500],
+                    data: { action: 'calculate-merma' },
+                    actions: [
+                        { action: 'calculate', title: '🧮 Calcular Ahora', icon: './icons/icon-72x72.png' },
+                        { action: 'dismiss', title: 'Más Tarde' }
+                    ]
                 }
             );
             return true;
@@ -121,26 +150,101 @@ const PushNotifications = {
         return false;
     },
 
-    // Verificar créditos pendientes
-    async checkCreditsPending() {
+    // Verificar créditos por cliente individual
+    async checkCreditsByClient() {
         if (typeof SalesModule === 'undefined' || typeof ClientsModule === 'undefined') {
-            console.warn('⚠️ Módulos no disponibles');
             return false;
         }
 
         const creditSales = SalesModule.getCreditSales();
         
-        if (creditSales.length > 0) {
-            const totalDebt = creditSales.reduce((sum, sale) => sum + sale.remainingDebt, 0);
-            const clientsWithDebt = new Set(creditSales.map(s => s.clientId)).size;
+        // Agrupar por cliente
+        const clientsWithDebt = {};
+        creditSales.forEach(sale => {
+            if (!clientsWithDebt[sale.clientId]) {
+                const client = ClientsModule.getClientById(sale.clientId);
+                clientsWithDebt[sale.clientId] = {
+                    client: client,
+                    totalDebt: 0,
+                    sales: []
+                };
+            }
+            clientsWithDebt[sale.clientId].totalDebt += sale.remainingDebt;
+            clientsWithDebt[sale.clientId].sales.push(sale);
+        });
+
+        // Crear notificación individual por cada cliente
+        for (const clientId in clientsWithDebt) {
+            const data = clientsWithDebt[clientId];
+            const client = data.client;
             
             await this.show(
-                '💳 Créditos Activos',
-                `${clientsWithDebt} clientes con deuda - Total: ${Utils.formatCurrency(totalDebt)}`,
+                `💳 ${client.name} - Crédito Activo`,
+                `Deuda total: ${Utils.formatCurrency(data.totalDebt)} (${data.sales.length} venta${data.sales.length > 1 ? 's' : ''})`,
                 {
-                    tag: 'credits-active',
+                    tag: `credit-${clientId}`,
                     requireInteraction: true,
-                    vibrate: [300, 100, 300, 100, 300]
+                    vibrate: [300, 100, 300],
+                    data: { 
+                        action: 'pay-credit',
+                        clientId: clientId,
+                        clientName: client.name,
+                        totalDebt: data.totalDebt
+                    },
+                    actions: [
+                        { action: 'pay-full', title: '💵 Pagar Todo', icon: './icons/icon-72x72.png' },
+                        { action: 'pay-partial', title: '💰 Abono Parcial', icon: './icons/icon-72x72.png' },
+                        { action: 'view', title: '👁️ Ver Detalles' }
+                    ]
+                }
+            );
+        }
+
+        return Object.keys(clientsWithDebt).length > 0;
+    },
+
+    // Verificar backup pendiente
+    async checkBackupPending() {
+        const lastBackup = localStorage.getItem('lastTelegramBackup');
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (!lastBackup) {
+            // Nunca se ha hecho backup
+            await this.show(
+                '⚠️ Backup Pendiente',
+                'No has realizado ningún backup. ¡Protege tus datos ahora!',
+                {
+                    tag: 'backup-never',
+                    requireInteraction: true,
+                    vibrate: [500, 200, 500, 200, 500],
+                    data: { action: 'create-backup' },
+                    actions: [
+                        { action: 'backup-now', title: '💾 Hacer Backup Ahora', icon: './icons/icon-72x72.png' },
+                        { action: 'dismiss', title: 'Más Tarde' }
+                    ]
+                }
+            );
+            return true;
+        }
+
+        const lastBackupDate = new Date(lastBackup).toISOString().split('T')[0];
+        
+        if (lastBackupDate !== today) {
+            // No se ha hecho backup hoy
+            const daysSince = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24));
+            
+            await this.show(
+                '💾 Backup Diario Pendiente',
+                `Último backup hace ${daysSince} día${daysSince > 1 ? 's' : ''}. Crea uno ahora.`,
+                {
+                    tag: 'backup-pending',
+                    requireInteraction: true,
+                    vibrate: [400, 100, 400],
+                    data: { action: 'create-backup' },
+                    actions: [
+                        { action: 'backup-now', title: '💾 Hacer Backup', icon: './icons/icon-72x72.png' },
+                        { action: 'dismiss', title: 'Más Tarde' }
+                    ]
                 }
             );
             return true;

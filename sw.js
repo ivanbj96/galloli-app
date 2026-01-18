@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.0.0'; // Sistema de notificaciones completamente nuevo
+const APP_VERSION = '6.1.0'; // Notificaciones automáticas con acciones interactivas
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -538,3 +538,49 @@ setInterval(() => {
         userActivity.notificationsSent = 0; // Reset counter when active
     }
 }, 5 * 60 * 1000); // Cada 5 minutos
+
+
+// Manejador de clics en acciones de notificaciones
+self.addEventListener('notificationclick', (event) => {
+    console.log('[Service Worker] Notificación clickeada:', event.action);
+    
+    event.notification.close();
+    
+    const data = event.notification.data || {};
+    
+    // Abrir la app
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true })
+            .then((clientList) => {
+                // Si ya hay una ventana abierta, enfocarla
+                for (const client of clientList) {
+                    if (client.url.includes(self.location.origin) && 'focus' in client) {
+                        return client.focus().then(client => {
+                            // Enviar mensaje con la acción
+                            client.postMessage({
+                                type: 'notification-action',
+                                action: event.action,
+                                data: data
+                            });
+                            return client;
+                        });
+                    }
+                }
+                
+                // Si no hay ventana abierta, abrir una nueva
+                if (clients.openWindow) {
+                    return clients.openWindow('/').then(client => {
+                        // Esperar un poco y enviar el mensaje
+                        setTimeout(() => {
+                            client.postMessage({
+                                type: 'notification-action',
+                                action: event.action,
+                                data: data
+                            });
+                        }, 1000);
+                        return client;
+                    });
+                }
+            })
+    );
+});

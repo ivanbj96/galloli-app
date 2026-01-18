@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.1.3'; // Fix: Usar event.action en lugar de data.action para botones
+const APP_VERSION = '6.2.0'; // Feature: Notificaciones interactivas estilo WhatsApp con procesamiento directo
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -501,11 +501,12 @@ setInterval(() => {
 }, 5 * 60 * 1000); // Cada 5 minutos
 
 
-// Manejador de clics en acciones de notificaciones
+// Manejador de clics en acciones de notificaciones CON SOPORTE INLINE
 self.addEventListener('notificationclick', (event) => {
     console.log('[Service Worker] ========================================');
     console.log('[Service Worker] 🔔 NOTIFICACIÓN CLICKEADA');
     console.log('[Service Worker] event.action:', event.action);
+    console.log('[Service Worker] event.reply:', event.reply); // Para inputs inline
     console.log('[Service Worker] Tag:', event.notification.tag);
     console.log('[Service Worker] event.notification.data:', event.notification.data);
     console.log('[Service Worker] ========================================');
@@ -513,7 +514,8 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     
     const notificationData = event.notification.data || {};
-    const buttonAction = event.action || 'open'; // La acción del botón clickeado
+    const buttonAction = event.action || 'open';
+    const userInput = event.reply || null; // Texto ingresado por el usuario
     
     // Si es dismiss, no hacer nada
     if (buttonAction === 'dismiss') {
@@ -521,50 +523,203 @@ self.addEventListener('notificationclick', (event) => {
         return;
     }
     
-    // Abrir la app y enviar la acción
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then((clientList) => {
-                console.log('[Service Worker] 🔍 Clientes encontrados:', clientList.length);
-                
-                // Si ya hay una ventana abierta, enfocarla
-                for (const client of clientList) {
-                    if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        console.log('[Service Worker] ✅ Enfocando cliente existente');
-                        console.log('[Service Worker] 📤 Enviando mensaje:', { 
-                            type: 'notification-action', 
-                            action: buttonAction, 
-                            data: notificationData 
-                        });
-                        
-                        return client.focus().then(focusedClient => {
-                            // Enviar mensaje con la acción del botón Y los datos de la notificación
-                            focusedClient.postMessage({
-                                type: 'notification-action',
-                                action: buttonAction, // La acción del botón (pay-full, pay-partial, etc)
-                                data: notificationData // Los datos de la notificación (clientId, clientName, etc)
-                            });
-                            console.log('[Service Worker] ✅ Mensaje enviado correctamente');
-                            return focusedClient;
-                        });
-                    }
-                }
-                
-                // Si no hay ventana abierta, abrir una nueva con la acción en la URL
-                console.log('[Service Worker] 🆕 Abriendo nueva ventana con acción:', buttonAction);
-                if (clients.openWindow) {
-                    const url = new URL(self.location.origin);
-                    url.searchParams.set('action', buttonAction);
-                    if (notificationData.clientId) url.searchParams.set('clientId', notificationData.clientId);
-                    if (notificationData.clientName) url.searchParams.set('clientName', notificationData.clientName);
-                    if (notificationData.totalDebt) url.searchParams.set('totalDebt', notificationData.totalDebt);
-                    
-                    console.log('[Service Worker] 🌐 URL:', url.toString());
-                    return clients.openWindow(url.toString());
-                }
-            })
-            .catch(error => {
-                console.error('[Service Worker] ❌ Error manejando click:', error);
-            })
-    );
+    // PROCESAR ACCIONES DIRECTAMENTE EN EL SERVICE WORKER
+    if (notificationData.type === 'credit') {
+        event.waitUntil(handleCreditAction(buttonAction, notificationData, userInput));
+        return;
+    }
+    
+    if (notificationData.type === 'merma') {
+        event.waitUntil(handleMermaAction(buttonAction, notificationData));
+        return;
+    }
+    
+    if (notificationData.type === 'backup') {
+        event.waitUntil(handleBackupAction(buttonAction, notificationData));
+        return;
+    }
+    
+    // Para otras acciones, abrir la app
+    event.waitUntil(openAppWithAction(buttonAction, notificationData));
 });
+
+// Manejar acciones de crédito DIRECTAMENTE desde el Service Worker
+async function handleCreditAction(action, data, userInput) {
+    console.log('[Service Worker] 💳 Procesando acción de crédito:', action);
+    
+    try {
+        // Obtener clientes para enviar mensaje
+        const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        
+        if (action === 'pay-full') {
+            // Pagar deuda completa
+            console.log('[Service Worker] 💵 Pagando deuda completa:', data.totalDebt);
+            
+            // Enviar mensaje a la app para procesar el pago
+            if (clientList.length > 0) {
+                clientList[0].postMessage({
+                    type: 'process-payment',
+                    action: 'pay-full',
+                    clientId: data.clientId,
+                    amount: data.totalDebt,
+                    salesIds: data.sales
+                });
+                
+                // Mostrar notificación de confirmación
+                await self.registration.showNotification(
+                    '✅ Pago Registrado',
+                    {
+                        body: `${data.clientName}: ${formatCurrency(data.totalDebt)} pagado completamente`,
+                        icon: './icons/icon-192x192.png',
+                        badge: './icons/icon-72x72.png',
+                        tag: 'payment-success',
+                        requireInteraction: false,
+                        vibrate: [200, 100, 200]
+                    }
+                );
+            } else {
+                // Si no hay ventana abierta, abrir una con los datos
+                await openAppWithPayment('pay-full', data);
+            }
+            
+        } else if (action === 'pay-partial' && userInput) {
+            // Abono parcial con monto ingresado
+            const amount = parseFloat(userInput);
+            
+            if (isNaN(amount) || amount <= 0) {
+                await self.registration.showNotification(
+                    '❌ Monto Inválido',
+                    {
+                        body: 'Ingresa un monto válido para el abono',
+                        icon: './icons/icon-192x192.png',
+                        tag: 'payment-error',
+                        requireInteraction: true
+                    }
+                );
+                return;
+            }
+            
+            if (amount > data.totalDebt) {
+                await self.registration.showNotification(
+                    '⚠️ Monto Excedido',
+                    {
+                        body: `El monto (${formatCurrency(amount)}) es mayor a la deuda (${formatCurrency(data.totalDebt)})`,
+                        icon: './icons/icon-192x192.png',
+                        tag: 'payment-error',
+                        requireInteraction: true
+                    }
+                );
+                return;
+            }
+            
+            console.log('[Service Worker] 💰 Registrando abono:', amount);
+            
+            // Enviar mensaje a la app para procesar el abono
+            if (clientList.length > 0) {
+                clientList[0].postMessage({
+                    type: 'process-payment',
+                    action: 'pay-partial',
+                    clientId: data.clientId,
+                    amount: amount,
+                    salesIds: data.sales
+                });
+                
+                // Mostrar notificación de confirmación
+                await self.registration.showNotification(
+                    '✅ Abono Registrado',
+                    {
+                        body: `${data.clientName}: ${formatCurrency(amount)} abonado. Resta: ${formatCurrency(data.totalDebt - amount)}`,
+                        icon: './icons/icon-192x192.png',
+                        badge: './icons/icon-72x72.png',
+                        tag: 'payment-success',
+                        requireInteraction: false,
+                        vibrate: [200, 100, 200]
+                    }
+                );
+            } else {
+                // Si no hay ventana abierta, abrir una con los datos
+                await openAppWithPayment('pay-partial', { ...data, amount });
+            }
+            
+        } else if (action === 'view') {
+            // Ver detalles - abrir la app
+            await openAppWithAction('view-credits', data);
+        }
+        
+    } catch (error) {
+        console.error('[Service Worker] ❌ Error procesando pago:', error);
+        await self.registration.showNotification(
+            '❌ Error',
+            {
+                body: 'No se pudo procesar el pago. Intenta desde la app.',
+                icon: './icons/icon-192x192.png',
+                tag: 'payment-error',
+                requireInteraction: true
+            }
+        );
+    }
+}
+
+// Manejar acciones de merma
+async function handleMermaAction(action, data) {
+    if (action === 'calculate') {
+        await openAppWithAction('calculate-merma', data);
+    }
+}
+
+// Manejar acciones de backup
+async function handleBackupAction(action, data) {
+    if (action === 'backup-now') {
+        await openAppWithAction('create-backup', data);
+    }
+}
+
+// Abrir la app con una acción específica
+async function openAppWithAction(action, data) {
+    const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    
+    // Si ya hay una ventana abierta, enfocarla y enviar mensaje
+    for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+            console.log('[Service Worker] ✅ Enfocando cliente existente');
+            
+            await client.focus();
+            client.postMessage({
+                type: 'notification-action',
+                action: action,
+                data: data
+            });
+            return;
+        }
+    }
+    
+    // Si no hay ventana abierta, abrir una nueva
+    console.log('[Service Worker] 🆕 Abriendo nueva ventana');
+    if (clients.openWindow) {
+        const url = new URL(self.location.origin);
+        url.searchParams.set('action', action);
+        url.searchParams.set('data', JSON.stringify(data));
+        await clients.openWindow(url.toString());
+    }
+}
+
+// Abrir la app con datos de pago
+async function openAppWithPayment(action, data) {
+    const url = new URL(self.location.origin);
+    url.searchParams.set('action', action);
+    url.searchParams.set('clientId', data.clientId);
+    url.searchParams.set('amount', data.amount || data.totalDebt);
+    url.searchParams.set('salesIds', JSON.stringify(data.sales));
+    
+    if (clients.openWindow) {
+        await clients.openWindow(url.toString());
+    }
+}
+
+// Función auxiliar para formatear moneda
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('es-GT', {
+        style: 'currency',
+        currency: 'GTQ'
+    }).format(amount);
+}

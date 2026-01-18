@@ -146,6 +146,12 @@ const App = {
                 console.log('✅ Procesando acción de notificación...');
                 this.handleNotificationAction(event.data.action, event.data.data);
             }
+            
+            // NUEVO: Procesar pagos desde notificaciones
+            if (event.data && event.data.type === 'process-payment') {
+                console.log('💰 Procesando pago desde notificación...');
+                PaymentProcessor.processPaymentFromNotification(event.data);
+            }
         });
     },
     

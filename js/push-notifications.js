@@ -173,7 +173,7 @@ const PushNotifications = {
             clientsWithDebt[sale.clientId].sales.push(sale);
         });
 
-        // Crear notificación individual por cada cliente
+        // Crear notificación individual por cada cliente con ACCIONES INLINE
         for (const clientId in clientsWithDebt) {
             const data = clientsWithDebt[clientId];
             const client = data.client;
@@ -186,15 +186,29 @@ const PushNotifications = {
                     requireInteraction: true,
                     vibrate: [300, 100, 300],
                     data: { 
-                        action: 'pay-credit',
+                        type: 'credit',
                         clientId: clientId,
                         clientName: client.name,
-                        totalDebt: data.totalDebt
+                        totalDebt: data.totalDebt,
+                        sales: data.sales.map(s => s.id)
                     },
                     actions: [
-                        { action: 'pay-full', title: '💵 Pagar Todo', icon: './icons/icon-72x72.png' },
-                        { action: 'pay-partial', title: '💰 Abono Parcial', icon: './icons/icon-72x72.png' },
-                        { action: 'view', title: '👁️ Ver Detalles' }
+                        { 
+                            action: 'pay-full', 
+                            title: `💵 Pagar ${Utils.formatCurrency(data.totalDebt)}`,
+                            icon: './icons/icon-72x72.png'
+                        },
+                        { 
+                            action: 'pay-partial', 
+                            title: '💰 Abono Parcial',
+                            icon: './icons/icon-72x72.png',
+                            type: 'text',
+                            placeholder: 'Monto del abono'
+                        },
+                        { 
+                            action: 'view', 
+                            title: '👁️ Ver Detalles' 
+                        }
                     ]
                 }
             );

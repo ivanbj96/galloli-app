@@ -26,7 +26,7 @@ const PaymentProcessor = {
                 for (const sale of sales) {
                     const remainingDebt = sale.remainingDebt;
                     if (remainingDebt > 0) {
-                        await SalesModule.addPayment(sale.id, remainingDebt);
+                        await SalesModule.registerPayment(sale.id, remainingDebt);
                     }
                 }
                 
@@ -48,7 +48,7 @@ const PaymentProcessor = {
                     const paymentForThisSale = Math.min(remainingAmount, saleDebt);
                     
                     if (paymentForThisSale > 0) {
-                        await SalesModule.addPayment(sale.id, paymentForThisSale);
+                        await SalesModule.registerPayment(sale.id, paymentForThisSale);
                         remainingAmount -= paymentForThisSale;
                     }
                 }

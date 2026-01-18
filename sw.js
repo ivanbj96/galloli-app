@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.2.0'; // Feature: Notificaciones interactivas estilo WhatsApp con procesamiento directo
+const APP_VERSION = '6.2.1'; // Fix: Usar registerPayment en lugar de addPayment
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

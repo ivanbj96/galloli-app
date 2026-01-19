@@ -1,4 +1,4 @@
-// Sistema de Backup Automático Diario
+// Sistema de Backup Automático Diario - USA EL MISMO MÉTODO QUE EL BACKUP MANUAL
 const AutoBackup = {
     checkInterval: null,
     lastDataHash: null,
@@ -159,76 +159,42 @@ const AutoBackup = {
         return hash.toString();
     },
     
-    // Crear backup automático
+    // Crear backup automático - USA EXACTAMENTE EL MISMO MÉTODO QUE EL BACKUP MANUAL
     async createAutomaticBackup() {
         try {
-            // Verificar que haya credenciales guardadas
-            const credentials = await this.getCredentials();
+            console.log('📦 Creando backup automático usando el método manual...');
             
-            if (!credentials.botToken || !credentials.chatId) {
-                console.warn('⚠️ No hay credenciales de Telegram guardadas');
-                
-                // Mostrar notificación para configurar
-                if (typeof PushNotifications !== 'undefined') {
-                    await PushNotifications.show(
-                        '⚠️ Configurar Telegram',
-                        'Configura tus credenciales de Telegram para backups automáticos',
-                        {
-                            tag: 'telegram-config-needed',
-                            requireInteraction: true,
-                            actions: [
-                                { action: 'open-config', title: 'Configurar' }
-                            ]
-                        }
-                    );
+            // Verificar que BackupModule tenga credenciales
+            if (!BackupModule.telegramBotToken || !BackupModule.telegramChatId) {
+                // Intentar cargar desde IndexedDB
+                const credentials = await this.getCredentials();
+                if (credentials.botToken && credentials.chatId) {
+                    BackupModule.telegramBotToken = credentials.botToken;
+                    BackupModule.telegramChatId = credentials.chatId;
+                } else {
+                    console.warn('⚠️ No hay credenciales de Telegram guardadas');
+                    return false;
                 }
-                return false;
             }
             
-            console.log('📦 Creando backup automático...');
+            // USAR EXACTAMENTE EL MISMO MÉTODO QUE EL BACKUP MANUAL
+            // 1. Crear backup con BackupModule.createBackup()
+            const backup = await BackupModule.createBackup();
             
-            // IMPORTANTE: Usar el mismo método que el backup manual
-            // Generar el archivo de backup usando BackupModule.createBackup()
-            const backupData = await BackupModule.createBackup();
-            const fileName = `galloli_backup_auto_${new Date().toISOString().split('T')[0]}.json`;
-            const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            // 2. Enviar con BackupModule.sendToTelegram()
+            const result = await BackupModule.sendToTelegram(backup);
             
-            // Enviar a Telegram
-            const formData = new FormData();
-            formData.append('chat_id', credentials.chatId);
-            formData.append('document', blob, fileName);
-            formData.append('caption', `🤖 Backup Automático\n📅 ${new Date().toLocaleString('es-ES')}`);
-            
-            const response = await fetch(`https://api.telegram.org/bot${credentials.botToken}/sendDocument`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response.ok) {
-                console.log('✅ Backup automático enviado a Telegram');
+            if (result.ok) {
+                console.log('✅ Backup automático enviado correctamente');
                 
                 // Guardar fecha del último backup
                 const today = new Date().toISOString().split('T')[0];
                 await this.saveToDB('lastAutoBackupDate', today);
-                localStorage.setItem('lastTelegramBackup', new Date().toISOString());
-                
-                // Notificar éxito
-                if (typeof PushNotifications !== 'undefined') {
-                    await PushNotifications.notifyBackupSuccess(fileName);
-                }
                 
                 return true;
-            } else {
-                const error = await response.json();
-                console.error('❌ Error enviando backup:', error);
-                
-                // Notificar error
-                if (typeof PushNotifications !== 'undefined') {
-                    await PushNotifications.notifyBackupError(error.description || 'Error desconocido');
-                }
-                
-                return false;
             }
+            
+            return false;
             
         } catch (error) {
             console.error('❌ Error creando backup automático:', error);
@@ -321,9 +287,9 @@ const AutoBackup = {
         }
     },
     
-    // Forzar backup manual (para pruebas)
+    // Forzar backup manual (para pruebas) - USA EL MISMO MÉTODO
     async forceBackup() {
-        console.log('🔧 Forzando backup manual...');
+        console.log('🔧 Forzando backup manual (mismo método que el automático)...');
         await this.createAutomaticBackup();
     }
 };

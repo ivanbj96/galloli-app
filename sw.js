@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.3.3'; // Fix: Cargar credenciales desde IndexedDB y formato de backup automático idéntico al manual
+const APP_VERSION = '6.3.4'; // Fix: Backup automático usa EXACTAMENTE el mismo método que el manual
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

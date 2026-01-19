@@ -1564,7 +1564,7 @@ const SalesModule = {
         return false;
     },
 
-    registerPayment(saleId, amount, date = null) {
+    registerPayment(saleId, amount, date = null, silent = false) {
         const sale = this.getSaleById(saleId);
         if (!sale) return false;
 
@@ -1593,8 +1593,8 @@ const SalesModule = {
             sale.isPaid = true;
             sale.remainingDebt = 0;
             
-            // Notificar pago recibido (sin bloquear si falla)
-            if (typeof NotificationsModule !== 'undefined') {
+            // Notificar pago recibido SOLO si no es silencioso (sin bloquear si falla)
+            if (!silent && typeof NotificationsModule !== 'undefined') {
                 try {
                     const client = ClientsModule.getClientById(sale.clientId);
                     const clientName = client ? client.name : 'Cliente';

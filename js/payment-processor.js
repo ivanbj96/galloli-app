@@ -8,7 +8,7 @@ const PaymentProcessor = {
         console.log('========================================');
         
         try {
-            const { action, clientId, amount, salesIds } = paymentData;
+            const { action, clientId, clientName, amount, salesIds } = paymentData;
             
             if (!clientId || !amount || !salesIds) {
                 throw new Error('Datos de pago incompletos');
@@ -22,23 +22,25 @@ const PaymentProcessor = {
             }
             
             if (action === 'pay-full') {
-                // Pagar todas las ventas completamente
+                // Pagar todas las ventas completamente (modo silencioso)
                 for (const sale of sales) {
                     const remainingDebt = sale.remainingDebt;
                     if (remainingDebt > 0) {
-                        await SalesModule.registerPayment(sale.id, remainingDebt);
+                        await SalesModule.registerPayment(sale.id, remainingDebt, null, true);
                     }
                 }
                 
                 const client = ClientsModule.getClientById(clientId);
+                
+                // Enviar UNA SOLA notificación de confirmación
                 Utils.showNotification(
-                    `✅ Pago completo registrado para ${client.name}`,
+                    `✅ Pago completo: ${client.name}`,
                     'success',
                     5000
                 );
                 
             } else if (action === 'pay-partial') {
-                // Distribuir el abono entre las ventas
+                // Distribuir el abono entre las ventas (modo silencioso)
                 let remainingAmount = amount;
                 
                 for (const sale of sales) {
@@ -48,14 +50,16 @@ const PaymentProcessor = {
                     const paymentForThisSale = Math.min(remainingAmount, saleDebt);
                     
                     if (paymentForThisSale > 0) {
-                        await SalesModule.registerPayment(sale.id, paymentForThisSale);
+                        await SalesModule.registerPayment(sale.id, paymentForThisSale, null, true);
                         remainingAmount -= paymentForThisSale;
                     }
                 }
                 
                 const client = ClientsModule.getClientById(clientId);
+                
+                // Enviar UNA SOLA notificación de confirmación
                 Utils.showNotification(
-                    `✅ Abono de ${Utils.formatCurrency(amount)} registrado para ${client.name}`,
+                    `✅ Abono registrado: ${client.name} - ${Utils.formatCurrency(amount)}`,
                     'success',
                     5000
                 );

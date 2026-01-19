@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.2.2'; // Feature: Auto-recarga de datos al abrir app después de pago desde notificación
+const APP_VERSION = '6.2.3'; // Fix: Evitar pagos duplicados y notificaciones duplicadas
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -555,28 +555,20 @@ async function handleCreditAction(action, data, userInput) {
             // Pagar deuda completa
             console.log('[Service Worker] 💵 Pagando deuda completa:', data.totalDebt);
             
-            // Enviar mensaje a la app para procesar el pago
+            // Enviar mensaje SOLO AL PRIMER cliente (evitar duplicados)
             if (clientList.length > 0) {
+                console.log('[Service Worker] 📤 Enviando a primer cliente solamente');
                 clientList[0].postMessage({
                     type: 'process-payment',
                     action: 'pay-full',
                     clientId: data.clientId,
+                    clientName: data.clientName,
                     amount: data.totalDebt,
                     salesIds: data.sales
                 });
                 
-                // Mostrar notificación de confirmación
-                await self.registration.showNotification(
-                    '✅ Pago Registrado',
-                    {
-                        body: `${data.clientName}: ${formatCurrency(data.totalDebt)} pagado completamente`,
-                        icon: './icons/icon-192x192.png',
-                        badge: './icons/icon-72x72.png',
-                        tag: 'payment-success',
-                        requireInteraction: false,
-                        vibrate: [200, 100, 200]
-                    }
-                );
+                // NO mostrar notificación aquí - la app lo hará
+                console.log('[Service Worker] ✅ Mensaje enviado - app procesará el pago');
             } else {
                 // Si no hay ventana abierta, abrir una con los datos
                 await openAppWithPayment('pay-full', data);
@@ -614,28 +606,20 @@ async function handleCreditAction(action, data, userInput) {
             
             console.log('[Service Worker] 💰 Registrando abono:', amount);
             
-            // Enviar mensaje a la app para procesar el abono
+            // Enviar mensaje SOLO AL PRIMER cliente (evitar duplicados)
             if (clientList.length > 0) {
+                console.log('[Service Worker] 📤 Enviando a primer cliente solamente');
                 clientList[0].postMessage({
                     type: 'process-payment',
                     action: 'pay-partial',
                     clientId: data.clientId,
+                    clientName: data.clientName,
                     amount: amount,
                     salesIds: data.sales
                 });
                 
-                // Mostrar notificación de confirmación
-                await self.registration.showNotification(
-                    '✅ Abono Registrado',
-                    {
-                        body: `${data.clientName}: ${formatCurrency(amount)} abonado. Resta: ${formatCurrency(data.totalDebt - amount)}`,
-                        icon: './icons/icon-192x192.png',
-                        badge: './icons/icon-72x72.png',
-                        tag: 'payment-success',
-                        requireInteraction: false,
-                        vibrate: [200, 100, 200]
-                    }
-                );
+                // NO mostrar notificación aquí - la app lo hará
+                console.log('[Service Worker] ✅ Mensaje enviado - app procesará el abono');
             } else {
                 // Si no hay ventana abierta, abrir una con los datos
                 await openAppWithPayment('pay-partial', { ...data, amount });

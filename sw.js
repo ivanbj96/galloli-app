@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.2.3'; // Fix: Evitar pagos duplicados y notificaciones duplicadas
+const APP_VERSION = '6.2.4'; // Fix: Evitar procesamiento duplicado con flag y usar clientName de datos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -1,7 +1,17 @@
 // Procesador de Pagos desde Notificaciones
 const PaymentProcessor = {
+    isProcessing: false, // Flag para evitar procesamiento duplicado
+    
     // Procesar pagos desde notificaciones
     async processPaymentFromNotification(paymentData) {
+        // Evitar procesamiento duplicado
+        if (this.isProcessing) {
+            console.log('⚠️ Ya se está procesando un pago, ignorando duplicado');
+            return;
+        }
+        
+        this.isProcessing = true;
+        
         console.log('========================================');
         console.log('💰 PROCESANDO PAGO DESDE NOTIFICACIÓN');
         console.log('Datos:', paymentData);
@@ -14,12 +24,15 @@ const PaymentProcessor = {
                 throw new Error('Datos de pago incompletos');
             }
             
-            // Obtener las ventas
+            // Obtener las ventas ANTES de recargar
             const sales = salesIds.map(id => SalesModule.getSaleById(id)).filter(s => s);
             
             if (sales.length === 0) {
                 throw new Error('No se encontraron ventas');
             }
+            
+            // Usar el nombre del cliente que viene en los datos
+            const displayName = clientName || 'Cliente';
             
             if (action === 'pay-full') {
                 // Pagar todas las ventas completamente (modo silencioso)
@@ -30,11 +43,9 @@ const PaymentProcessor = {
                     }
                 }
                 
-                const client = ClientsModule.getClientById(clientId);
-                
                 // Enviar UNA SOLA notificación de confirmación
                 Utils.showNotification(
-                    `✅ Pago completo: ${client.name}`,
+                    `✅ Pago completo: ${displayName}`,
                     'success',
                     5000
                 );
@@ -55,11 +66,9 @@ const PaymentProcessor = {
                     }
                 }
                 
-                const client = ClientsModule.getClientById(clientId);
-                
                 // Enviar UNA SOLA notificación de confirmación
                 Utils.showNotification(
-                    `✅ Abono registrado: ${client.name} - ${Utils.formatCurrency(amount)}`,
+                    `✅ Abono registrado: ${displayName} - ${Utils.formatCurrency(amount)}`,
                     'success',
                     5000
                 );
@@ -84,6 +93,11 @@ const PaymentProcessor = {
                 'error',
                 5000
             );
+        } finally {
+            // Liberar el flag después de un pequeño delay
+            setTimeout(() => {
+                this.isProcessing = false;
+            }, 1000);
         }
     }
 };

@@ -919,6 +919,9 @@ loadConfigPage() {
                     <button class="btn btn-primary" onclick="App.checkCreditsPending()" style="width: 100%; margin-bottom: 10px;">
                         <i class="fas fa-credit-card"></i> Verificar Créditos Activos
                     </button>
+                    <button class="btn btn-success" onclick="App.testAutoBackup()" style="width: 100%; margin-bottom: 10px;">
+                        <i class="fas fa-robot"></i> Probar Backup Automático
+                    </button>
                     <button class="btn btn-outline" onclick="App.testAllNotifications()" style="width: 100%;">
                         <i class="fas fa-vial"></i> Probar Todas las Notificaciones
                     </button>
@@ -4588,6 +4591,39 @@ async importConfig(file) {
             Utils.showNotification('Notificaciones de prueba enviadas', 'success', 3000);
         } else {
             Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
+        }
+    },
+    
+    // Probar backup automático
+    async testAutoBackup() {
+        if (typeof AutoBackup === 'undefined') {
+            Utils.showNotification('Sistema de backup automático no disponible', 'error', 3000);
+            return;
+        }
+        
+        if (!AutoBackup.hasCredentials()) {
+            Utils.showNotification('⚠️ Configura tus credenciales de Telegram primero en la página de Backups', 'warning', 5000);
+            return;
+        }
+        
+        const confirmed = await Utils.showConfirm(
+            '¿Forzar backup automático ahora? Esto creará y enviará un backup a Telegram.',
+            'Probar Backup Automático',
+            'Sí, crear backup',
+            'Cancelar'
+        );
+        
+        if (!confirmed) return;
+        
+        Utils.showLoading(true);
+        
+        try {
+            await AutoBackup.forceBackup();
+            Utils.showLoading(false);
+            Utils.showNotification('✅ Backup automático enviado correctamente', 'success', 5000);
+        } catch (error) {
+            Utils.showLoading(false);
+            Utils.showNotification(`❌ Error: ${error.message}`, 'error', 5000);
         }
     },
 

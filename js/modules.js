@@ -2916,6 +2916,7 @@ const BackupModule = {
     },
 
     loadTelegramConfig() {
+        // Intentar cargar desde versión encriptada primero
         const encryptedToken = localStorage.getItem('tg_bt');
         const encryptedChatId = localStorage.getItem('tg_ci');
         
@@ -2925,6 +2926,19 @@ const BackupModule = {
         if (encryptedChatId) {
             this.telegramChatId = this.decrypt(encryptedChatId);
         }
+        
+        // Si no hay encriptadas, intentar cargar las sin encriptar (para AutoBackup)
+        if (!this.telegramBotToken) {
+            this.telegramBotToken = localStorage.getItem('telegramBotToken');
+        }
+        if (!this.telegramChatId) {
+            this.telegramChatId = localStorage.getItem('telegramChatId');
+        }
+        
+        console.log('📱 Credenciales de Telegram cargadas:', {
+            hasToken: !!this.telegramBotToken,
+            hasChatId: !!this.telegramChatId
+        });
     },
 
     loadAutoBackupConfig() {

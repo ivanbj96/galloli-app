@@ -61,9 +61,16 @@ const PaymentProcessor = {
                 );
             }
             
+            // IMPORTANTE: Recargar todos los datos para reflejar los cambios
+            console.log('🔄 Recargando datos después del pago...');
+            await SalesModule.init();
+            await ClientsModule.init();
+            await CreditosModule.init();
+            
             // Recargar la página actual si App está disponible
             if (typeof App !== 'undefined' && App.loadPage) {
                 App.loadPage(App.currentPage);
+                console.log('✅ Interfaz actualizada');
             }
             
         } catch (error) {

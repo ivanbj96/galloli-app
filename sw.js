@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.2.1'; // Fix: Usar registerPayment en lugar de addPayment
+const APP_VERSION = '6.2.2'; // Feature: Auto-recarga de datos al abrir app después de pago desde notificación
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

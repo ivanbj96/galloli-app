@@ -66,6 +66,53 @@ const App = {
         
         // Procesar acción de notificación desde URL
         this.checkNotificationActionFromURL();
+        
+        // NUEVO: Detectar cuando la app se vuelve visible y recargar datos
+        this.setupVisibilityChangeHandler();
+    },
+    
+    // NUEVO: Detectar cuando la app se vuelve visible y recargar datos
+    setupVisibilityChangeHandler() {
+        let lastVisibilityChange = Date.now();
+        
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden) {
+                // La app se volvió visible
+                const now = Date.now();
+                const timeSinceLastChange = now - lastVisibilityChange;
+                
+                console.log('👁️ App visible - Tiempo desde último cambio:', timeSinceLastChange, 'ms');
+                
+                // Si pasaron más de 2 segundos desde el último cambio, recargar datos
+                if (timeSinceLastChange > 2000) {
+                    console.log('🔄 Recargando datos...');
+                    
+                    // Recargar todos los datos
+                    await this.loadAllData();
+                    
+                    // Recargar la página actual para reflejar cambios
+                    this.loadPage(this.currentPage);
+                    
+                    console.log('✅ Datos actualizados');
+                }
+                
+                lastVisibilityChange = now;
+            }
+        });
+        
+        // También detectar cuando la ventana recibe foco
+        window.addEventListener('focus', async () => {
+            const now = Date.now();
+            const timeSinceLastChange = now - lastVisibilityChange;
+            
+            if (timeSinceLastChange > 2000) {
+                console.log('🔄 Ventana enfocada - Recargando datos...');
+                await this.loadAllData();
+                this.loadPage(this.currentPage);
+                console.log('✅ Datos actualizados');
+                lastVisibilityChange = now;
+            }
+        });
     },
 
     // Cargar datos

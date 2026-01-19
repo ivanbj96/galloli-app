@@ -2731,7 +2731,7 @@ const BackupModule = {
     lastAutoBackup: null,
 
     async init() {
-        this.loadTelegramConfig();
+        await this.loadTelegramConfig();
         this.loadAutoBackupConfig();
     },
 
@@ -2915,7 +2915,7 @@ const BackupModule = {
         }
     },
 
-    loadTelegramConfig() {
+    async loadTelegramConfig() {
         // Intentar cargar desde versión encriptada primero
         const encryptedToken = localStorage.getItem('tg_bt');
         const encryptedChatId = localStorage.getItem('tg_ci');
@@ -2933,6 +2933,20 @@ const BackupModule = {
         }
         if (!this.telegramChatId) {
             this.telegramChatId = localStorage.getItem('telegramChatId');
+        }
+        
+        // Si aún no hay, intentar cargar desde IndexedDB (AutoBackup)
+        if ((!this.telegramBotToken || !this.telegramChatId) && typeof AutoBackup !== 'undefined') {
+            try {
+                const credentials = await AutoBackup.getCredentials();
+                if (credentials.botToken && credentials.chatId) {
+                    this.telegramBotToken = credentials.botToken;
+                    this.telegramChatId = credentials.chatId;
+                    console.log('✅ Credenciales cargadas desde IndexedDB');
+                }
+            } catch (error) {
+                console.error('Error cargando desde IndexedDB:', error);
+            }
         }
         
         console.log('📱 Credenciales de Telegram cargadas:', {

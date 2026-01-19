@@ -187,7 +187,8 @@ const AutoBackup = {
             
             console.log('📦 Creando backup automático...');
             
-            // Generar el archivo de backup usando BackupModule
+            // IMPORTANTE: Usar el mismo método que el backup manual
+            // Generar el archivo de backup usando BackupModule.createBackup()
             const backupData = await BackupModule.createBackup();
             const fileName = `galloli_backup_auto_${new Date().toISOString().split('T')[0]}.json`;
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });

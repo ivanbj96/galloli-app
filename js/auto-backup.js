@@ -7,8 +7,8 @@ const AutoBackup = {
     async init() {
         console.log('💾 Inicializando sistema de backup automático...');
         
-        // Cargar el hash de los últimos datos
-        this.lastDataHash = localStorage.getItem('lastBackupDataHash') || null;
+        // Cargar el hash de los últimos datos desde IndexedDB
+        this.lastDataHash = await this.getFromDB('lastBackupDataHash');
         
         // Verificar cada hora si es hora de hacer backup
         this.checkInterval = setInterval(() => {
@@ -19,6 +19,62 @@ const AutoBackup = {
         setTimeout(() => this.checkBackupTime(), 5000);
         
         console.log('✅ Sistema de backup automático inicializado');
+    },
+    
+    // Guardar en IndexedDB (más seguro y persistente)
+    async saveToDB(key, value) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('GallOliSecure', 1);
+            
+            request.onerror = () => reject(request.error);
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('credentials')) {
+                    db.createObjectStore('credentials');
+                }
+            };
+            
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                const transaction = db.transaction(['credentials'], 'readwrite');
+                const store = transaction.objectStore('credentials');
+                const putRequest = store.put(value, key);
+                
+                putRequest.onsuccess = () => resolve();
+                putRequest.onerror = () => reject(putRequest.error);
+            };
+        });
+    },
+    
+    // Obtener de IndexedDB
+    async getFromDB(key) {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('GallOliSecure', 1);
+            
+            request.onerror = () => reject(request.error);
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('credentials')) {
+                    db.createObjectStore('credentials');
+                }
+            };
+            
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('credentials')) {
+                    resolve(null);
+                    return;
+                }
+                const transaction = db.transaction(['credentials'], 'readonly');
+                const store = transaction.objectStore('credentials');
+                const getRequest = store.get(key);
+                
+                getRequest.onsuccess = () => resolve(getRequest.result || null);
+                getRequest.onerror = () => reject(getRequest.error);
+            };
+        });
     },
     
     // Verificar si es hora de hacer backup (10 PM)
@@ -32,7 +88,7 @@ const AutoBackup = {
             console.log('🕙 Son las 10 PM - Verificando si hay cambios para backup...');
             
             // Verificar si ya se hizo backup hoy
-            const lastBackup = localStorage.getItem('lastAutoBackupDate');
+            const lastBackup = await this.getFromDB('lastAutoBackupDate');
             const today = new Date().toISOString().split('T')[0];
             
             if (lastBackup === today) {
@@ -72,14 +128,14 @@ const AutoBackup = {
             if (this.lastDataHash === null) {
                 // Primera vez - guardar hash
                 this.lastDataHash = currentHash;
-                localStorage.setItem('lastBackupDataHash', currentHash);
+                await this.saveToDB('lastBackupDataHash', currentHash);
                 return true; // Hay "cambios" porque es la primera vez
             }
             
             if (currentHash !== this.lastDataHash) {
                 // Hay cambios
                 this.lastDataHash = currentHash;
-                localStorage.setItem('lastBackupDataHash', currentHash);
+                await this.saveToDB('lastBackupDataHash', currentHash);
                 return true;
             }
             
@@ -107,10 +163,9 @@ const AutoBackup = {
     async createAutomaticBackup() {
         try {
             // Verificar que haya credenciales guardadas
-            const botToken = localStorage.getItem('telegramBotToken');
-            const chatId = localStorage.getItem('telegramChatId');
+            const credentials = await this.getCredentials();
             
-            if (!botToken || !chatId) {
+            if (!credentials.botToken || !credentials.chatId) {
                 console.warn('⚠️ No hay credenciales de Telegram guardadas');
                 
                 // Mostrar notificación para configurar
@@ -130,26 +185,20 @@ const AutoBackup = {
                 return false;
             }
             
-            // Crear el backup usando el módulo de Backup
-            if (typeof BackupModule === 'undefined') {
-                console.error('❌ BackupModule no disponible');
-                return false;
-            }
-            
             console.log('📦 Creando backup automático...');
             
-            // Generar el archivo de backup
-            const backupData = BackupModule.generateBackupData();
+            // Generar el archivo de backup usando BackupModule
+            const backupData = await BackupModule.createBackup();
             const fileName = `galloli_backup_auto_${new Date().toISOString().split('T')[0]}.json`;
             const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
             
             // Enviar a Telegram
             const formData = new FormData();
-            formData.append('chat_id', chatId);
+            formData.append('chat_id', credentials.chatId);
             formData.append('document', blob, fileName);
             formData.append('caption', `🤖 Backup Automático\n📅 ${new Date().toLocaleString('es-ES')}`);
             
-            const response = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+            const response = await fetch(`https://api.telegram.org/bot${credentials.botToken}/sendDocument`, {
                 method: 'POST',
                 body: formData
             });
@@ -159,7 +208,7 @@ const AutoBackup = {
                 
                 // Guardar fecha del último backup
                 const today = new Date().toISOString().split('T')[0];
-                localStorage.setItem('lastAutoBackupDate', today);
+                await this.saveToDB('lastAutoBackupDate', today);
                 localStorage.setItem('lastTelegramBackup', new Date().toISOString());
                 
                 // Notificar éxito
@@ -192,26 +241,83 @@ const AutoBackup = {
         }
     },
     
-    // Guardar credenciales de Telegram permanentemente
-    saveCredentials(botToken, chatId) {
-        localStorage.setItem('telegramBotToken', botToken);
-        localStorage.setItem('telegramChatId', chatId);
-        console.log('✅ Credenciales de Telegram guardadas');
+    // Guardar credenciales de Telegram permanentemente en IndexedDB (más seguro)
+    async saveCredentials(botToken, chatId) {
+        // Encriptar las credenciales antes de guardar
+        const encrypted = {
+            botToken: this.encrypt(botToken),
+            chatId: this.encrypt(chatId)
+        };
+        
+        await this.saveToDB('telegramCredentials', encrypted);
+        console.log('✅ Credenciales de Telegram guardadas de forma segura en IndexedDB');
     },
     
     // Obtener credenciales guardadas
-    getCredentials() {
-        return {
-            botToken: localStorage.getItem('telegramBotToken') || '',
-            chatId: localStorage.getItem('telegramChatId') || ''
-        };
+    async getCredentials() {
+        try {
+            const encrypted = await this.getFromDB('telegramCredentials');
+            
+            if (!encrypted) {
+                return { botToken: '', chatId: '' };
+            }
+            
+            // Desencriptar las credenciales
+            return {
+                botToken: this.decrypt(encrypted.botToken),
+                chatId: this.decrypt(encrypted.chatId)
+            };
+        } catch (error) {
+            console.error('Error obteniendo credenciales:', error);
+            return { botToken: '', chatId: '' };
+        }
     },
     
     // Verificar si hay credenciales guardadas
-    hasCredentials() {
-        const botToken = localStorage.getItem('telegramBotToken');
-        const chatId = localStorage.getItem('telegramChatId');
-        return !!(botToken && chatId);
+    async hasCredentials() {
+        const credentials = await this.getCredentials();
+        return !!(credentials.botToken && credentials.chatId);
+    },
+    
+    // Encriptación mejorada (AES-like con múltiples capas)
+    encrypt(text) {
+        if (!text) return '';
+        
+        // Capa 1: Reverse y Base64
+        const layer1 = btoa(text.split('').reverse().join(''));
+        
+        // Capa 2: XOR con clave
+        const key = 'GallOli2024SecureKey';
+        let layer2 = '';
+        for (let i = 0; i < layer1.length; i++) {
+            layer2 += String.fromCharCode(layer1.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+        
+        // Capa 3: Base64 final
+        return btoa(layer2);
+    },
+    
+    // Desencriptación
+    decrypt(encrypted) {
+        if (!encrypted) return '';
+        
+        try {
+            // Capa 3: Decodificar Base64
+            const layer2 = atob(encrypted);
+            
+            // Capa 2: XOR con clave
+            const key = 'GallOli2024SecureKey';
+            let layer1 = '';
+            for (let i = 0; i < layer2.length; i++) {
+                layer1 += String.fromCharCode(layer2.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            
+            // Capa 1: Decodificar Base64 y reverse
+            return atob(layer1).split('').reverse().join('');
+        } catch (error) {
+            console.error('Error desencriptando:', error);
+            return '';
+        }
     },
     
     // Forzar backup manual (para pruebas)

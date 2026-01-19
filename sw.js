@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.3.1'; // Fix: Cargar credenciales de Telegram y botón de prueba de backup
+const APP_VERSION = '6.3.2'; // Fix: Credenciales en IndexedDB con encriptación multicapa y fix generateBackupData
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -4601,7 +4601,9 @@ async importConfig(file) {
             return;
         }
         
-        if (!AutoBackup.hasCredentials()) {
+        const hasCredentials = await AutoBackup.hasCredentials();
+        
+        if (!hasCredentials) {
             Utils.showNotification('⚠️ Configura tus credenciales de Telegram primero en la página de Backups', 'warning', 5000);
             return;
         }

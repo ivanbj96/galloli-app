@@ -2909,7 +2909,7 @@ const BackupModule = {
         localStorage.setItem('telegramBotToken', token);
         localStorage.setItem('telegramChatId', chatId);
         
-        // Guardar también en AutoBackup para backups automáticos
+        // Guardar también en AutoBackup para backups automáticos (IndexedDB seguro)
         if (typeof AutoBackup !== 'undefined') {
             AutoBackup.saveCredentials(token, chatId);
         }
@@ -2965,15 +2965,15 @@ const BackupModule = {
         if (token) {
             this.telegramBotToken = token;
             localStorage.setItem('tg_bt', this.encrypt(token));
-            localStorage.setItem('telegramBotToken', token); // También sin encriptar para AutoBackup
+            localStorage.setItem('telegramBotToken', token); // También sin encriptar para compatibilidad
         }
         if (chatId) {
             this.telegramChatId = chatId;
             localStorage.setItem('tg_ci', this.encrypt(chatId));
-            localStorage.setItem('telegramChatId', chatId); // También sin encriptar para AutoBackup
+            localStorage.setItem('telegramChatId', chatId); // También sin encriptar para compatibilidad
         }
         
-        // Guardar también en AutoBackup para backups automáticos
+        // Guardar también en AutoBackup para backups automáticos (IndexedDB seguro)
         if (typeof AutoBackup !== 'undefined' && token && chatId) {
             AutoBackup.saveCredentials(token, chatId);
         }

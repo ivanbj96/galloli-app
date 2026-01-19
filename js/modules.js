@@ -2908,6 +2908,11 @@ const BackupModule = {
         this.telegramChatId = chatId;
         localStorage.setItem('telegramBotToken', token);
         localStorage.setItem('telegramChatId', chatId);
+        
+        // Guardar también en AutoBackup para backups automáticos
+        if (typeof AutoBackup !== 'undefined') {
+            AutoBackup.saveCredentials(token, chatId);
+        }
     },
 
     loadTelegramConfig() {
@@ -2946,11 +2951,19 @@ const BackupModule = {
         if (token) {
             this.telegramBotToken = token;
             localStorage.setItem('tg_bt', this.encrypt(token));
+            localStorage.setItem('telegramBotToken', token); // También sin encriptar para AutoBackup
         }
         if (chatId) {
             this.telegramChatId = chatId;
             localStorage.setItem('tg_ci', this.encrypt(chatId));
+            localStorage.setItem('telegramChatId', chatId); // También sin encriptar para AutoBackup
         }
+        
+        // Guardar también en AutoBackup para backups automáticos
+        if (typeof AutoBackup !== 'undefined' && token && chatId) {
+            AutoBackup.saveCredentials(token, chatId);
+        }
+        
         Utils.showNotification('✅ Configuración de Telegram guardada de forma segura', 'success', 3000);
     },
 

@@ -49,6 +49,9 @@ const App = {
         // INICIALIZAR NOTIFICACIONES PUSH
         await this.initPushNotifications();
         
+        // INICIALIZAR BACKUP AUTOMÁTICO
+        await AutoBackup.init();
+        
         // Configurar recordatorio diario
         this.setupDailyReminder();
         

@@ -85,8 +85,7 @@ const PushNotifications = {
         // Verificar créditos por cliente
         await this.checkCreditsByClient();
         
-        // Verificar backup
-        await this.checkBackupPending();
+        // NO verificar backup - se hace automáticamente a las 10 PM
     },
 
     // Mostrar notificación
@@ -218,55 +217,6 @@ const PushNotifications = {
     },
 
     // Verificar backup pendiente
-    async checkBackupPending() {
-        const lastBackup = localStorage.getItem('lastTelegramBackup');
-        const today = new Date().toISOString().split('T')[0];
-        
-        if (!lastBackup) {
-            // Nunca se ha hecho backup
-            await this.show(
-                '⚠️ Backup Pendiente',
-                'No has realizado ningún backup. ¡Protege tus datos ahora!',
-                {
-                    tag: 'backup-never',
-                    requireInteraction: true,
-                    vibrate: [500, 200, 500, 200, 500],
-                    data: { action: 'create-backup' },
-                    actions: [
-                        { action: 'backup-now', title: '💾 Hacer Backup Ahora', icon: './icons/icon-72x72.png' },
-                        { action: 'dismiss', title: 'Más Tarde' }
-                    ]
-                }
-            );
-            return true;
-        }
-
-        const lastBackupDate = new Date(lastBackup).toISOString().split('T')[0];
-        
-        if (lastBackupDate !== today) {
-            // No se ha hecho backup hoy
-            const daysSince = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24));
-            
-            await this.show(
-                '💾 Backup Diario Pendiente',
-                `Último backup hace ${daysSince} día${daysSince > 1 ? 's' : ''}. Crea uno ahora.`,
-                {
-                    tag: 'backup-pending',
-                    requireInteraction: true,
-                    vibrate: [400, 100, 400],
-                    data: { action: 'create-backup' },
-                    actions: [
-                        { action: 'backup-now', title: '💾 Hacer Backup', icon: './icons/icon-72x72.png' },
-                        { action: 'dismiss', title: 'Más Tarde' }
-                    ]
-                }
-            );
-            return true;
-        }
-        
-        return false;
-    },
-
     // Notificación de backup exitoso
     async notifyBackupSuccess(fileName) {
         await this.show(

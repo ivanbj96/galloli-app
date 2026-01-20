@@ -290,6 +290,6 @@ const AutoBackup = {
     // Forzar backup manual (para pruebas) - USA EL MISMO MÉTODO
     async forceBackup() {
         console.log('🔧 Forzando backup manual (mismo método que el automático)...');
-        await this.createAutomaticBackup();
+        return await this.createAutomaticBackup();
     }
 };

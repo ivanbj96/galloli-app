@@ -232,7 +232,7 @@ const App = {
     },
 
     // Cargar página
-    loadPage(page) {
+    async loadPage(page) {
         this.currentPage = page;
         const mainContent = document.getElementById('main-content');
         if (!mainContent) return;
@@ -269,7 +269,7 @@ const App = {
                 this.loadAccountingPage();
                 break;
             case 'backup':
-                this.loadBackupPage();
+                await this.loadBackupPage(); // ESPERAR carga asíncrona
                 break;
             case 'rutas':
                 this.loadRutasPage();
@@ -2518,7 +2518,10 @@ async importConfig(file) {
     },
 
     // Página de Backup (NUEVA)
-    loadBackupPage() {
+    async loadBackupPage() {
+        // IMPORTANTE: Cargar credenciales de forma asíncrona ANTES de verificar
+        await BackupModule.loadTelegramConfig();
+        
         const stats = BackupModule.getBackupStats();
         const telegramConfigured = BackupModule.telegramBotToken && BackupModule.telegramChatId;
         
@@ -2655,6 +2658,29 @@ async importConfig(file) {
                         </button>
                     `}
                 </div>
+                
+                ${telegramConfigured ? `
+                <div class="card">
+                    <h3><i class="fas fa-robot"></i> Backup Automático</h3>
+                    <p style="margin-bottom: 15px; color: var(--gray);">
+                        <i class="fas fa-clock"></i> El backup automático se ejecuta todos los días a las <strong>10:00 PM</strong>
+                    </p>
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--success);">
+                        <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;">
+                            ✅ El sistema verifica automáticamente si hay cambios en los datos<br>
+                            ✅ Solo crea backup si detecta cambios (evita duplicados)<br>
+                            ✅ Usa el mismo método que el backup manual<br>
+                            ✅ Envía el backup a tu Telegram configurado
+                        </p>
+                    </div>
+                    <button class="btn btn-success" onclick="App.testAutoBackup()" style="width: 100%;">
+                        <i class="fas fa-robot"></i> 🤖 Probar Backup Automático
+                    </button>
+                    <p style="margin-top: 10px; text-align: center; color: var(--gray); font-size: 0.85rem;">
+                        Este botón ejecuta el mismo backup que se enviará a las 10 PM
+                    </p>
+                </div>
+                ` : ''}
             </div>
         `;
         
@@ -4215,6 +4241,27 @@ async importConfig(file) {
             }
         } catch (error) {
             Utils.showNotification('Error al enviar a Telegram: ' + error.message, 'error', 5000);
+        } finally {
+            Utils.showLoading(false);
+        }
+    },
+
+    // NUEVO: Probar backup automático (ejecuta el mismo método que se ejecutará a las 10 PM)
+    async testAutoBackup() {
+        try {
+            Utils.showLoading(true);
+            Utils.showNotification('🤖 Ejecutando backup automático de prueba...', 'info', 3000);
+            
+            // Ejecutar el mismo método que se ejecuta a las 10 PM
+            const result = await AutoBackup.forceBackup();
+            
+            if (result !== false) {
+                Utils.showNotification('✅ Backup automático enviado correctamente. Revisa tu Telegram.', 'success', 5000);
+            } else {
+                Utils.showNotification('⚠️ No se pudo enviar el backup. Verifica las credenciales.', 'warning', 5000);
+            }
+        } catch (error) {
+            Utils.showNotification('❌ Error en backup automático: ' + error.message, 'error', 5000);
         } finally {
             Utils.showLoading(false);
         }

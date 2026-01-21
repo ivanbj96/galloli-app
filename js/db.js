@@ -4,7 +4,7 @@
 // Solo se borran si explícitamente se elimina la base de datos o se limpia el almacenamiento del sitio
 const DB = {
     name: 'GallOliDB',
-    version: 1,
+    version: 2, // INCREMENTADO para agregar paymentHistory store
     db: null,
 
     async init() {

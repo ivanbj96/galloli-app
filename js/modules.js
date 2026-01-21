@@ -2833,6 +2833,49 @@ const PaymentHistoryModule = {
                 this.payments = JSON.parse(saved);
             }
         }
+        
+        // Migrar pagos existentes desde las ventas si el historial está vacío
+        if (this.payments.length === 0) {
+            await this.migrateExistingPayments();
+        }
+    },
+
+    // Migrar pagos existentes desde paymentHistory en las ventas
+    async migrateExistingPayments() {
+        console.log('🔄 Migrando pagos existentes al historial permanente...');
+        
+        const sales = SalesModule.sales || [];
+        let migratedCount = 0;
+        
+        for (const sale of sales) {
+            if (sale.paymentHistory && sale.paymentHistory.length > 0) {
+                const client = ClientsModule.getClientById(sale.clientId);
+                const clientName = client ? client.name : 'Cliente Desconocido';
+                
+                for (const payment of sale.paymentHistory) {
+                    this.recordPayment(
+                        sale.id,
+                        sale.clientId,
+                        clientName,
+                        payment.amount,
+                        payment.date,
+                        payment.time,
+                        {
+                            totalAmount: sale.totalAmount || sale.total,
+                            weight: sale.weight,
+                            quantity: sale.quantity,
+                            date: sale.date
+                        }
+                    );
+                    migratedCount++;
+                }
+            }
+        }
+        
+        if (migratedCount > 0) {
+            console.log(`✅ ${migratedCount} pagos migrados al historial permanente`);
+            await this.savePayments();
+        }
     },
 
     // Exportar historial de pagos

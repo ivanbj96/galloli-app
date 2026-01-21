@@ -56,6 +56,12 @@ const DB = {
                     const tilesStore = db.createObjectStore('mapTiles', { keyPath: 'url' });
                     tilesStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
+                if (!db.objectStoreNames.contains('paymentHistory')) {
+                    const paymentHistoryStore = db.createObjectStore('paymentHistory', { keyPath: 'id' });
+                    paymentHistoryStore.createIndex('clientId', 'clientId', { unique: false });
+                    paymentHistoryStore.createIndex('date', 'date', { unique: false });
+                    paymentHistoryStore.createIndex('timestamp', 'timestamp', { unique: false });
+                }
             };
         });
     },

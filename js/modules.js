@@ -1,4 +1,130 @@
-﻿// Módulo de Clientes
+﻿// Módulo de Historial de Pagos - PERSISTENTE Y COMPLETO
+const PaymentHistoryModule = {
+    payments: [],
+
+    async init() {
+        await this.loadPayments();
+    },
+
+    // Registrar un pago en el historial permanente
+    async recordPayment(saleId, clientId, clientName, amount, date, time, saleDetails) {
+        const payment = {
+            id: Date.now() + Math.random(), // ID único
+            saleId: saleId,
+            clientId: clientId,
+            clientName: clientName,
+            amount: parseFloat(amount),
+            date: date,
+            time: time,
+            timestamp: Date.now(),
+            saleDetails: {
+                totalAmount: saleDetails.totalAmount,
+                weight: saleDetails.weight,
+                quantity: saleDetails.quantity,
+                saleDate: saleDetails.date
+            }
+        };
+
+        this.payments.push(payment);
+        await this.savePayments();
+        
+        console.log('💰 Pago registrado en historial permanente:', payment);
+        return payment;
+    },
+
+    // Obtener todos los pagos
+    getAllPayments() {
+        return this.payments.sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener pagos por cliente
+    getPaymentsByClient(clientId) {
+        return this.payments
+            .filter(p => p.clientId === clientId)
+            .sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener pagos por fecha
+    getPaymentsByDate(date) {
+        return this.payments
+            .filter(p => p.date === date)
+            .sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener pagos por rango de fechas
+    getPaymentsByDateRange(startDate, endDate) {
+        return this.payments
+            .filter(p => p.date >= startDate && p.date <= endDate)
+            .sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener total de pagos por cliente
+    getTotalPaymentsByClient(clientId) {
+        return this.payments
+            .filter(p => p.clientId === clientId)
+            .reduce((sum, p) => sum + p.amount, 0);
+    },
+
+    // Obtener estadísticas de pagos
+    getPaymentStats() {
+        const totalPayments = this.payments.length;
+        const totalAmount = this.payments.reduce((sum, p) => sum + p.amount, 0);
+        
+        // Agrupar por cliente
+        const byClient = {};
+        this.payments.forEach(p => {
+            if (!byClient[p.clientId]) {
+                byClient[p.clientId] = {
+                    clientName: p.clientName,
+                    count: 0,
+                    total: 0
+                };
+            }
+            byClient[p.clientId].count++;
+            byClient[p.clientId].total += p.amount;
+        });
+
+        return {
+            totalPayments,
+            totalAmount,
+            byClient
+        };
+    },
+
+    async savePayments() {
+        if (DB.db) {
+            // Guardar en IndexedDB
+            const transaction = DB.db.transaction(['paymentHistory'], 'readwrite');
+            const store = transaction.objectStore('paymentHistory');
+            
+            // Limpiar y guardar todos
+            await store.clear();
+            for (const payment of this.payments) {
+                await store.put(payment);
+            }
+        } else {
+            localStorage.setItem('polloPaymentHistory', JSON.stringify(this.payments));
+        }
+    },
+
+    async loadPayments() {
+        if (DB.db) {
+            try {
+                this.payments = await DB.getAll('paymentHistory');
+            } catch (error) {
+                console.warn('Error cargando historial de pagos desde IndexedDB:', error);
+                this.payments = [];
+            }
+        } else {
+            const saved = localStorage.getItem('polloPaymentHistory');
+            if (saved) {
+                this.payments = JSON.parse(saved);
+            }
+        }
+    }
+};
+
+// Módulo de Clientes
 const ClientsModule = {
     clients: [],
 
@@ -1589,6 +1715,25 @@ const SalesModule = {
             timestamp: Date.now()
         });
 
+        // NUEVO: Registrar en historial permanente
+        const client = ClientsModule.getClientById(sale.clientId);
+        if (client && typeof PaymentHistoryModule !== 'undefined') {
+            PaymentHistoryModule.recordPayment(
+                sale.id,
+                sale.clientId,
+                client.name,
+                paymentAmount,
+                paymentDate,
+                paymentTime,
+                {
+                    totalAmount: sale.totalAmount,
+                    weight: sale.weight,
+                    quantity: sale.quantity,
+                    date: sale.date
+                }
+            );
+        }
+
         if (sale.remainingDebt <= 0.01) {
             sale.isPaid = true;
             sale.remainingDebt = 0;
@@ -2713,6 +2858,123 @@ const ConfigModule = {
     }
 };
 
+// Módulo de Historial de Pagos - Registro permanente de todos los pagos
+const PaymentHistoryModule = {
+    payments: [],
+
+    async init() {
+        await this.loadPayments();
+    },
+
+    // Registrar un pago en el historial permanente
+    recordPayment(saleId, clientId, clientName, amount, date, time, saleDetails) {
+        const payment = {
+            id: Date.now(),
+            saleId: saleId,
+            clientId: clientId,
+            clientName: clientName,
+            amount: amount,
+            date: date,
+            time: time,
+            timestamp: Date.now(),
+            saleDetails: {
+                totalAmount: saleDetails.totalAmount,
+                weight: saleDetails.weight,
+                quantity: saleDetails.quantity,
+                saleDate: saleDetails.date
+            }
+        };
+
+        this.payments.push(payment);
+        this.savePayments();
+        
+        console.log('💰 Pago registrado en historial permanente:', payment);
+    },
+
+    // Obtener todos los pagos
+    getAllPayments() {
+        return this.payments.sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener pagos por cliente
+    getPaymentsByClient(clientId) {
+        return this.payments
+            .filter(p => p.clientId === clientId)
+            .sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener pagos por rango de fechas
+    getPaymentsByDateRange(startDate, endDate) {
+        return this.payments
+            .filter(p => p.date >= startDate && p.date <= endDate)
+            .sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener pagos por cliente y rango de fechas
+    getPaymentsByClientAndDateRange(clientId, startDate, endDate) {
+        return this.payments
+            .filter(p => p.clientId === clientId && p.date >= startDate && p.date <= endDate)
+            .sort((a, b) => b.timestamp - a.timestamp);
+    },
+
+    // Obtener total pagado por cliente
+    getTotalPaidByClient(clientId) {
+        return this.payments
+            .filter(p => p.clientId === clientId)
+            .reduce((sum, p) => sum + p.amount, 0);
+    },
+
+    // Obtener estadísticas de pagos
+    getStats() {
+        const totalPayments = this.payments.length;
+        const totalAmount = this.payments.reduce((sum, p) => sum + p.amount, 0);
+        const uniqueClients = [...new Set(this.payments.map(p => p.clientId))].length;
+        
+        return {
+            totalPayments,
+            totalAmount,
+            uniqueClients,
+            averagePayment: totalPayments > 0 ? totalAmount / totalPayments : 0
+        };
+    },
+
+    // Guardar pagos en IndexedDB
+    async savePayments() {
+        if (DB.db) {
+            for (const payment of this.payments) {
+                await DB.set('paymentHistory', payment);
+            }
+        } else {
+            localStorage.setItem('polloPaymentHistory', JSON.stringify(this.payments));
+        }
+    },
+
+    // Cargar pagos desde IndexedDB
+    async loadPayments() {
+        if (DB.db) {
+            this.payments = await DB.getAll('paymentHistory');
+        } else {
+            const saved = localStorage.getItem('polloPaymentHistory');
+            if (saved) {
+                this.payments = JSON.parse(saved);
+            }
+        }
+    },
+
+    // Exportar historial de pagos
+    exportPayments(clientId = null) {
+        const payments = clientId ? this.getPaymentsByClient(clientId) : this.getAllPayments();
+        const dataStr = JSON.stringify(payments, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `historial_pagos_${clientId || 'todos'}_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+};
+
 const RutasModule = {
     actualizarRutaAutomatica() {},
     actualizarRutaPorCambioPedido() {},
@@ -2751,6 +3013,9 @@ const BackupModule = {
             diezmosRecords: DiezmosModule.records || [],
             diezmosConfig: DiezmosModule.config || { diezmoPercent: 10, ofrendaPercent: 5 },
             
+            // Historial de pagos permanente
+            paymentHistory: PaymentHistoryModule.payments || [],
+            
             // Créditos (incluido en sales pero separado para claridad)
             creditosData: {
                 creditSales: SalesModule.sales.filter(s => !s.isPaid) || [],
@@ -2769,11 +3034,12 @@ const BackupModule = {
             // Metadatos del backup
             metadata: {
                 exportDate: Utils.formatDateTime(),
-                version: '2.0',
+                version: '2.1',
                 totalClients: ClientsModule.clients.length,
                 totalSales: SalesModule.sales.length,
                 totalOrders: OrdersModule.orders.length,
                 totalExpenses: AccountingModule.expenses.length,
+                totalPayments: PaymentHistoryModule.payments.length,
                 appName: ConfigModule.currentConfig.appName || 'GallOli'
             }
         };
@@ -2844,6 +3110,12 @@ const BackupModule = {
                     if (data.diezmosConfig) {
                         DiezmosModule.config = data.diezmosConfig;
                         await DiezmosModule.saveConfig();
+                    }
+                    
+                    // Restaurar historial de pagos
+                    if (data.paymentHistory) {
+                        PaymentHistoryModule.payments = data.paymentHistory;
+                        await PaymentHistoryModule.savePayments();
                     }
                     
                     if (data.config) {

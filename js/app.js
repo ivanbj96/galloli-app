@@ -127,6 +127,7 @@ const App = {
         await MermaModule.init();
         await DiezmosModule.init();
         await CreditosModule.init();
+        await PaymentHistoryModule.init();
     },
 
     // Configurar navegación
@@ -282,6 +283,9 @@ const App = {
                 break;
             case 'creditos':
                 this.loadCreditosPage();
+                break;
+            case 'payment-history':
+                this.loadPaymentHistoryPage();
                 break;
         }
         
@@ -733,6 +737,179 @@ const App = {
             return true;
         }
         return false;
+    },
+
+    // Página de Historial de Pagos
+    loadPaymentHistoryPage() {
+        const allPayments = PaymentHistoryModule.getAllPayments();
+        const stats = PaymentHistoryModule.getStats();
+        const clients = ClientsModule.clients;
+        
+        const html = `
+            <div class="page active" id="payment-history-page">
+                <h2><i class="fas fa-history"></i> Historial de Pagos</h2>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Registro permanente de todos los pagos recibidos</p>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total de Pagos</div>
+                        <div class="stat-value" style="color: var(--primary)">${stats.totalPayments}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Monto Total</div>
+                        <div class="stat-value" style="color: var(--success)">${Utils.formatCurrency(stats.totalAmount)}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Clientes Únicos</div>
+                        <div class="stat-value">${stats.uniqueClients}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Promedio por Pago</div>
+                        <div class="stat-value">${Utils.formatCurrency(stats.averagePayment)}</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-filter"></i> Filtros</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Cliente</label>
+                            <select class="form-input" id="filter-client" onchange="App.filterPaymentHistory()">
+                                <option value="">Todos los clientes</option>
+                                ${clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" class="form-input" id="filter-start-date" onchange="App.filterPaymentHistory()">
+                        </div>
+                        <div class="form-group" style="margin: 0;">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" class="form-input" id="filter-end-date" onchange="App.filterPaymentHistory()">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-outline" onclick="App.clearPaymentFilters()">
+                            <i class="fas fa-times"></i> Limpiar Filtros
+                        </button>
+                        <button class="btn btn-primary" onclick="App.exportPaymentHistory()">
+                            <i class="fas fa-download"></i> Exportar
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="payment-history-list">
+                    ${this.renderPaymentHistoryList(allPayments)}
+                </div>
+            </div>
+        `;
+        
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+            mainContent.innerHTML = html;
+        }
+    },
+
+    renderPaymentHistoryList(payments) {
+        if (payments.length === 0) {
+            return `
+                <div class="card" style="background: #FFF3CD; border-left: 4px solid #FF9800;">
+                    <p style="margin: 0; color: #856404;">
+                        <i class="fas fa-info-circle"></i> No hay pagos registrados con los filtros seleccionados
+                    </p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="card">
+                <h3><i class="fas fa-list"></i> Pagos Registrados (${payments.length})</h3>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha y Hora</th>
+                                <th>Cliente</th>
+                                <th>Monto</th>
+                                <th>Venta Original</th>
+                                <th>Detalles</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${payments.map(payment => `
+                                <tr>
+                                    <td>
+                                        <strong>${payment.date}</strong><br>
+                                        <small style="color: var(--gray);">${payment.time}</small>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-user"></i> ${payment.clientName}
+                                    </td>
+                                    <td>
+                                        <strong style="color: var(--success); font-size: 1.1rem;">
+                                            ${Utils.formatCurrency(payment.amount)}
+                                        </strong>
+                                    </td>
+                                    <td>
+                                        <small style="color: var(--gray);">
+                                            ${payment.saleDetails.saleDate}<br>
+                                            Total: ${Utils.formatCurrency(payment.saleDetails.totalAmount)}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-weight"></i> ${payment.saleDetails.weight.toFixed(2)} lb<br>
+                                            <i class="fas fa-egg"></i> ${payment.saleDetails.quantity} pollos
+                                        </small>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    },
+
+    filterPaymentHistory() {
+        const clientId = document.getElementById('filter-client').value;
+        const startDate = document.getElementById('filter-start-date').value;
+        const endDate = document.getElementById('filter-end-date').value;
+        
+        let payments = PaymentHistoryModule.getAllPayments();
+        
+        // Filtrar por cliente
+        if (clientId) {
+            payments = payments.filter(p => p.clientId == clientId);
+        }
+        
+        // Filtrar por rango de fechas
+        if (startDate && endDate) {
+            payments = payments.filter(p => p.date >= startDate && p.date <= endDate);
+        } else if (startDate) {
+            payments = payments.filter(p => p.date >= startDate);
+        } else if (endDate) {
+            payments = payments.filter(p => p.date <= endDate);
+        }
+        
+        // Actualizar la lista
+        const listContainer = document.getElementById('payment-history-list');
+        if (listContainer) {
+            listContainer.innerHTML = this.renderPaymentHistoryList(payments);
+        }
+    },
+
+    clearPaymentFilters() {
+        document.getElementById('filter-client').value = '';
+        document.getElementById('filter-start-date').value = '';
+        document.getElementById('filter-end-date').value = '';
+        this.filterPaymentHistory();
+    },
+
+    exportPaymentHistory() {
+        const clientId = document.getElementById('filter-client').value;
+        PaymentHistoryModule.exportPayments(clientId || null);
+        Utils.showNotification('✅ Historial exportado correctamente', 'success', 3000);
     },
 
     // Página de Configuración (NUEVA)

@@ -750,50 +750,68 @@ const App = {
                 <h2><i class="fas fa-history"></i> Historial de Pagos</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Registro permanente de todos los pagos recibidos</p>
                 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Total de Pagos</div>
-                        <div class="stat-value" style="color: var(--primary)">${stats.totalPayments}</div>
+                <div class="stats-grid" style="margin-bottom: 25px;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Total de Pagos</div>
+                        <div class="stat-value" style="color: white; font-size: 2.5rem;">${stats.totalPayments}</div>
+                        <div style="margin-top: 5px; font-size: 0.85rem; opacity: 0.9;">
+                            <i class="fas fa-receipt"></i> Transacciones
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Monto Total</div>
-                        <div class="stat-value" style="color: var(--success)">${Utils.formatCurrency(stats.totalAmount)}</div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); color: white; border: none;">
+                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Monto Total</div>
+                        <div class="stat-value" style="color: white; font-size: 2.5rem;">${Utils.formatCurrency(stats.totalAmount)}</div>
+                        <div style="margin-top: 5px; font-size: 0.85rem; opacity: 0.9;">
+                            <i class="fas fa-money-bill-wave"></i> Recaudado
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Clientes Únicos</div>
-                        <div class="stat-value">${stats.uniqueClients}</div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none;">
+                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Clientes Únicos</div>
+                        <div class="stat-value" style="color: white; font-size: 2.5rem;">${stats.uniqueClients}</div>
+                        <div style="margin-top: 5px; font-size: 0.85rem; opacity: 0.9;">
+                            <i class="fas fa-users"></i> Clientes
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Promedio por Pago</div>
-                        <div class="stat-value">${Utils.formatCurrency(stats.averagePayment)}</div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; border: none;">
+                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Promedio por Pago</div>
+                        <div class="stat-value" style="color: white; font-size: 2.5rem;">${Utils.formatCurrency(stats.averagePayment)}</div>
+                        <div style="margin-top: 5px; font-size: 0.85rem; opacity: 0.9;">
+                            <i class="fas fa-chart-line"></i> Promedio
+                        </div>
                     </div>
                 </div>
                 
-                <div class="card">
-                    <h3><i class="fas fa-filter"></i> Filtros</h3>
+                <div class="card" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="margin-bottom: 20px;"><i class="fas fa-filter"></i> Filtros de Búsqueda</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
                         <div class="form-group" style="margin: 0;">
-                            <label class="form-label">Cliente</label>
-                            <select class="form-input" id="filter-client" onchange="App.filterPaymentHistory()">
+                            <label class="form-label" style="font-weight: 600;">
+                                <i class="fas fa-user"></i> Cliente
+                            </label>
+                            <select class="form-input" id="filter-client" onchange="App.filterPaymentHistory()" style="border: 2px solid var(--border);">
                                 <option value="">Todos los clientes</option>
                                 ${clients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-group" style="margin: 0;">
-                            <label class="form-label">Fecha Inicio</label>
-                            <input type="date" class="form-input" id="filter-start-date" onchange="App.filterPaymentHistory()">
+                            <label class="form-label" style="font-weight: 600;">
+                                <i class="fas fa-calendar-alt"></i> Fecha Inicio
+                            </label>
+                            <input type="date" class="form-input" id="filter-start-date" onchange="App.filterPaymentHistory()" style="border: 2px solid var(--border);">
                         </div>
                         <div class="form-group" style="margin: 0;">
-                            <label class="form-label">Fecha Fin</label>
-                            <input type="date" class="form-input" id="filter-end-date" onchange="App.filterPaymentHistory()">
+                            <label class="form-label" style="font-weight: 600;">
+                                <i class="fas fa-calendar-check"></i> Fecha Fin
+                            </label>
+                            <input type="date" class="form-input" id="filter-end-date" onchange="App.filterPaymentHistory()" style="border: 2px solid var(--border);">
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-outline" onclick="App.clearPaymentFilters()">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-outline" onclick="App.clearPaymentFilters()" style="flex: 1; min-width: 150px;">
                             <i class="fas fa-times"></i> Limpiar Filtros
                         </button>
-                        <button class="btn btn-primary" onclick="App.exportPaymentHistory()">
-                            <i class="fas fa-download"></i> Exportar
+                        <button class="btn btn-primary" onclick="App.exportPaymentHistory()" style="flex: 1; min-width: 150px;">
+                            <i class="fas fa-download"></i> Exportar Historial
                         </button>
                     </div>
                 </div>
@@ -821,54 +839,116 @@ const App = {
             `;
         }
 
-        return `
-            <div class="card">
-                <h3><i class="fas fa-list"></i> Pagos Registrados (${payments.length})</h3>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Fecha y Hora</th>
-                                <th>Cliente</th>
-                                <th>Monto</th>
-                                <th>Venta Original</th>
-                                <th>Detalles</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${payments.map(payment => `
-                                <tr>
-                                    <td>
-                                        <strong>${payment.date}</strong><br>
-                                        <small style="color: var(--gray);">${payment.time}</small>
-                                    </td>
-                                    <td>
-                                        <i class="fas fa-user"></i> ${payment.clientName}
-                                    </td>
-                                    <td>
-                                        <strong style="color: var(--success); font-size: 1.1rem;">
-                                            ${Utils.formatCurrency(payment.amount)}
-                                        </strong>
-                                    </td>
-                                    <td>
-                                        <small style="color: var(--gray);">
-                                            ${payment.saleDetails.saleDate}<br>
-                                            Total: ${Utils.formatCurrency(payment.saleDetails.totalAmount)}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <small>
-                                            <i class="fas fa-weight"></i> ${payment.saleDetails.weight.toFixed(2)} lb<br>
-                                            <i class="fas fa-egg"></i> ${payment.saleDetails.quantity} pollos
-                                        </small>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+        // Agrupar pagos por fecha
+        const paymentsByDate = {};
+        payments.forEach(payment => {
+            if (!paymentsByDate[payment.date]) {
+                paymentsByDate[payment.date] = [];
+            }
+            paymentsByDate[payment.date].push(payment);
+        });
+
+        return Object.keys(paymentsByDate).sort().reverse().map(date => `
+            <div class="card" style="margin-bottom: 20px;">
+                <h3 style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border);">
+                    <i class="fas fa-calendar-day"></i> ${date}
+                    <span style="float: right; color: var(--success); font-size: 1rem;">
+                        ${paymentsByDate[date].length} pago${paymentsByDate[date].length > 1 ? 's' : ''}
+                    </span>
+                </h3>
+                
+                <div style="display: grid; gap: 15px;">
+                    ${paymentsByDate[date].map(payment => `
+                        <div style="
+                            background: var(--bg);
+                            border: 1px solid var(--border);
+                            border-radius: 12px;
+                            padding: 20px;
+                            display: grid;
+                            grid-template-columns: auto 1fr auto;
+                            gap: 20px;
+                            align-items: center;
+                            transition: all 0.3s ease;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        " onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)';" 
+                           onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'; this.style.transform='translateY(0)';">
+                            
+                            <!-- Icono y hora -->
+                            <div style="text-align: center;">
+                                <div style="
+                                    width: 60px;
+                                    height: 60px;
+                                    border-radius: 50%;
+                                    background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%);
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    color: white;
+                                    font-size: 1.5rem;
+                                    box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+                                ">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <div style="margin-top: 8px; font-size: 0.75rem; color: var(--gray);">
+                                    ${payment.time}
+                                </div>
+                            </div>
+                            
+                            <!-- Información del pago -->
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                    <i class="fas fa-user" style="color: var(--primary);"></i>
+                                    <strong style="font-size: 1.1rem;">${payment.clientName}</strong>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 10px;">
+                                    <div style="font-size: 0.85rem; color: var(--gray);">
+                                        <i class="fas fa-calendar" style="width: 16px;"></i> 
+                                        Venta: ${payment.saleDetails.saleDate}
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: var(--gray);">
+                                        <i class="fas fa-weight" style="width: 16px;"></i> 
+                                        ${payment.saleDetails.weight.toFixed(2)} lb
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: var(--gray);">
+                                        <i class="fas fa-egg" style="width: 16px;"></i> 
+                                        ${payment.saleDetails.quantity} pollos
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: var(--gray);">
+                                        <i class="fas fa-receipt" style="width: 16px;"></i> 
+                                        Total: ${Utils.formatCurrency(payment.saleDetails.totalAmount)}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Monto del pago -->
+                            <div style="text-align: right;">
+                                <div style="
+                                    font-size: 1.8rem;
+                                    font-weight: bold;
+                                    color: var(--success);
+                                    line-height: 1;
+                                    margin-bottom: 5px;
+                                ">
+                                    ${Utils.formatCurrency(payment.amount)}
+                                </div>
+                                <div style="
+                                    display: inline-block;
+                                    padding: 4px 12px;
+                                    background: var(--success);
+                                    color: white;
+                                    border-radius: 20px;
+                                    font-size: 0.75rem;
+                                    font-weight: 500;
+                                ">
+                                    <i class="fas fa-check"></i> Pagado
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
-        `;
+        `).join('');
     },
 
     filterPaymentHistory() {

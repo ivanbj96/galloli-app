@@ -2,9 +2,13 @@
 // IMPORTANTE: IndexedDB es INDEPENDIENTE del cache del Service Worker
 // Los datos en IndexedDB NO se borran al limpiar el cache del navegador
 // Solo se borran si explícitamente se elimina la base de datos o se limpia el almacenamiento del sitio
+
+// Versión global de la DB
+window.DB_VERSION = 3;
+
 const DB = {
     name: 'GallOliDB',
-    version: 2, // INCREMENTADO para agregar paymentHistory store
+    version: window.DB_VERSION,
     db: null,
 
     async init() {
@@ -61,6 +65,9 @@ const DB = {
                     paymentHistoryStore.createIndex('clientId', 'clientId', { unique: false });
                     paymentHistoryStore.createIndex('date', 'date', { unique: false });
                     paymentHistoryStore.createIndex('timestamp', 'timestamp', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('auth')) {
+                    db.createObjectStore('auth', { keyPath: 'key' });
                 }
             };
         });

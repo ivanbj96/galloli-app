@@ -31,13 +31,12 @@ class SyncEngine {
         // 2. Sincronización inicial completa
         await this.fullSync();
 
-        // 3. Interceptar cambios locales
-        this.interceptChanges();
+        // 3. Esperar a que los módulos estén listos antes de interceptar
+        setTimeout(() => {
+            this.interceptChanges();
+        }, 2000);
 
-        // 4. Sincronización periódica (backup)
-        this.startPeriodicSync();
-
-        // 5. Detectar online/offline
+        // 4. Detectar online/offline
         window.addEventListener('online', () => this.handleOnline());
         window.addEventListener('offline', () => this.handleOffline());
 
@@ -418,6 +417,8 @@ class SyncEngine {
     interceptChanges() {
         console.log('🎯 Interceptando cambios locales...');
         
+        let interceptorsInstalled = 0;
+        
         // Clientes
         if (window.ClientsModule?.saveClients) {
             const original = ClientsModule.saveClients;
@@ -426,6 +427,9 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: clients');
                 this.notifyChange('clients');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ ClientsModule.saveClients no disponible');
         }
         
         // Ventas
@@ -436,6 +440,9 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: sales');
                 this.notifyChange('sales');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ SalesModule.saveSales no disponible');
         }
         
         // Pedidos
@@ -446,6 +453,9 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: orders');
                 this.notifyChange('orders');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ OrdersModule.saveOrders no disponible');
         }
         
         // Gastos
@@ -456,6 +466,9 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: expenses');
                 this.notifyChange('expenses');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ AccountingModule.saveExpenses no disponible');
         }
         
         // Precios
@@ -466,6 +479,9 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: prices');
                 this.notifyChange('prices');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ MermaModule.saveDailyPrices no disponible');
         }
         
         // Merma
@@ -476,6 +492,9 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: mermaRecords');
                 this.notifyChange('mermaRecords');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ MermaModule.saveMermaRecords no disponible');
         }
         
         // Historial de pagos
@@ -486,9 +505,12 @@ class SyncEngine {
                 console.log('📤 Cambio detectado: paymentHistory');
                 this.notifyChange('paymentHistory');
             };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ PaymentHistoryModule.savePayments no disponible');
         }
         
-        console.log('✅ Interceptores instalados');
+        console.log(`✅ ${interceptorsInstalled} interceptores instalados`);
     }
 
     notifyChange(dataType) {

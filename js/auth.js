@@ -149,6 +149,11 @@ class AuthManager {
             
             console.log('✅ Login exitoso:', data.user.name);
             
+            // Inicializar sincronización
+            if (window.SyncEngine) {
+                await window.SyncEngine.init();
+            }
+            
             return {
                 success: true,
                 user: data.user,
@@ -182,6 +187,11 @@ class AuthManager {
             await this.saveSession(data.token, data.user, data.business);
             
             console.log('✅ Login exitoso:', data.user.name);
+            
+            // Inicializar sincronización
+            if (window.SyncEngine) {
+                await window.SyncEngine.init();
+            }
             
             return {
                 success: true,

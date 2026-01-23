@@ -521,7 +521,7 @@ class SyncEngine {
     }
 
     notifyChange(dataType) {
-        // Enviar notificación simple via WebSocket
+        // 1. Enviar notificación simple via WebSocket para tiempo real
         if (this.ws?.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({
                 type: 'change',
@@ -535,6 +535,62 @@ class SyncEngine {
         } else {
             console.warn('⚠️ WebSocket no conectado');
         }
+        
+        // 2. Subir datos al backend (sin esperar respuesta)
+        this.uploadChanges(dataType).catch(err => {
+            console.error('Error subiendo cambios:', err);
+        });
+    }
+    
+    async uploadChanges(dataType) {
+        try {
+            // Obtener datos locales del tipo específico
+            const localData = await DB.getAll(this.getStoreName(dataType)) || [];
+            
+            if (localData.length === 0) return;
+            
+            const changes = localData.map(item => {
+                const itemId = item.id || item.key || item.date || `${dataType}_${Date.now()}`;
+                return {
+                    data_type: dataType,
+                    data_id: itemId,
+                    action: 'upsert',
+                    data: item,
+                    timestamp: Date.now()
+                };
+            });
+            
+            // Subir en lotes de 50
+            const batchSize = 50;
+            for (let i = 0; i < changes.length; i += batchSize) {
+                const batch = changes.slice(i, i + batchSize);
+                
+                await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
+                    method: 'POST',
+                    headers: window.AuthManager.getAuthHeaders(),
+                    body: JSON.stringify({ changes: batch })
+                });
+            }
+            
+            console.log(`✅ ${changes.length} cambios subidos (${dataType})`);
+        } catch (error) {
+            console.error('Error subiendo cambios:', error);
+        }
+    }
+    
+    getStoreName(dataType) {
+        const storeMap = {
+            'clients': 'clients',
+            'sales': 'sales',
+            'orders': 'orders',
+            'expenses': 'expenses',
+            'prices': 'prices',
+            'mermaRecords': 'mermaRecords',
+            'diezmos': 'diezmos',
+            'paymentHistory': 'paymentHistory',
+            'config': 'config'
+        };
+        return storeMap[dataType] || dataType;
     }
 
     startPeriodicSync() {

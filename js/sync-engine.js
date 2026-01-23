@@ -49,7 +49,14 @@ class SyncEngine {
         const user = window.AuthManager.user;
         const business = window.AuthManager.business;
         
-        const wsUrl = `${SYNC_CONFIG.WS_URL}?business_id=${business.id}&user_id=${user.id}&user_name=${encodeURIComponent(user.name)}`;
+        // Generar ID único por dispositivo/sesión
+        let deviceId = localStorage.getItem('device_id');
+        if (!deviceId) {
+            deviceId = `${user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('device_id', deviceId);
+        }
+        
+        const wsUrl = `${SYNC_CONFIG.WS_URL}?business_id=${business.id}&user_id=${deviceId}&user_name=${encodeURIComponent(user.name)}`;
         
         console.log('🔌 Conectando WebSocket...');
         

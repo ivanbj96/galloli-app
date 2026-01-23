@@ -113,10 +113,17 @@ class SyncEngine {
             clients: await DB.getAll('clients') || [],
             sales: await DB.getAll('sales') || [],
             orders: await DB.getAll('orders') || [],
-            expenses: await DB.getAll('expenses') || []
+            expenses: await DB.getAll('expenses') || [],
+            prices: await DB.getAll('prices') || [],
+            mermaRecords: await DB.getAll('mermaRecords') || [],
+            diezmos: await DB.getAll('diezmos') || [],
+            paymentHistory: await DB.getAll('paymentHistory') || [],
+            config: await DB.getAll('config') || []
         };
         
-        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+        const total = data.clients.length + data.sales.length + data.orders.length + 
+                     data.expenses.length + data.prices.length + data.mermaRecords.length + 
+                     data.diezmos.length + data.paymentHistory.length + data.config.length;
         console.log(`📦 ${total} registros locales encontrados`);
         
         return data;
@@ -141,7 +148,12 @@ class SyncEngine {
                 clients: [],
                 sales: [],
                 orders: [],
-                expenses: []
+                expenses: [],
+                prices: [],
+                mermaRecords: [],
+                diezmos: [],
+                paymentHistory: [],
+                config: []
             };
             
             (result.data || []).forEach(item => {
@@ -150,13 +162,15 @@ class SyncEngine {
                 }
             });
             
-            const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+            const total = data.clients.length + data.sales.length + data.orders.length + 
+                         data.expenses.length + data.prices.length + data.mermaRecords.length + 
+                         data.diezmos.length + data.paymentHistory.length + data.config.length;
             console.log(`☁️ ${total} registros remotos encontrados`);
             
             return data;
         } catch (error) {
             console.error('Error obteniendo datos remotos:', error);
-            return { clients: [], sales: [], orders: [], expenses: [] };
+            return { clients: [], sales: [], orders: [], expenses: [], prices: [], mermaRecords: [], diezmos: [], paymentHistory: [], config: [] };
         }
     }
 
@@ -167,34 +181,46 @@ class SyncEngine {
             clients: [],
             sales: [],
             orders: [],
-            expenses: []
+            expenses: [],
+            prices: [],
+            mermaRecords: [],
+            diezmos: [],
+            paymentHistory: [],
+            config: []
         };
         
         const toDownload = {
             clients: [],
             sales: [],
             orders: [],
-            expenses: []
+            expenses: [],
+            prices: [],
+            mermaRecords: [],
+            diezmos: [],
+            paymentHistory: [],
+            config: []
         };
         
         // Para cada tipo de dato
-        for (const dataType of ['clients', 'sales', 'orders', 'expenses']) {
+        for (const dataType of ['clients', 'sales', 'orders', 'expenses', 'prices', 'mermaRecords', 'diezmos', 'paymentHistory', 'config']) {
             const local = localData[dataType] || [];
             const remote = remoteData[dataType] || [];
             
-            // Crear mapas por ID
-            const localMap = new Map(local.map(item => [item.id, item]));
-            const remoteMap = new Map(remote.map(item => [item.id, item]));
+            // Crear mapas por ID (o key para config)
+            const getKey = (item) => item.id || item.key || item.date;
+            const localMap = new Map(local.map(item => [getKey(item), item]));
+            const remoteMap = new Map(remote.map(item => [getKey(item), item]));
             
             // Datos locales que no existen en remoto -> SUBIR
             local.forEach(item => {
-                if (!remoteMap.has(item.id)) {
+                const key = getKey(item);
+                if (!remoteMap.has(key)) {
                     toUpload[dataType].push(item);
                 } else {
                     // Existe en ambos - comparar timestamps
-                    const remoteItem = remoteMap.get(item.id);
-                    const localTime = item.timestamp || item.date || 0;
-                    const remoteTime = remoteItem.timestamp || remoteItem.date || 0;
+                    const remoteItem = remoteMap.get(key);
+                    const localTime = item.timestamp || item.date || item.created_at || 0;
+                    const remoteTime = remoteItem.timestamp || remoteItem.date || remoteItem.created_at || 0;
                     
                     // Si local es más reciente, subir
                     if (localTime > remoteTime) {
@@ -205,13 +231,14 @@ class SyncEngine {
             
             // Datos remotos que no existen localmente -> DESCARGAR
             remote.forEach(item => {
-                if (!localMap.has(item.id)) {
+                const key = getKey(item);
+                if (!localMap.has(key)) {
                     toDownload[dataType].push(item);
                 } else {
                     // Existe en ambos - comparar timestamps
-                    const localItem = localMap.get(item.id);
-                    const localTime = localItem.timestamp || localItem.date || 0;
-                    const remoteTime = item.timestamp || item.date || 0;
+                    const localItem = localMap.get(key);
+                    const localTime = localItem.timestamp || localItem.date || localItem.created_at || 0;
+                    const remoteTime = item.timestamp || item.date || item.created_at || 0;
                     
                     // Si remoto es más reciente, descargar
                     if (remoteTime > localTime) {
@@ -221,8 +248,12 @@ class SyncEngine {
             });
         }
         
-        const uploadCount = toUpload.clients.length + toUpload.sales.length + toUpload.orders.length + toUpload.expenses.length;
-        const downloadCount = toDownload.clients.length + toDownload.sales.length + toDownload.orders.length + toDownload.expenses.length;
+        const uploadCount = toUpload.clients.length + toUpload.sales.length + toUpload.orders.length + 
+                           toUpload.expenses.length + toUpload.prices.length + toUpload.mermaRecords.length + 
+                           toUpload.diezmos.length + toUpload.paymentHistory.length + toUpload.config.length;
+        const downloadCount = toDownload.clients.length + toDownload.sales.length + toDownload.orders.length + 
+                             toDownload.expenses.length + toDownload.prices.length + toDownload.mermaRecords.length + 
+                             toDownload.diezmos.length + toDownload.paymentHistory.length + toDownload.config.length;
         
         console.log(`🔀 Merge completado: ${uploadCount} para subir, ${downloadCount} para descargar`);
         
@@ -230,7 +261,9 @@ class SyncEngine {
     }
 
     async uploadLocalData(data) {
-        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length + 
+                     data.prices.length + data.mermaRecords.length + data.diezmos.length + 
+                     data.paymentHistory.length + data.config.length;
         
         if (total === 0) {
             console.log('✅ No hay datos locales para subir');
@@ -241,11 +274,12 @@ class SyncEngine {
         
         const changes = [];
         
-        for (const dataType of ['clients', 'sales', 'orders', 'expenses']) {
+        for (const dataType of ['clients', 'sales', 'orders', 'expenses', 'prices', 'mermaRecords', 'diezmos', 'paymentHistory', 'config']) {
             data[dataType].forEach(item => {
+                const itemId = item.id || item.key || item.date || generateId();
                 changes.push({
                     data_type: dataType,
-                    data_id: item.id,
+                    data_id: itemId,
                     action: 'upsert',
                     data: item,
                     timestamp: Date.now()
@@ -279,7 +313,9 @@ class SyncEngine {
     }
 
     async downloadRemoteData(data) {
-        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length + 
+                     data.prices.length + data.mermaRecords.length + data.diezmos.length + 
+                     data.paymentHistory.length + data.config.length;
         
         if (total === 0) {
             console.log('✅ No hay datos remotos para descargar');
@@ -288,7 +324,7 @@ class SyncEngine {
         
         console.log(`📥 Descargando ${total} registros remotos...`);
         
-        for (const dataType of ['clients', 'sales', 'orders', 'expenses']) {
+        for (const dataType of ['clients', 'sales', 'orders', 'expenses', 'prices', 'mermaRecords', 'diezmos', 'paymentHistory', 'config']) {
             for (const item of data[dataType]) {
                 await this.updateLocalData(dataType, item);
             }
@@ -397,7 +433,11 @@ class SyncEngine {
             'sales': 'sales',
             'orders': 'orders',
             'expenses': 'expenses',
-            'prices': 'prices'
+            'prices': 'prices',
+            'mermaRecords': 'mermaRecords',
+            'diezmos': 'diezmos',
+            'paymentHistory': 'paymentHistory',
+            'config': 'config'
         };
         
         const storeName = storeMap[dataType];
@@ -411,7 +451,12 @@ class SyncEngine {
             'clients': 'clients',
             'sales': 'sales',
             'orders': 'orders',
-            'expenses': 'expenses'
+            'expenses': 'expenses',
+            'prices': 'prices',
+            'mermaRecords': 'mermaRecords',
+            'diezmos': 'diezmos',
+            'paymentHistory': 'paymentHistory',
+            'config': 'config'
         };
         
         const storeName = storeMap[dataType];
@@ -428,7 +473,12 @@ class SyncEngine {
             'clients': ['clients', 'sales', 'orders', 'dashboard'],
             'sales': ['sales', 'dashboard', 'stats', 'accounting'],
             'orders': ['orders', 'dashboard'],
-            'expenses': ['accounting', 'stats']
+            'expenses': ['accounting', 'stats'],
+            'prices': ['config', 'dashboard'],
+            'mermaRecords': ['merma', 'stats'],
+            'diezmos': ['diezmos', 'stats'],
+            'paymentHistory': ['payment-history'],
+            'config': ['config']
         };
         
         const pagesToReload = reloadMap[dataType] || [];
@@ -468,6 +518,16 @@ class SyncEngine {
                     if (window.AccountingModule && window.App) {
                         AccountingModule.updateAccounting(window.App.currentDate);
                         AccountingModule.updateExpensesList(window.App.currentDate);
+                    }
+                    break;
+                case 'merma':
+                    if (window.App) {
+                        window.App.loadPage('merma');
+                    }
+                    break;
+                case 'config':
+                    if (window.App) {
+                        window.App.loadPage('config');
                     }
                     break;
             }
@@ -518,6 +578,46 @@ class SyncEngine {
             await originalSaveExpenses.call(AccountingModule);
             const expenses = await AccountingModule.loadExpenses();
             this.queueChanges('expenses', expenses);
+        };
+        
+        // Interceptar guardado de precios
+        const originalSavePrices = PricesModule.savePrices;
+        PricesModule.savePrices = async () => {
+            await originalSavePrices.call(PricesModule);
+            const prices = await PricesModule.loadPrices();
+            this.queueChanges('prices', prices);
+        };
+        
+        // Interceptar guardado de merma
+        const originalSaveMerma = MermaModule.saveMermaRecords;
+        MermaModule.saveMermaRecords = async () => {
+            await originalSaveMerma.call(MermaModule);
+            const merma = await MermaModule.loadMermaRecords();
+            this.queueChanges('mermaRecords', merma);
+        };
+        
+        // Interceptar guardado de diezmos
+        const originalSaveDiezmos = DiezmosModule.saveDiezmos;
+        DiezmosModule.saveDiezmos = async () => {
+            await originalSaveDiezmos.call(DiezmosModule);
+            const diezmos = await DiezmosModule.loadDiezmos();
+            this.queueChanges('diezmos', diezmos);
+        };
+        
+        // Interceptar guardado de historial de pagos
+        const originalSavePaymentHistory = PaymentHistoryModule.savePaymentHistory;
+        PaymentHistoryModule.savePaymentHistory = async () => {
+            await originalSavePaymentHistory.call(PaymentHistoryModule);
+            const history = await PaymentHistoryModule.loadPaymentHistory();
+            this.queueChanges('paymentHistory', history);
+        };
+        
+        // Interceptar guardado de configuración
+        const originalSaveConfig = ConfigModule.saveConfig;
+        ConfigModule.saveConfig = async () => {
+            await originalSaveConfig.call(ConfigModule);
+            const config = await DB.getAll('config');
+            this.queueChanges('config', config);
         };
         
         console.log('✅ Interceptores de cambios instalados');

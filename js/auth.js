@@ -24,11 +24,19 @@ class AuthManager {
         // Esperar a que IndexedDB esté listo
         if (!window.DB || !window.DB.db) {
             console.log('⏳ Esperando IndexedDB...');
-            await new Promise(resolve => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 segundos máximo
+            
+            await new Promise((resolve, reject) => {
                 const checkDB = setInterval(() => {
+                    attempts++;
                     if (window.DB && window.DB.db) {
                         clearInterval(checkDB);
                         resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkDB);
+                        console.warn('⚠️ Timeout esperando IndexedDB');
+                        resolve(); // Continuar de todos modos
                     }
                 }, 100);
             });

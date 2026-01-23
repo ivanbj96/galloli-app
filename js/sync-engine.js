@@ -35,6 +35,14 @@ class SyncEngine {
         // Cargar cambios pendientes
         await this.loadPendingChanges();
         
+        // Verificar si es primera sincronización
+        const isFirstSync = await this.isFirstSync();
+        
+        if (isFirstSync) {
+            console.log('🆕 Primera sincronización - Subiendo datos locales...');
+            await this.performInitialSync();
+        }
+        
         // Conectar WebSocket
         this.connectWebSocket();
         
@@ -50,6 +58,243 @@ class SyncEngine {
         
         this.initialized = true;
         console.log('✅ Motor de sincronización inicializado');
+    }
+
+    async isFirstSync() {
+        try {
+            const syncStatus = await DB.get('config', 'sync_status');
+            return !syncStatus || !syncStatus.value || !syncStatus.value.last_full_sync;
+        } catch {
+            return true;
+        }
+    }
+
+    async performInitialSync() {
+        try {
+            console.log('📤 Iniciando sincronización inicial completa...');
+            
+            // 1. Obtener TODOS los datos locales
+            const localData = await this.getAllLocalData();
+            
+            // 2. Obtener TODOS los datos remotos
+            const remoteData = await this.getAllRemoteData();
+            
+            // 3. Hacer merge inteligente
+            const mergedData = await this.mergeData(localData, remoteData);
+            
+            // 4. Subir datos locales que no existen en remoto
+            await this.uploadLocalData(mergedData.toUpload);
+            
+            // 5. Descargar datos remotos que no existen localmente
+            await this.downloadRemoteData(mergedData.toDownload);
+            
+            // 6. Marcar como sincronizado
+            await DB.set('config', {
+                key: 'sync_status',
+                value: {
+                    last_full_sync: Date.now(),
+                    synced: true
+                }
+            });
+            
+            console.log('✅ Sincronización inicial completada');
+            alert('✅ Datos sincronizados correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error en sincronización inicial:', error);
+            alert('⚠️ Error en sincronización inicial. Tus datos locales están seguros.');
+        }
+    }
+
+    async getAllLocalData() {
+        console.log('📦 Obteniendo datos locales...');
+        
+        const data = {
+            clients: await DB.getAll('clients') || [],
+            sales: await DB.getAll('sales') || [],
+            orders: await DB.getAll('orders') || [],
+            expenses: await DB.getAll('expenses') || []
+        };
+        
+        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+        console.log(`📦 ${total} registros locales encontrados`);
+        
+        return data;
+    }
+
+    async getAllRemoteData() {
+        console.log('☁️ Obteniendo datos remotos...');
+        
+        try {
+            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/full`, {
+                headers: window.AuthManager.getAuthHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error('Error obteniendo datos remotos');
+            }
+            
+            const result = await response.json();
+            
+            // Organizar por tipo
+            const data = {
+                clients: [],
+                sales: [],
+                orders: [],
+                expenses: []
+            };
+            
+            (result.data || []).forEach(item => {
+                if (data[item.data_type]) {
+                    data[item.data_type].push(item.data);
+                }
+            });
+            
+            const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+            console.log(`☁️ ${total} registros remotos encontrados`);
+            
+            return data;
+        } catch (error) {
+            console.error('Error obteniendo datos remotos:', error);
+            return { clients: [], sales: [], orders: [], expenses: [] };
+        }
+    }
+
+    async mergeData(localData, remoteData) {
+        console.log('🔀 Haciendo merge de datos...');
+        
+        const toUpload = {
+            clients: [],
+            sales: [],
+            orders: [],
+            expenses: []
+        };
+        
+        const toDownload = {
+            clients: [],
+            sales: [],
+            orders: [],
+            expenses: []
+        };
+        
+        // Para cada tipo de dato
+        for (const dataType of ['clients', 'sales', 'orders', 'expenses']) {
+            const local = localData[dataType] || [];
+            const remote = remoteData[dataType] || [];
+            
+            // Crear mapas por ID
+            const localMap = new Map(local.map(item => [item.id, item]));
+            const remoteMap = new Map(remote.map(item => [item.id, item]));
+            
+            // Datos locales que no existen en remoto -> SUBIR
+            local.forEach(item => {
+                if (!remoteMap.has(item.id)) {
+                    toUpload[dataType].push(item);
+                } else {
+                    // Existe en ambos - comparar timestamps
+                    const remoteItem = remoteMap.get(item.id);
+                    const localTime = item.timestamp || item.date || 0;
+                    const remoteTime = remoteItem.timestamp || remoteItem.date || 0;
+                    
+                    // Si local es más reciente, subir
+                    if (localTime > remoteTime) {
+                        toUpload[dataType].push(item);
+                    }
+                }
+            });
+            
+            // Datos remotos que no existen localmente -> DESCARGAR
+            remote.forEach(item => {
+                if (!localMap.has(item.id)) {
+                    toDownload[dataType].push(item);
+                } else {
+                    // Existe en ambos - comparar timestamps
+                    const localItem = localMap.get(item.id);
+                    const localTime = localItem.timestamp || localItem.date || 0;
+                    const remoteTime = item.timestamp || item.date || 0;
+                    
+                    // Si remoto es más reciente, descargar
+                    if (remoteTime > localTime) {
+                        toDownload[dataType].push(item);
+                    }
+                }
+            });
+        }
+        
+        const uploadCount = toUpload.clients.length + toUpload.sales.length + toUpload.orders.length + toUpload.expenses.length;
+        const downloadCount = toDownload.clients.length + toDownload.sales.length + toDownload.orders.length + toDownload.expenses.length;
+        
+        console.log(`🔀 Merge completado: ${uploadCount} para subir, ${downloadCount} para descargar`);
+        
+        return { toUpload, toDownload };
+    }
+
+    async uploadLocalData(data) {
+        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+        
+        if (total === 0) {
+            console.log('✅ No hay datos locales para subir');
+            return;
+        }
+        
+        console.log(`📤 Subiendo ${total} registros locales...`);
+        
+        const changes = [];
+        
+        for (const dataType of ['clients', 'sales', 'orders', 'expenses']) {
+            data[dataType].forEach(item => {
+                changes.push({
+                    data_type: dataType,
+                    data_id: item.id,
+                    action: 'upsert',
+                    data: item,
+                    timestamp: Date.now()
+                });
+            });
+        }
+        
+        // Subir en lotes de 50
+        const batchSize = 50;
+        for (let i = 0; i < changes.length; i += batchSize) {
+            const batch = changes.slice(i, i + batchSize);
+            
+            try {
+                const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
+                    method: 'POST',
+                    headers: window.AuthManager.getAuthHeaders(),
+                    body: JSON.stringify({ changes: batch })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error subiendo lote');
+                }
+                
+                console.log(`✅ Lote ${Math.floor(i / batchSize) + 1} subido`);
+            } catch (error) {
+                console.error('❌ Error subiendo lote:', error);
+            }
+        }
+        
+        console.log('✅ Datos locales subidos');
+    }
+
+    async downloadRemoteData(data) {
+        const total = data.clients.length + data.sales.length + data.orders.length + data.expenses.length;
+        
+        if (total === 0) {
+            console.log('✅ No hay datos remotos para descargar');
+            return;
+        }
+        
+        console.log(`📥 Descargando ${total} registros remotos...`);
+        
+        for (const dataType of ['clients', 'sales', 'orders', 'expenses']) {
+            for (const item of data[dataType]) {
+                await this.updateLocalData(dataType, item);
+            }
+        }
+        
+        console.log('✅ Datos remotos descargados');
     }
 
     connectWebSocket() {
@@ -249,6 +494,12 @@ class SyncEngine {
         }
         
         items.forEach(item => {
+            // Validar que el item tenga id
+            if (!item || !item.id) {
+                console.warn('⚠️ Item sin ID, ignorando:', item);
+                return;
+            }
+            
             this.pendingChanges.push({
                 data_type: dataType,
                 data_id: item.id,

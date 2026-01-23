@@ -3454,10 +3454,10 @@ const CloudSyncModule = {
                 
                 <!-- Tabs -->
                 <div class="login-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid #eee;">
-                    <button class="login-tab active" data-tab="telegram" style="flex: 1; padding: 1rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2196F3; color: #2196F3; font-weight: bold;">
+                    <button class="login-tab active" onclick="CloudSyncModule.switchTab('telegram')" style="flex: 1; padding: 1rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2196F3; color: #2196F3; font-weight: bold;">
                         <i class="fab fa-telegram"></i> Telegram
                     </button>
-                    <button class="login-tab" data-tab="email" style="flex: 1; padding: 1rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
+                    <button class="login-tab" onclick="CloudSyncModule.switchTab('email')" style="flex: 1; padding: 1rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
                         <i class="fas fa-envelope"></i> Email
                     </button>
                 </div>
@@ -3577,26 +3577,32 @@ const CloudSyncModule = {
         if (window.AuthManager.isAuthenticated()) {
             await window.SyncEngine.init();
         }
-        
-        // Setup tabs
+    },
+    
+    switchTab(tabName) {
+        // Actualizar estilos de tabs
         document.querySelectorAll('.login-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                document.querySelectorAll('.login-tab').forEach(t => {
-                    t.classList.remove('active');
-                    t.style.borderBottom = '3px solid transparent';
-                    t.style.color = '#666';
-                });
-                e.target.classList.add('active');
-                e.target.style.borderBottom = '3px solid #2196F3';
-                e.target.style.color = '#2196F3';
-                
-                const tabName = e.target.dataset.tab;
-                document.querySelectorAll('.login-form').forEach(form => {
-                    form.style.display = 'none';
-                });
-                document.getElementById(`${tabName}-form`).style.display = 'block';
-            });
+            tab.classList.remove('active');
+            tab.style.borderBottom = '3px solid transparent';
+            tab.style.color = '#666';
         });
+        
+        const activeTab = event.target.closest('.login-tab');
+        if (activeTab) {
+            activeTab.classList.add('active');
+            activeTab.style.borderBottom = '3px solid #2196F3';
+            activeTab.style.color = '#2196F3';
+        }
+        
+        // Mostrar formulario correspondiente
+        document.querySelectorAll('.login-form').forEach(form => {
+            form.style.display = 'none';
+        });
+        
+        const targetForm = document.getElementById(`${tabName}-form`);
+        if (targetForm) {
+            targetForm.style.display = 'block';
+        }
     },
     
     async handleTelegramLogin() {

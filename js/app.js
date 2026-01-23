@@ -272,6 +272,9 @@ const App = {
             case 'backup':
                 await this.loadBackupPage(); // ESPERAR carga asíncrona
                 break;
+            case 'cloud-sync':
+                await this.loadCloudSyncPage();
+                break;
             case 'rutas':
                 this.loadRutasPage();
                 break;
@@ -2944,6 +2947,15 @@ async importConfig(file) {
         const mainContent = document.getElementById('main-content');
         if (mainContent) {
             mainContent.innerHTML = html;
+        }
+    },
+
+    // Página de Sincronización en la Nube
+    async loadCloudSyncPage() {
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) {
+            mainContent.innerHTML = await CloudSyncModule.load();
+            await CloudSyncModule.init();
         }
     },
 

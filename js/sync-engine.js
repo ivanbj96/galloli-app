@@ -28,8 +28,8 @@ class SyncEngine {
         // 1. Conectar WebSocket
         this.connectWebSocket();
 
-        // 2. Sincronización inicial completa
-        await this.fullSync();
+        // 2. Sincronización inicial inteligente con merge
+        await this.smartSync();
 
         // 3. Esperar a que los módulos estén listos antes de interceptar
         setTimeout(() => {
@@ -120,32 +120,81 @@ class SyncEngine {
         
         try {
             // Obtener datos remotos de ese tipo
-            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/full`, {
+            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/full?data_type=${dataType}`, {
                 headers: window.AuthManager.getAuthHeaders()
             });
             
             if (!response.ok) return;
             
             const result = await response.json();
+            const remoteItems = (result.data || []).map(item => item.data);
             
-            // Filtrar solo el tipo de dato que cambió
-            const items = (result.data || [])
-                .filter(item => item.data_type === dataType)
-                .map(item => item.data);
+            // Obtener datos locales
+            const storeName = this.getStoreName(dataType);
+            const localItems = await DB.getAll(storeName) || [];
             
-            // Guardar localmente
-            for (const item of items) {
-                await this.saveLocal(dataType, item);
+            // Hacer merge
+            const itemsMap = new Map();
+            
+            // Agregar items remotos
+            remoteItems.forEach(item => {
+                const id = this.getItemId(item, dataType);
+                itemsMap.set(id, item);
+            });
+            
+            // Agregar/sobrescribir con items locales si son más recientes
+            localItems.forEach(item => {
+                const id = this.getItemId(item, dataType);
+                const existing = itemsMap.get(id);
+                
+                if (!existing) {
+                    itemsMap.set(id, item);
+                } else {
+                    const localTime = this.getItemTimestamp(item);
+                    const remoteTime = this.getItemTimestamp(existing);
+                    
+                    if (localTime > remoteTime) {
+                        itemsMap.set(id, item);
+                    }
+                }
+            });
+            
+            // Guardar items merged
+            const mergedItems = Array.from(itemsMap.values());
+            
+            // Limpiar y guardar
+            for (const item of localItems) {
+                const id = this.getItemId(item, dataType);
+                await DB.delete(storeName, id);
+            }
+            
+            for (const item of mergedItems) {
+                await DB.set(storeName, item);
             }
             
             // Recargar UI
             await this.reloadUI(dataType);
             
-            console.log(`✅ ${items.length} items sincronizados (${dataType})`);
+            console.log(`✅ ${mergedItems.length} items sincronizados (${dataType})`);
             
         } catch (error) {
             console.error('Error sincronizando:', error);
         }
+    }
+    
+    getStoreName(dataType) {
+        const storeMap = {
+            'clients': 'clients',
+            'sales': 'sales',
+            'orders': 'orders',
+            'expenses': 'expenses',
+            'prices': 'prices',
+            'mermaRecords': 'mermaRecords',
+            'diezmos': 'diezmos',
+            'paymentHistory': 'paymentHistory',
+            'config': 'config'
+        };
+        return storeMap[dataType] || dataType;
     }
 
     async saveLocal(dataType, data) {
@@ -246,34 +295,213 @@ class SyncEngine {
         }
     }
 
-    async fullSync() {
+    async smartSync() {
         if (this.isSyncing) return;
         
         this.isSyncing = true;
-        console.log('🔄 Sincronización completa iniciada...');
+        console.log('🔄 Sincronización inteligente iniciada...');
         
         try {
             // 1. Obtener datos locales
             const localData = await this.getLocalData();
+            console.log('📦 Datos locales:', this.countItems(localData));
             
             // 2. Obtener datos remotos
             const remoteData = await this.getRemoteData();
+            console.log('☁️ Datos remotos:', this.countItems(remoteData));
             
-            // 3. Subir datos locales
-            await this.uploadData(localData);
+            // 3. Hacer merge inteligente
+            const mergedData = await this.mergeData(localData, remoteData);
+            console.log('🔀 Datos después del merge:', this.countItems(mergedData));
             
-            // 4. Descargar y aplicar datos remotos
-            await this.downloadData(remoteData);
+            // 4. Subir datos que faltan en el servidor
+            await this.uploadMissingData(mergedData, remoteData);
             
-            // 5. Recargar toda la UI
+            // 5. Aplicar datos localmente
+            await this.applyMergedData(mergedData);
+            
+            // 6. Recargar toda la UI
             await this.reloadAllModules();
             
-            console.log('✅ Sincronización completa');
+            console.log('✅ Sincronización inteligente completada');
             
         } catch (error) {
             console.error('❌ Error en sincronización:', error);
         } finally {
             this.isSyncing = false;
+        }
+    }
+    
+    countItems(data) {
+        const counts = {};
+        for (const [type, items] of Object.entries(data)) {
+            counts[type] = items.length;
+        }
+        return counts;
+    }
+    
+    async mergeData(localData, remoteData) {
+        console.log('🔀 Haciendo merge inteligente...');
+        
+        const merged = {};
+        const dataTypes = ['clients', 'sales', 'orders', 'expenses', 'prices', 'mermaRecords', 'diezmos', 'paymentHistory', 'config'];
+        
+        for (const type of dataTypes) {
+            const local = localData[type] || [];
+            const remote = remoteData[type] || [];
+            
+            // Crear mapa por ID
+            const itemsMap = new Map();
+            
+            // Agregar items remotos
+            remote.forEach(item => {
+                const id = this.getItemId(item, type);
+                itemsMap.set(id, {
+                    ...item,
+                    _source: 'remote'
+                });
+            });
+            
+            // Agregar/sobrescribir con items locales (comparando timestamps)
+            local.forEach(item => {
+                const id = this.getItemId(item, type);
+                const existing = itemsMap.get(id);
+                
+                if (!existing) {
+                    // Item solo existe localmente
+                    itemsMap.set(id, {
+                        ...item,
+                        _source: 'local'
+                    });
+                } else {
+                    // Item existe en ambos - comparar timestamps
+                    const localTime = this.getItemTimestamp(item);
+                    const remoteTime = this.getItemTimestamp(existing);
+                    
+                    if (localTime > remoteTime) {
+                        // Local es más reciente
+                        itemsMap.set(id, {
+                            ...item,
+                            _source: 'local_newer'
+                        });
+                    }
+                    // Si remote es más reciente o igual, mantener el que ya está
+                }
+            });
+            
+            // Convertir mapa a array
+            merged[type] = Array.from(itemsMap.values()).map(item => {
+                const { _source, ...cleanItem } = item;
+                return cleanItem;
+            });
+            
+            console.log(`  ${type}: ${local.length} local + ${remote.length} remote = ${merged[type].length} merged`);
+        }
+        
+        return merged;
+    }
+    
+    getItemId(item, type) {
+        // Obtener ID único del item según su tipo
+        if (item.id) return String(item.id);
+        if (item.key) return String(item.key);
+        if (item.date) return String(item.date);
+        
+        // Fallback: crear ID basado en contenido
+        return `${type}_${JSON.stringify(item).substring(0, 50)}`;
+    }
+    
+    getItemTimestamp(item) {
+        // Obtener timestamp del item
+        if (item.timestamp) {
+            if (typeof item.timestamp === 'number') return item.timestamp;
+            return new Date(item.timestamp).getTime();
+        }
+        if (item.date) {
+            return new Date(item.date).getTime();
+        }
+        if (item.created_at) {
+            return new Date(item.created_at).getTime();
+        }
+        return 0;
+    }
+    
+    async uploadMissingData(mergedData, remoteData) {
+        console.log('📤 Subiendo datos que faltan en el servidor...');
+        
+        const changes = [];
+        
+        for (const [dataType, items] of Object.entries(mergedData)) {
+            const remoteItems = remoteData[dataType] || [];
+            const remoteIds = new Set(remoteItems.map(item => this.getItemId(item, dataType)));
+            
+            // Encontrar items que no están en el servidor
+            const missingItems = items.filter(item => {
+                const id = this.getItemId(item, dataType);
+                return !remoteIds.has(id);
+            });
+            
+            if (missingItems.length > 0) {
+                console.log(`  ${dataType}: ${missingItems.length} items nuevos`);
+                
+                missingItems.forEach(item => {
+                    const itemId = this.getItemId(item, dataType);
+                    changes.push({
+                        data_type: dataType,
+                        data_id: itemId,
+                        action: 'upsert',
+                        data: item,
+                        timestamp: this.getItemTimestamp(item) || Date.now()
+                    });
+                });
+            }
+        }
+        
+        if (changes.length === 0) {
+            console.log('✅ Todos los datos ya están sincronizados');
+            return;
+        }
+        
+        console.log(`📤 Subiendo ${changes.length} cambios...`);
+        
+        // Subir en lotes de 50
+        const batchSize = 50;
+        for (let i = 0; i < changes.length; i += batchSize) {
+            const batch = changes.slice(i, i + batchSize);
+            
+            try {
+                await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
+                    method: 'POST',
+                    headers: window.AuthManager.getAuthHeaders(),
+                    body: JSON.stringify({ changes: batch })
+                });
+                
+                console.log(`✅ Lote ${Math.floor(i / batchSize) + 1}/${Math.ceil(changes.length / batchSize)} subido`);
+            } catch (error) {
+                console.error('Error subiendo lote:', error);
+            }
+        }
+    }
+    
+    async applyMergedData(mergedData) {
+        console.log('💾 Aplicando datos localmente...');
+        
+        for (const [dataType, items] of Object.entries(mergedData)) {
+            const storeName = this.getStoreName(dataType);
+            
+            // Limpiar store actual
+            const existingItems = await DB.getAll(storeName) || [];
+            for (const item of existingItems) {
+                const id = this.getItemId(item, dataType);
+                await DB.delete(storeName, id);
+            }
+            
+            // Guardar items merged
+            for (const item of items) {
+                await DB.set(storeName, item);
+            }
+            
+            console.log(`  ${dataType}: ${items.length} items guardados`);
         }
     }
 
@@ -544,53 +772,84 @@ class SyncEngine {
     
     async uploadChanges(dataType) {
         try {
-            // Obtener datos locales del tipo específico
-            const localData = await DB.getAll(this.getStoreName(dataType)) || [];
+            // Obtener solo el item más reciente del tipo específico
+            const storeName = this.getStoreName(dataType);
+            const localData = await DB.getAll(storeName) || [];
             
             if (localData.length === 0) return;
             
-            const changes = localData.map(item => {
-                const itemId = item.id || item.key || item.date || `${dataType}_${Date.now()}`;
-                return {
-                    data_type: dataType,
-                    data_id: itemId,
-                    action: 'upsert',
-                    data: item,
-                    timestamp: Date.now()
-                };
+            // Obtener datos remotos para comparar
+            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/full?data_type=${dataType}`, {
+                headers: window.AuthManager.getAuthHeaders()
             });
             
-            // Subir en lotes de 50
-            const batchSize = 50;
-            for (let i = 0; i < changes.length; i += batchSize) {
-                const batch = changes.slice(i, i + batchSize);
-                
-                await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
-                    method: 'POST',
-                    headers: window.AuthManager.getAuthHeaders(),
-                    body: JSON.stringify({ changes: batch })
-                });
+            if (!response.ok) {
+                console.warn('No se pudo obtener datos remotos, subiendo todo');
+                await this.uploadAllData(dataType, localData);
+                return;
             }
             
-            console.log(`✅ ${changes.length} cambios subidos (${dataType})`);
+            const result = await response.json();
+            const remoteItems = (result.data || []).map(item => item.data);
+            const remoteIds = new Set(remoteItems.map(item => this.getItemId(item, dataType)));
+            
+            // Encontrar items que no están en el servidor o son más recientes
+            const itemsToUpload = localData.filter(item => {
+                const id = this.getItemId(item, dataType);
+                
+                if (!remoteIds.has(id)) {
+                    return true; // Item nuevo
+                }
+                
+                // Comparar timestamps
+                const remoteItem = remoteItems.find(r => this.getItemId(r, dataType) === id);
+                if (remoteItem) {
+                    const localTime = this.getItemTimestamp(item);
+                    const remoteTime = this.getItemTimestamp(remoteItem);
+                    return localTime > remoteTime; // Local es más reciente
+                }
+                
+                return false;
+            });
+            
+            if (itemsToUpload.length === 0) {
+                console.log(`✅ ${dataType} ya está sincronizado`);
+                return;
+            }
+            
+            console.log(`📤 Subiendo ${itemsToUpload.length} items de ${dataType}...`);
+            await this.uploadAllData(dataType, itemsToUpload);
+            
         } catch (error) {
             console.error('Error subiendo cambios:', error);
         }
     }
     
-    getStoreName(dataType) {
-        const storeMap = {
-            'clients': 'clients',
-            'sales': 'sales',
-            'orders': 'orders',
-            'expenses': 'expenses',
-            'prices': 'prices',
-            'mermaRecords': 'mermaRecords',
-            'diezmos': 'diezmos',
-            'paymentHistory': 'paymentHistory',
-            'config': 'config'
-        };
-        return storeMap[dataType] || dataType;
+    async uploadAllData(dataType, items) {
+        const changes = items.map(item => {
+            const itemId = this.getItemId(item, dataType);
+            return {
+                data_type: dataType,
+                data_id: itemId,
+                action: 'upsert',
+                data: item,
+                timestamp: this.getItemTimestamp(item) || Date.now()
+            };
+        });
+        
+        // Subir en lotes de 50
+        const batchSize = 50;
+        for (let i = 0; i < changes.length; i += batchSize) {
+            const batch = changes.slice(i, i + batchSize);
+            
+            await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
+                method: 'POST',
+                headers: window.AuthManager.getAuthHeaders(),
+                body: JSON.stringify({ changes: batch })
+            });
+        }
+        
+        console.log(`✅ ${changes.length} cambios subidos (${dataType})`);
     }
 
     startPeriodicSync() {
@@ -602,7 +861,7 @@ class SyncEngine {
         console.log('🌐 Conexión restaurada');
         this.isOnline = true;
         this.connectWebSocket();
-        this.fullSync();
+        this.smartSync();
     }
 
     handleOffline() {

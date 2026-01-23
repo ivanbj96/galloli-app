@@ -509,12 +509,8 @@ class SyncEngine {
     }
 
     startPeriodicSync() {
-        this.syncInterval = setInterval(() => {
-            if (this.isOnline && !this.isSyncing) {
-                console.log('⏰ Sincronización periódica');
-                this.fullSync();
-            }
-        }, SYNC_CONFIG.SYNC_INTERVAL);
+        // Sincronización periódica desactivada - solo WebSocket en tiempo real
+        console.log('⏰ Sincronización periódica desactivada (solo WebSocket)');
     }
 
     handleOnline() {

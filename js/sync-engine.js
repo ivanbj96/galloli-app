@@ -548,79 +548,111 @@ class SyncEngine {
     }
 
     interceptModuleChanges() {
-        // Interceptar guardado de clientes
-        const originalSaveClients = ClientsModule.saveClients;
-        ClientsModule.saveClients = async () => {
-            await originalSaveClients.call(ClientsModule);
-            const clients = await ClientsModule.loadClients();
-            this.queueChanges('clients', clients);
-        };
-        
-        // Interceptar guardado de ventas
-        const originalSaveSales = SalesModule.saveSales;
-        SalesModule.saveSales = async () => {
-            await originalSaveSales.call(SalesModule);
-            const sales = await SalesModule.loadSales();
-            this.queueChanges('sales', sales);
-        };
-        
-        // Interceptar guardado de pedidos
-        const originalSaveOrders = OrdersModule.saveOrders;
-        OrdersModule.saveOrders = async () => {
-            await originalSaveOrders.call(OrdersModule);
-            const orders = await OrdersModule.loadOrders();
-            this.queueChanges('orders', orders);
-        };
-        
-        // Interceptar guardado de gastos
-        const originalSaveExpenses = AccountingModule.saveExpenses;
-        AccountingModule.saveExpenses = async () => {
-            await originalSaveExpenses.call(AccountingModule);
-            const expenses = await AccountingModule.loadExpenses();
-            this.queueChanges('expenses', expenses);
-        };
-        
-        // Interceptar guardado de precios
-        const originalSavePrices = PricesModule.savePrices;
-        PricesModule.savePrices = async () => {
-            await originalSavePrices.call(PricesModule);
-            const prices = await PricesModule.loadPrices();
-            this.queueChanges('prices', prices);
-        };
-        
-        // Interceptar guardado de merma
-        const originalSaveMerma = MermaModule.saveMermaRecords;
-        MermaModule.saveMermaRecords = async () => {
-            await originalSaveMerma.call(MermaModule);
-            const merma = await MermaModule.loadMermaRecords();
-            this.queueChanges('mermaRecords', merma);
-        };
-        
-        // Interceptar guardado de diezmos
-        const originalSaveDiezmos = DiezmosModule.saveDiezmos;
-        DiezmosModule.saveDiezmos = async () => {
-            await originalSaveDiezmos.call(DiezmosModule);
-            const diezmos = await DiezmosModule.loadDiezmos();
-            this.queueChanges('diezmos', diezmos);
-        };
-        
-        // Interceptar guardado de historial de pagos
-        const originalSavePaymentHistory = PaymentHistoryModule.savePaymentHistory;
-        PaymentHistoryModule.savePaymentHistory = async () => {
-            await originalSavePaymentHistory.call(PaymentHistoryModule);
-            const history = await PaymentHistoryModule.loadPaymentHistory();
-            this.queueChanges('paymentHistory', history);
-        };
-        
-        // Interceptar guardado de configuración
-        const originalSaveConfig = ConfigModule.saveConfig;
-        ConfigModule.saveConfig = async () => {
-            await originalSaveConfig.call(ConfigModule);
-            const config = await DB.getAll('config');
-            this.queueChanges('config', config);
-        };
-        
-        console.log('✅ Interceptores de cambios instalados');
+        try {
+            // Interceptar guardado de clientes
+            if (typeof ClientsModule !== 'undefined' && ClientsModule.saveClients) {
+                const originalSaveClients = ClientsModule.saveClients;
+                ClientsModule.saveClients = async () => {
+                    await originalSaveClients.call(ClientsModule);
+                    const clients = await ClientsModule.loadClients();
+                    this.queueChanges('clients', clients);
+                };
+            }
+            
+            // Interceptar guardado de ventas
+            if (typeof SalesModule !== 'undefined' && SalesModule.saveSales) {
+                const originalSaveSales = SalesModule.saveSales;
+                SalesModule.saveSales = async () => {
+                    await originalSaveSales.call(SalesModule);
+                    const sales = await SalesModule.loadSales();
+                    this.queueChanges('sales', sales);
+                };
+            }
+            
+            // Interceptar guardado de pedidos
+            if (typeof OrdersModule !== 'undefined' && OrdersModule.saveOrders) {
+                const originalSaveOrders = OrdersModule.saveOrders;
+                OrdersModule.saveOrders = async () => {
+                    await originalSaveOrders.call(OrdersModule);
+                    const orders = await OrdersModule.loadOrders();
+                    this.queueChanges('orders', orders);
+                };
+            }
+            
+            // Interceptar guardado de gastos
+            if (typeof AccountingModule !== 'undefined' && AccountingModule.saveExpenses) {
+                const originalSaveExpenses = AccountingModule.saveExpenses;
+                AccountingModule.saveExpenses = async () => {
+                    await originalSaveExpenses.call(AccountingModule);
+                    const expenses = await AccountingModule.loadExpenses();
+                    this.queueChanges('expenses', expenses);
+                };
+            }
+            
+            // Interceptar guardado de precios (en MermaModule)
+            if (typeof MermaModule !== 'undefined' && MermaModule.saveDailyPrices) {
+                const originalSavePrices = MermaModule.saveDailyPrices;
+                MermaModule.saveDailyPrices = async () => {
+                    await originalSavePrices.call(MermaModule);
+                    const prices = await DB.getAll('prices');
+                    this.queueChanges('prices', prices);
+                };
+            }
+            
+            // Interceptar guardado de merma
+            if (typeof MermaModule !== 'undefined' && MermaModule.saveMermaRecords) {
+                const originalSaveMerma = MermaModule.saveMermaRecords;
+                MermaModule.saveMermaRecords = async () => {
+                    await originalSaveMerma.call(MermaModule);
+                    const mermaConfig = await DB.get('config', 'merma-records');
+                    if (mermaConfig && mermaConfig.value) {
+                        this.queueChanges('mermaRecords', mermaConfig.value);
+                    }
+                };
+            }
+            
+            // Interceptar guardado de diezmos
+            if (typeof DiezmosModule !== 'undefined' && DiezmosModule.saveConfig) {
+                const originalSaveDiezmos = DiezmosModule.saveConfig;
+                DiezmosModule.saveConfig = async () => {
+                    await originalSaveDiezmos.call(DiezmosModule);
+                    const diezmosConfig = await DB.get('config', 'diezmos-config');
+                    if (diezmosConfig && diezmosConfig.value) {
+                        this.queueChanges('diezmos', [diezmosConfig.value]);
+                    }
+                };
+            }
+            
+            // Interceptar guardado de historial de pagos
+            if (typeof PaymentHistoryModule !== 'undefined' && PaymentHistoryModule.savePayments) {
+                const originalSavePaymentHistory = PaymentHistoryModule.savePayments;
+                PaymentHistoryModule.savePayments = async () => {
+                    await originalSavePaymentHistory.call(PaymentHistoryModule);
+                    const history = await DB.getAll('paymentHistory');
+                    this.queueChanges('paymentHistory', history);
+                };
+            }
+            
+            // Interceptar guardado de configuración
+            if (typeof ConfigModule !== 'undefined' && ConfigModule.saveConfig) {
+                const originalSaveConfig = ConfigModule.saveConfig;
+                ConfigModule.saveConfig = () => {
+                    originalSaveConfig.call(ConfigModule);
+                    // ConfigModule guarda en localStorage, obtener de ahí
+                    const config = localStorage.getItem('polloConfig');
+                    if (config) {
+                        this.queueChanges('config', [{
+                            key: 'app-config',
+                            value: JSON.parse(config)
+                        }]);
+                    }
+                };
+            }
+            
+            console.log('✅ Interceptores de cambios instalados');
+        } catch (error) {
+            console.error('❌ Error instalando interceptores:', error);
+        }
     }
 
     queueChanges(dataType, items) {
@@ -629,15 +661,24 @@ class SyncEngine {
         }
         
         items.forEach(item => {
-            // Validar que el item tenga id
-            if (!item || !item.id) {
-                console.warn('⚠️ Item sin ID, ignorando:', item);
+            // Validar que el item exista
+            if (!item) {
+                console.warn('⚠️ Item vacío, ignorando');
                 return;
+            }
+            
+            // Obtener ID según el tipo de dato
+            let itemId = item.id || item.key || item.date;
+            
+            // Si no tiene ID, generar uno
+            if (!itemId) {
+                itemId = `${dataType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                console.warn('⚠️ Item sin ID, generando:', itemId);
             }
             
             this.pendingChanges.push({
                 data_type: dataType,
-                data_id: item.id,
+                data_id: itemId,
                 action: 'upsert',
                 data: item,
                 timestamp: Date.now()

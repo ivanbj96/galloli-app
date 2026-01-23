@@ -35,19 +35,8 @@ class SyncEngine {
         // Cargar cambios pendientes
         await this.loadPendingChanges();
         
-        // Verificar si es primera sincronización
-        const isFirstSync = await this.isFirstSync();
-        
-        if (isFirstSync) {
-            console.log('🆕 Primera sincronización - Subiendo datos locales...');
-            await this.performInitialSync();
-        }
-        
-        // Conectar WebSocket
+        // Conectar WebSocket PRIMERO
         this.connectWebSocket();
-        
-        // Sincronización periódica (fallback)
-        this.startPeriodicSync();
         
         // Detectar cambios de conectividad
         window.addEventListener('online', () => this.handleOnline());
@@ -56,14 +45,50 @@ class SyncEngine {
         // Interceptar cambios en módulos
         this.interceptModuleChanges();
         
+        // Esperar a que WebSocket se conecte
+        await this.waitForWebSocket();
+        
+        // Verificar si es primera sincronización o necesita sincronizar
+        const needsSync = await this.needsFullSync();
+        
+        if (needsSync) {
+            console.log('🆕 Sincronización completa necesaria...');
+            await this.performInitialSync();
+        } else {
+            // Sincronizar cambios incrementales
+            console.log('🔄 Sincronizando cambios recientes...');
+            await this.syncNow();
+        }
+        
+        // Sincronización periódica (fallback)
+        this.startPeriodicSync();
+        
         this.initialized = true;
         console.log('✅ Motor de sincronización inicializado');
     }
 
-    async isFirstSync() {
+    async waitForWebSocket(timeout = 5000) {
+        const start = Date.now();
+        while (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            if (Date.now() - start > timeout) {
+                console.warn('⚠️ Timeout esperando WebSocket');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+
+    async needsFullSync() {
         try {
             const syncStatus = await DB.get('config', 'sync_status');
-            return !syncStatus || !syncStatus.value || !syncStatus.value.last_full_sync;
+            if (!syncStatus || !syncStatus.value || !syncStatus.value.last_full_sync) {
+                return true;
+            }
+            
+            // Sincronizar si han pasado más de 24 horas
+            const dayInMs = 24 * 60 * 60 * 1000;
+            const timeSinceLastSync = Date.now() - syncStatus.value.last_full_sync;
+            return timeSinceLastSync > dayInMs;
         } catch {
             return true;
         }
@@ -72,6 +97,9 @@ class SyncEngine {
     async performInitialSync() {
         try {
             console.log('📤 Iniciando sincronización inicial completa...');
+            
+            // Mostrar indicador visual
+            this.showSyncIndicator('Sincronizando datos...');
             
             // 1. Obtener TODOS los datos locales
             const localData = await this.getAllLocalData();
@@ -88,7 +116,10 @@ class SyncEngine {
             // 5. Descargar datos remotos que no existen localmente
             await this.downloadRemoteData(mergedData.toDownload);
             
-            // 6. Marcar como sincronizado
+            // 6. Recargar todos los módulos con los datos actualizados
+            await this.reloadAllModules();
+            
+            // 7. Marcar como sincronizado
             await DB.set('config', {
                 key: 'sync_status',
                 value: {
@@ -98,11 +129,107 @@ class SyncEngine {
             });
             
             console.log('✅ Sincronización inicial completada');
-            alert('✅ Datos sincronizados correctamente');
+            this.hideSyncIndicator();
+            this.showSyncNotification('Datos sincronizados correctamente');
             
         } catch (error) {
             console.error('❌ Error en sincronización inicial:', error);
-            alert('⚠️ Error en sincronización inicial. Tus datos locales están seguros.');
+            this.hideSyncIndicator();
+            this.showSyncNotification('Error en sincronización. Tus datos locales están seguros.');
+        }
+    }
+
+    showSyncIndicator(message) {
+        // Crear indicador visual discreto
+        let indicator = document.getElementById('sync-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'sync-indicator';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: var(--primary);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+            `;
+            document.body.appendChild(indicator);
+        }
+        indicator.innerHTML = `
+            <i class="fas fa-sync fa-spin"></i>
+            <span>${message}</span>
+        `;
+        indicator.style.display = 'flex';
+    }
+
+    hideSyncIndicator() {
+        const indicator = document.getElementById('sync-indicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+
+    async reloadAllModules() {
+        console.log('🔄 Recargando todos los módulos...');
+        
+        try {
+            // Recargar clientes
+            if (window.ClientsModule) {
+                await ClientsModule.loadClients();
+                ClientsModule.updateClientList();
+                ClientsModule.updateClientSelect();
+            }
+            
+            // Recargar ventas
+            if (window.SalesModule) {
+                await SalesModule.loadSales();
+                if (window.App && window.App.currentPage === 'sales') {
+                    SalesModule.updateSalesList(window.App.currentDate);
+                }
+            }
+            
+            // Recargar pedidos
+            if (window.OrdersModule) {
+                await OrdersModule.loadOrders();
+                if (window.App && window.App.currentPage === 'orders') {
+                    OrdersModule.updateOrdersList();
+                }
+            }
+            
+            // Recargar gastos
+            if (window.AccountingModule) {
+                await AccountingModule.loadExpenses();
+                if (window.App && window.App.currentPage === 'accounting') {
+                    AccountingModule.updateAccounting(window.App.currentDate);
+                }
+            }
+            
+            // Recargar precios y merma
+            if (window.MermaModule) {
+                await MermaModule.loadDailyPrices();
+                await MermaModule.loadMermaRecords();
+            }
+            
+            // Recargar historial de pagos
+            if (window.PaymentHistoryModule) {
+                await PaymentHistoryModule.loadPayments();
+            }
+            
+            // Recargar página actual
+            if (window.App && window.App.currentPage) {
+                window.App.loadPage(window.App.currentPage);
+            }
+            
+            console.log('✅ Módulos recargados');
+        } catch (error) {
+            console.error('Error recargando módulos:', error);
         }
     }
 
@@ -660,6 +787,8 @@ class SyncEngine {
             items = [items];
         }
         
+        const changes = [];
+        
         items.forEach(item => {
             // Validar que el item exista
             if (!item) {
@@ -676,20 +805,42 @@ class SyncEngine {
                 console.warn('⚠️ Item sin ID, generando:', itemId);
             }
             
-            this.pendingChanges.push({
+            const change = {
                 data_type: dataType,
                 data_id: itemId,
                 action: 'upsert',
                 data: item,
                 timestamp: Date.now()
-            });
+            };
+            
+            this.pendingChanges.push(change);
+            changes.push(change);
         });
         
         console.log(`📝 ${items.length} cambios en cola (${dataType})`);
         
-        // Sincronizar inmediatamente si está online
+        // Enviar via WebSocket inmediatamente si está conectado
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            changes.forEach(change => {
+                try {
+                    this.ws.send(JSON.stringify({
+                        type: 'change',
+                        data: change
+                    }));
+                    console.log('📤 Cambio enviado via WebSocket:', dataType);
+                } catch (error) {
+                    console.error('Error enviando via WebSocket:', error);
+                }
+            });
+        }
+        
+        // Sincronizar via API si está online (fallback)
         if (this.isOnline && !this.isSyncing) {
-            this.syncNow();
+            // Debounce para evitar múltiples llamadas
+            clearTimeout(this.syncTimeout);
+            this.syncTimeout = setTimeout(() => {
+                this.syncNow();
+            }, 1000);
         }
     }
 

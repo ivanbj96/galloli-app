@@ -3570,12 +3570,12 @@ const CloudSyncModule = {
     },
     
     async init() {
-        // Inicializar AuthManager
-        await window.AuthManager.init();
-        
-        // Si está autenticado, iniciar motor de sincronización
+        // AuthManager y SyncEngine ya están inicializados globalmente en App.init()
+        // Solo verificar estado
         if (window.AuthManager.isAuthenticated()) {
-            await window.SyncEngine.init();
+            console.log('✅ Sesión activa en CloudSync');
+        } else {
+            console.log('⚠️ No hay sesión en CloudSync');
         }
     },
     

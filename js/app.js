@@ -21,6 +21,21 @@ const App = {
             Utils.showNotification('Usando almacenamiento local', 'warning', 3000);
         }
         
+        // INICIALIZAR SISTEMA DE AUTENTICACIÓN Y SINCRONIZACIÓN
+        try {
+            await window.AuthManager.init();
+            
+            // Si hay sesión activa, iniciar sincronización
+            if (window.AuthManager.isAuthenticated()) {
+                console.log('🔐 Sesión activa detectada:', window.AuthManager.user.name);
+                await window.SyncEngine.init();
+            } else {
+                console.log('⚠️ No hay sesión activa');
+            }
+        } catch (error) {
+            console.error('Error inicializando autenticación:', error);
+        }
+        
         // Inicializar sistema de modales
         Utils.initModals();
         

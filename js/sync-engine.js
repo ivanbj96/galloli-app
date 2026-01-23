@@ -434,8 +434,43 @@ class SyncEngine {
         const pagesToReload = reloadMap[dataType] || [];
         
         if (pagesToReload.includes(currentPage)) {
-            console.log('🔄 Recargando página actual...');
-            window.App.loadPage(currentPage);
+            console.log('🔄 Recargando página actual:', currentPage);
+            
+            // Recargar datos de los módulos
+            switch(currentPage) {
+                case 'clients':
+                    if (window.ClientsModule) {
+                        ClientsModule.updateClientList();
+                    }
+                    break;
+                case 'sales':
+                    if (window.SalesModule && window.App) {
+                        SalesModule.updateSalesList(window.App.currentDate);
+                    }
+                    break;
+                case 'orders':
+                    if (window.OrdersModule) {
+                        OrdersModule.updateOrdersList();
+                    }
+                    break;
+                case 'dashboard':
+                    // Recargar página completa del dashboard
+                    if (window.App) {
+                        window.App.loadPage('dashboard');
+                    }
+                    break;
+                case 'stats':
+                    if (window.StatsModule && window.App) {
+                        StatsModule.updateStats(window.App.currentDate);
+                    }
+                    break;
+                case 'accounting':
+                    if (window.AccountingModule && window.App) {
+                        AccountingModule.updateAccounting(window.App.currentDate);
+                        AccountingModule.updateExpensesList(window.App.currentDate);
+                    }
+                    break;
+            }
         }
     }
 

@@ -21,6 +21,19 @@ class AuthManager {
         
         console.log('🔐 Inicializando sistema de autenticación...');
         
+        // Esperar a que IndexedDB esté listo
+        if (!window.DB || !window.DB.db) {
+            console.log('⏳ Esperando IndexedDB...');
+            await new Promise(resolve => {
+                const checkDB = setInterval(() => {
+                    if (window.DB && window.DB.db) {
+                        clearInterval(checkDB);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+        
         // Cargar sesión desde IndexedDB
         await this.loadSession();
         

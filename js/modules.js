@@ -3420,3 +3420,301 @@ const MapModule = {
         }
     }
 };
+
+
+// ============================================
+// MÓDULO: SINCRONIZACIÓN EN LA NUBE
+// ============================================
+const CloudSyncModule = {
+    name: 'cloud-sync',
+    
+    async load() {
+        const isAuthenticated = window.AuthManager.isAuthenticated();
+        
+        if (!isAuthenticated) {
+            return this.renderLoginPage();
+        } else {
+            return this.renderSyncPage();
+        }
+    },
+    
+    renderLoginPage() {
+        return `
+            <div class="page-header">
+                <h1><i class="fas fa-cloud"></i> Sincronización en la Nube</h1>
+                <p>Accede a tus datos desde cualquier dispositivo</p>
+            </div>
+            
+            <div class="login-container" style="max-width: 500px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <i class="fas fa-cloud" style="font-size: 4rem; color: #2196F3; margin-bottom: 1rem;"></i>
+                    <h2 style="margin: 0 0 0.5rem 0;">Bienvenido a GallOli Cloud</h2>
+                    <p style="color: #666; margin: 0;">Sincroniza tus datos en tiempo real</p>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="login-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid #eee;">
+                    <button class="login-tab active" data-tab="telegram" style="flex: 1; padding: 1rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2196F3; color: #2196F3; font-weight: bold;">
+                        <i class="fab fa-telegram"></i> Telegram
+                    </button>
+                    <button class="login-tab" data-tab="email" style="flex: 1; padding: 1rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
+                        <i class="fas fa-envelope"></i> Email
+                    </button>
+                </div>
+                
+                <!-- Telegram Login -->
+                <div class="login-form" id="telegram-form">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Tu ID de Telegram</label>
+                        <input type="text" id="telegram-id" placeholder="Ej: 123456789" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">
+                            <i class="fas fa-info-circle"></i> Envía /start a @userinfobot para obtener tu ID
+                        </small>
+                    </div>
+                    
+                    <div id="telegram-code-section" style="display: none; margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Código de Verificación</label>
+                        <input type="text" id="telegram-code" placeholder="123456" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem;">
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">
+                            <i class="fas fa-info-circle"></i> Revisa tu Telegram, te enviamos un código
+                        </small>
+                    </div>
+                    
+                    <button id="telegram-login-btn" onclick="CloudSyncModule.handleTelegramLogin()" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #2196F3, #1976D2); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer;">
+                        <i class="fab fa-telegram"></i> Continuar con Telegram
+                    </button>
+                </div>
+                
+                <!-- Email Login -->
+                <div class="login-form" id="email-form" style="display: none;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
+                        <input type="email" id="email-input" placeholder="tu@email.com" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contraseña</label>
+                        <input type="password" id="password-input" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <button onclick="CloudSyncModule.handleEmailLogin()" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;">
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                    </button>
+                    
+                    <button onclick="CloudSyncModule.handleEmailRegister()" style="width: 100%; padding: 1rem; background: white; color: #4CAF50; border: 2px solid #4CAF50; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer;">
+                        <i class="fas fa-user-plus"></i> Crear Cuenta
+                    </button>
+                </div>
+                
+                <div id="login-message" style="margin-top: 1rem; padding: 1rem; border-radius: 8px; display: none;"></div>
+            </div>
+        `;
+    },
+    
+    renderSyncPage() {
+        const user = window.AuthManager.user;
+        const business = window.AuthManager.business;
+        
+        return `
+            <div class="page-header">
+                <h1><i class="fas fa-cloud"></i> Sincronización en la Nube</h1>
+                <p>Conectado como ${user.name}</p>
+            </div>
+            
+            <div style="max-width: 800px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #388E3C); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <i class="fas fa-check" style="font-size: 2.5rem; color: white;"></i>
+                    </div>
+                    <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">¡Conectado!</h2>
+                    <p style="color: #666; margin: 0;">${business.name}</p>
+                </div>
+                
+                <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
+                    <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <i class="fas fa-user-circle" style="font-size: 2rem; color: #2196F3;"></i>
+                            <div>
+                                <div style="font-weight: bold;">${user.name}</div>
+                                <div style="color: #666; font-size: 0.9rem;">${user.role}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <i class="fas fa-sync" style="font-size: 2rem; color: #4CAF50;"></i>
+                            <div>
+                                <div style="font-weight: bold;">Sincronización Automática</div>
+                                <div style="color: #666; font-size: 0.9rem;">Activa - Tiempo real</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; gap: 1rem;">
+                    <button onclick="CloudSyncModule.syncNow()" style="padding: 1rem; background: linear-gradient(135deg, #2196F3, #1976D2); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        <i class="fas fa-sync"></i> Sincronizar Ahora
+                    </button>
+                    
+                    <button onclick="CloudSyncModule.showInvitationCode()" style="padding: 1rem; background: white; color: #2196F3; border: 2px solid #2196F3; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        <i class="fas fa-user-plus"></i> Invitar Usuario
+                    </button>
+                    
+                    <button onclick="CloudSyncModule.logout()" style="padding: 1rem; background: white; color: #f44336; border: 2px solid #f44336; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+    
+    async init() {
+        // Inicializar AuthManager
+        await window.AuthManager.init();
+        
+        // Setup tabs
+        document.querySelectorAll('.login-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                document.querySelectorAll('.login-tab').forEach(t => {
+                    t.classList.remove('active');
+                    t.style.borderBottom = '3px solid transparent';
+                    t.style.color = '#666';
+                });
+                e.target.classList.add('active');
+                e.target.style.borderBottom = '3px solid #2196F3';
+                e.target.style.color = '#2196F3';
+                
+                const tabName = e.target.dataset.tab;
+                document.querySelectorAll('.login-form').forEach(form => {
+                    form.style.display = 'none';
+                });
+                document.getElementById(`${tabName}-form`).style.display = 'block';
+            });
+        });
+    },
+    
+    async handleTelegramLogin() {
+        const telegramId = document.getElementById('telegram-id').value.trim();
+        const codeSection = document.getElementById('telegram-code-section');
+        const codeInput = document.getElementById('telegram-code');
+        const btn = document.getElementById('telegram-login-btn');
+        
+        if (!telegramId) {
+            this.showMessage('Por favor ingresa tu ID de Telegram', 'error');
+            return;
+        }
+        
+        // Si ya se mostró el código, verificar
+        if (codeSection.style.display !== 'none') {
+            const code = codeInput.value.trim();
+            if (!code || code.length !== 6) {
+                this.showMessage('Ingresa el código de 6 dígitos', 'error');
+                return;
+            }
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+                
+                const result = await window.AuthManager.verifyTelegramCode(telegramId, code);
+                
+                if (result.success) {
+                    this.showMessage('¡Login exitoso! Recargando...', 'success');
+                    setTimeout(() => App.loadPage('cloud-sync'), 1000);
+                }
+            } catch (error) {
+                this.showMessage(error.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Código';
+            }
+            return;
+        }
+        
+        // Solicitar código
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando código...';
+            
+            await window.AuthManager.loginWithTelegram(telegramId);
+            
+            codeSection.style.display = 'block';
+            btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Código';
+            btn.disabled = false;
+            codeInput.focus();
+            
+            this.showMessage('Código enviado a tu Telegram', 'success');
+        } catch (error) {
+            this.showMessage(error.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fab fa-telegram"></i> Continuar con Telegram';
+        }
+    },
+    
+    async handleEmailLogin() {
+        const email = document.getElementById('email-input').value.trim();
+        const password = document.getElementById('password-input').value;
+        
+        if (!email || !password) {
+            this.showMessage('Completa todos los campos', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.AuthManager.loginWithEmail(email, password);
+            if (result.success) {
+                this.showMessage('¡Login exitoso! Recargando...', 'success');
+                setTimeout(() => App.loadPage('cloud-sync'), 1000);
+            }
+        } catch (error) {
+            this.showMessage(error.message, 'error');
+        }
+    },
+    
+    async handleEmailRegister() {
+        const email = document.getElementById('email-input').value.trim();
+        const password = document.getElementById('password-input').value;
+        
+        if (!email || !password) {
+            this.showMessage('Completa todos los campos', 'error');
+            return;
+        }
+        
+        const name = prompt('¿Cómo te llamas?');
+        if (!name) return;
+        
+        try {
+            const result = await window.AuthManager.registerWithEmail(email, password, name);
+            if (result.success) {
+                this.showMessage('¡Registro exitoso! Recargando...', 'success');
+                setTimeout(() => App.loadPage('cloud-sync'), 1000);
+            }
+        } catch (error) {
+            this.showMessage(error.message, 'error');
+        }
+    },
+    
+    async syncNow() {
+        alert('Sincronización manual - Próximamente');
+    },
+    
+    async showInvitationCode() {
+        alert('Códigos de invitación - Próximamente');
+    },
+    
+    async logout() {
+        if (confirm('¿Cerrar sesión?')) {
+            await window.AuthManager.logout();
+            App.loadPage('cloud-sync');
+        }
+    },
+    
+    showMessage(message, type) {
+        const msgDiv = document.getElementById('login-message');
+        msgDiv.textContent = message;
+        msgDiv.style.display = 'block';
+        msgDiv.style.background = type === 'error' ? '#ffebee' : '#e8f5e9';
+        msgDiv.style.color = type === 'error' ? '#c62828' : '#2e7d32';
+        msgDiv.style.border = `2px solid ${type === 'error' ? '#ef5350' : '#66bb6a'}`;
+    }
+};

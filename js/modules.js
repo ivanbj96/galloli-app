@@ -3737,3 +3737,19 @@ const CloudSyncModule = {
         msgDiv.style.border = `2px solid ${type === 'error' ? '#ef5350' : '#66bb6a'}`;
     }
 };
+
+
+// Exportar módulos a window para que SyncEngine pueda interceptarlos
+window.ClientsModule = ClientsModule;
+window.SalesModule = SalesModule;
+window.OrdersModule = OrdersModule;
+window.AccountingModule = AccountingModule;
+window.MermaModule = MermaModule;
+window.DiezmosModule = DiezmosModule;
+window.PaymentHistoryModule = PaymentHistoryModule;
+window.ConfigModule = ConfigModule;
+window.StatsModule = StatsModule;
+window.RutasModule = RutasModule;
+window.ReportsModule = ReportsModule;
+window.MapModule = MapModule;
+window.CloudSyncModule = CloudSyncModule;

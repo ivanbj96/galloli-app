@@ -3573,6 +3573,11 @@ const CloudSyncModule = {
         // Inicializar AuthManager
         await window.AuthManager.init();
         
+        // Si está autenticado, iniciar motor de sincronización
+        if (window.AuthManager.isAuthenticated()) {
+            await window.SyncEngine.init();
+        }
+        
         // Setup tabs
         document.querySelectorAll('.login-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -3695,7 +3700,15 @@ const CloudSyncModule = {
     },
     
     async syncNow() {
-        alert('Sincronización manual - Próximamente');
+        try {
+            Utils.showLoading(true);
+            await window.SyncEngine.syncNow();
+            Utils.showLoading(false);
+            alert('✅ Sincronización completada');
+        } catch (error) {
+            Utils.showLoading(false);
+            alert('❌ Error en sincronización: ' + error.message);
+        }
     },
     
     async showInvitationCode() {

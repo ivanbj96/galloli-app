@@ -95,7 +95,12 @@ class SyncEngine {
                 
             case 'change':
                 // Otro usuario hizo un cambio
-                this.applyRemoteChange(message.data);
+                const dataType = message.data?.data_type;
+                if (dataType) {
+                    console.log('🔔 Cambio remoto detectado:', dataType);
+                    // Sincronizar solo ese tipo de dato
+                    this.syncDataType(dataType);
+                }
                 break;
                 
             case 'presence':
@@ -104,23 +109,36 @@ class SyncEngine {
         }
     }
 
-    async applyRemoteChange(change) {
-        console.log('📥 Aplicando cambio remoto:', change.data_type);
+    async syncDataType(dataType) {
+        console.log('🔄 Sincronizando:', dataType);
         
         try {
-            const { data_type, data, action } = change;
+            // Obtener datos remotos de ese tipo
+            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/full`, {
+                headers: window.AuthManager.getAuthHeaders()
+            });
             
-            if (action === 'delete') {
-                await this.deleteLocal(data_type, data.id);
-            } else {
-                await this.saveLocal(data_type, data);
+            if (!response.ok) return;
+            
+            const result = await response.json();
+            
+            // Filtrar solo el tipo de dato que cambió
+            const items = (result.data || [])
+                .filter(item => item.data_type === dataType)
+                .map(item => item.data);
+            
+            // Guardar localmente
+            for (const item of items) {
+                await this.saveLocal(dataType, item);
             }
             
             // Recargar UI
-            await this.reloadUI(data_type);
+            await this.reloadUI(dataType);
+            
+            console.log(`✅ ${items.length} items sincronizados (${dataType})`);
             
         } catch (error) {
-            console.error('Error aplicando cambio:', error);
+            console.error('Error sincronizando:', error);
         }
     }
 
@@ -405,8 +423,8 @@ class SyncEngine {
             const original = ClientsModule.saveClients;
             ClientsModule.saveClients = async () => {
                 await original.call(ClientsModule);
-                const clients = await DB.getAll('clients');
-                this.broadcastChanges('clients', clients);
+                console.log('📤 Cambio detectado: clients');
+                this.notifyChange('clients');
             };
         }
         
@@ -415,8 +433,8 @@ class SyncEngine {
             const original = SalesModule.saveSales;
             SalesModule.saveSales = async () => {
                 await original.call(SalesModule);
-                const sales = await DB.getAll('sales');
-                this.broadcastChanges('sales', sales);
+                console.log('📤 Cambio detectado: sales');
+                this.notifyChange('sales');
             };
         }
         
@@ -425,8 +443,8 @@ class SyncEngine {
             const original = OrdersModule.saveOrders;
             OrdersModule.saveOrders = async () => {
                 await original.call(OrdersModule);
-                const orders = await DB.getAll('orders');
-                this.broadcastChanges('orders', orders);
+                console.log('📤 Cambio detectado: orders');
+                this.notifyChange('orders');
             };
         }
         
@@ -435,8 +453,8 @@ class SyncEngine {
             const original = AccountingModule.saveExpenses;
             AccountingModule.saveExpenses = async () => {
                 await original.call(AccountingModule);
-                const expenses = await DB.getAll('expenses');
-                this.broadcastChanges('expenses', expenses);
+                console.log('📤 Cambio detectado: expenses');
+                this.notifyChange('expenses');
             };
         }
         
@@ -445,8 +463,8 @@ class SyncEngine {
             const original = MermaModule.saveDailyPrices;
             MermaModule.saveDailyPrices = async () => {
                 await original.call(MermaModule);
-                const prices = await DB.getAll('prices');
-                this.broadcastChanges('prices', prices);
+                console.log('📤 Cambio detectado: prices');
+                this.notifyChange('prices');
             };
         }
         
@@ -455,10 +473,8 @@ class SyncEngine {
             const original = MermaModule.saveMermaRecords;
             MermaModule.saveMermaRecords = async () => {
                 await original.call(MermaModule);
-                const config = await DB.get('config', 'merma-records');
-                if (config?.value) {
-                    this.broadcastChanges('mermaRecords', config.value);
-                }
+                console.log('📤 Cambio detectado: mermaRecords');
+                this.notifyChange('mermaRecords');
             };
         }
         
@@ -467,52 +483,28 @@ class SyncEngine {
             const original = PaymentHistoryModule.savePayments;
             PaymentHistoryModule.savePayments = async () => {
                 await original.call(PaymentHistoryModule);
-                const history = await DB.getAll('paymentHistory');
-                this.broadcastChanges('paymentHistory', history);
+                console.log('📤 Cambio detectado: paymentHistory');
+                this.notifyChange('paymentHistory');
             };
         }
         
         console.log('✅ Interceptores instalados');
     }
 
-    broadcastChanges(dataType, items) {
-        if (!Array.isArray(items)) items = [items];
-        
-        console.log(`📤 Broadcasting ${items.length} cambios de ${dataType}`);
-        
-        items.forEach(item => {
-            const itemId = item.id || item.key || item.date || `${dataType}_${Date.now()}`;
-            
-            const change = {
-                data_type: dataType,
-                data_id: itemId,
-                action: 'upsert',
-                data: item,
-                timestamp: Date.now()
-            };
-            
-            // Enviar via WebSocket
-            if (this.ws?.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({
-                    type: 'change',
-                    data: change
-                }));
-            }
-            
-            // Enviar via API (backup)
-            this.pushToAPI(change);
-        });
-    }
-
-    async pushToAPI(change) {
-        try {
-            await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
-                method: 'POST',
-                headers: window.AuthManager.getAuthHeaders(),
-                body: JSON.stringify({ changes: [change] })
-            });
-        } catch (error) {
-            console.error('Error enviando a API:', error);
+    notifyChange(dataType) {
+        // Enviar notificación simple via WebSocket
+        if (this.ws?.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'change',
+                data: {
+                    data_type: dataType,
+                    action: 'sync_request',
+                    timestamp: Date.now()
+                }
+            }));
+            console.log('✅ Notificación enviada via WebSocket:', dataType);
+        } else {
+            console.warn('⚠️ WebSocket no conectado');
         }
     }
 

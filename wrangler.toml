@@ -1,0 +1,27 @@
+name = "galloli-sync"
+main = "workers/index.js"
+compatibility_date = "2024-01-22"
+
+# Variables de entorno
+[vars]
+ENVIRONMENT = "production"
+
+# Base de datos D1
+[[d1_databases]]
+binding = "DB"
+database_name = "galloli"
+database_id = "c5dd06b9-2998-49d5-834e-fd0d5f7f8da1"
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "SESSION_MANAGER"
+class_name = "SessionManager"
+script_name = "galloli-sync"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionManager"]
+
+# Secrets (configurar con: wrangler secret put <NAME>)
+# TELEGRAM_BOT_TOKEN
+# JWT_SECRET

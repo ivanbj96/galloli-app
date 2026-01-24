@@ -287,6 +287,25 @@ class SyncEngine {
                 }
                 break;
                 
+            case 'diezmos':
+                if (window.DiezmosModule) {
+                    await DiezmosModule.loadRecords();
+                    if (window.App?.currentPage === 'diezmos') {
+                        DiezmosModule.updateDiezmosList();
+                    }
+                }
+                break;
+                
+            case 'config':
+                if (window.ConfigModule) {
+                    await ConfigModule.loadConfig();
+                    ConfigModule.applyConfig();
+                }
+                if (window.DiezmosModule) {
+                    await DiezmosModule.loadConfig();
+                }
+                break;
+                
             case 'paymentHistory':
                 if (window.PaymentHistoryModule) {
                     await PaymentHistoryModule.loadPayments();
@@ -635,6 +654,16 @@ class SyncEngine {
                 await MermaModule.loadMermaRecords();
             }
             
+            if (window.DiezmosModule) {
+                await DiezmosModule.loadConfig();
+                await DiezmosModule.loadRecords();
+            }
+            
+            if (window.ConfigModule) {
+                await ConfigModule.loadConfig();
+                ConfigModule.applyConfig();
+            }
+            
             if (window.PaymentHistoryModule) {
                 await PaymentHistoryModule.loadPayments();
             }
@@ -743,6 +772,45 @@ class SyncEngine {
             interceptorsInstalled++;
         } else {
             console.warn('⚠️ PaymentHistoryModule.savePayments no disponible');
+        }
+        
+        // Diezmos - Configuración
+        if (window.DiezmosModule?.saveConfig) {
+            const original = DiezmosModule.saveConfig;
+            DiezmosModule.saveConfig = async () => {
+                await original.call(DiezmosModule);
+                console.log('📤 Cambio detectado: config (diezmos)');
+                this.notifyChange('config');
+            };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ DiezmosModule.saveConfig no disponible');
+        }
+        
+        // Diezmos - Registros
+        if (window.DiezmosModule?.saveRecords) {
+            const original = DiezmosModule.saveRecords;
+            DiezmosModule.saveRecords = async () => {
+                await original.call(DiezmosModule);
+                console.log('📤 Cambio detectado: diezmos');
+                this.notifyChange('diezmos');
+            };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ DiezmosModule.saveRecords no disponible');
+        }
+        
+        // Configuración de la app
+        if (window.ConfigModule?.saveConfig) {
+            const original = ConfigModule.saveConfig;
+            ConfigModule.saveConfig = function() {
+                original.call(ConfigModule);
+                console.log('📤 Cambio detectado: config (app)');
+                window.SyncEngine.notifyChange('config');
+            };
+            interceptorsInstalled++;
+        } else {
+            console.warn('⚠️ ConfigModule.saveConfig no disponible');
         }
         
         console.log(`✅ ${interceptorsInstalled} interceptores instalados`);

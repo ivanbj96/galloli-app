@@ -638,6 +638,21 @@ const App = {
                             <i class="fas fa-phone"></i> ${data.client.phone}
                         </p>
                         
+                        ${data.sales.length > 1 ? `
+                        <div style="background: linear-gradient(135deg, #4CAF50, #388E3C); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div style="color: white;">
+                                    <div style="font-size: 0.9rem; opacity: 0.9;">💡 Pago Inteligente</div>
+                                    <div style="font-size: 1.3rem; font-weight: bold;">${data.sales.length} créditos activos</div>
+                                </div>
+                                <button class="btn" onclick="App.showSmartPaymentModal(${data.client.id})" 
+                                        style="background: white; color: #4CAF50; font-weight: bold; padding: 12px 24px;">
+                                    <i class="fas fa-magic"></i> Pagar Todo
+                                </button>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
                         <ul class="sales-list">
                             ${data.sales.map(sale => `
                                 <li class="sale-item">
@@ -746,6 +761,189 @@ const App = {
                 Utils.showNotification('Error al registrar pago', 'error', 3000);
             }
         });
+    },
+
+    showSmartPaymentModal(clientId) {
+        const client = ClientsModule.getClientById(clientId);
+        if (!client) return;
+
+        const clientSales = SalesModule.getCreditSales().filter(s => s.clientId === clientId);
+        const totalDebt = clientSales.reduce((sum, sale) => sum + sale.remainingDebt, 0);
+
+        // Ordenar ventas por fecha (más antiguas primero - FIFO)
+        clientSales.sort((a, b) => {
+            const dateA = new Date(a.date + ' ' + a.time);
+            const dateB = new Date(b.date + ' ' + b.time);
+            return dateA - dateB;
+        });
+
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #4CAF50, #388E3C); color: white;">
+                    <h3><i class="fas fa-magic"></i> Pago Inteligente</h3>
+                    <button class="close-modal" onclick="this.closest('.modal').remove()" style="color: white;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="background: #E8F5E9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <p style="margin: 0 0 10px 0;"><strong>Cliente:</strong> ${client.name}</p>
+                        <p style="margin: 0 0 10px 0;"><strong>Créditos activos:</strong> ${clientSales.length}</p>
+                        <p style="margin: 0; font-size: 1.2rem; color: #4CAF50; font-weight: bold;">
+                            <strong>Deuda total:</strong> ${Utils.formatCurrency(totalDebt)}
+                        </p>
+                    </div>
+
+                    <div style="background: #FFF3CD; padding: 12px; border-radius: 8px; border-left: 4px solid #FF9800; margin-bottom: 20px;">
+                        <p style="margin: 0; color: #856404; font-size: 0.9rem;">
+                            <i class="fas fa-info-circle"></i> <strong>¿Cómo funciona?</strong>
+                        </p>
+                        <p style="margin: 5px 0 0 0; color: #856404; font-size: 0.85rem;">
+                            El pago se distribuirá automáticamente entre los créditos más antiguos primero (FIFO).
+                        </p>
+                    </div>
+
+                    <form id="smart-payment-form">
+                        <div class="form-group">
+                            <label class="form-label">Monto a Pagar</label>
+                            <input type="number" step="0.01" min="0.01" max="${totalDebt.toFixed(2)}"
+                                   class="form-input" id="smart-payment-amount" required 
+                                   placeholder="Máximo: ${totalDebt.toFixed(2)}">
+                            <div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-outline" onclick="document.getElementById('smart-payment-amount').value = ${(totalDebt / 4).toFixed(2)}" style="flex: 1; min-width: 60px; padding: 8px; font-size: 0.85rem;">
+                                    25%
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="document.getElementById('smart-payment-amount').value = ${(totalDebt / 2).toFixed(2)}" style="flex: 1; min-width: 60px; padding: 8px; font-size: 0.85rem;">
+                                    50%
+                                </button>
+                                <button type="button" class="btn btn-outline" onclick="document.getElementById('smart-payment-amount').value = ${(totalDebt * 0.75).toFixed(2)}" style="flex: 1; min-width: 60px; padding: 8px; font-size: 0.85rem;">
+                                    75%
+                                </button>
+                                <button type="button" class="btn btn-success" onclick="document.getElementById('smart-payment-amount').value = ${totalDebt.toFixed(2)}" style="flex: 1; min-width: 60px; padding: 8px; font-size: 0.85rem;">
+                                    100%
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Fecha del Pago</label>
+                            <input type="date" class="form-input" id="smart-payment-date" 
+                                   value="${Utils.getTodayDate()}" required>
+                        </div>
+
+                        <div id="payment-preview" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
+                            <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--gray);">
+                                <i class="fas fa-eye"></i> Vista Previa de Distribución
+                            </h4>
+                            <div id="preview-content"></div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%; padding: 15px; font-size: 1.1rem;">
+                            <i class="fas fa-magic"></i> Aplicar Pago Inteligente
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Preview en tiempo real
+        const amountInput = document.getElementById('smart-payment-amount');
+        amountInput.addEventListener('input', () => {
+            const amount = parseFloat(amountInput.value) || 0;
+            if (amount > 0) {
+                this.showPaymentPreview(clientSales, amount);
+            } else {
+                document.getElementById('payment-preview').style.display = 'none';
+            }
+        });
+
+        const form = modal.querySelector('#smart-payment-form');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('smart-payment-amount').value);
+            const date = document.getElementById('smart-payment-date').value;
+            
+            if (amount > totalDebt) {
+                Utils.showNotification('El monto no puede ser mayor a la deuda total', 'error', 3000);
+                return;
+            }
+
+            this.processSmartPayment(clientSales, amount, date);
+            modal.remove();
+            this.loadCreditosPage();
+            CreditosModule.updateCreditBadges();
+        });
+    },
+
+    showPaymentPreview(sales, amount) {
+        const preview = document.getElementById('payment-preview');
+        const content = document.getElementById('preview-content');
+        
+        let remaining = amount;
+        const distribution = [];
+
+        for (const sale of sales) {
+            if (remaining <= 0) break;
+            
+            const payment = Math.min(remaining, sale.remainingDebt);
+            distribution.push({
+                date: sale.date,
+                time: sale.time,
+                debt: sale.remainingDebt,
+                payment: payment,
+                remaining: sale.remainingDebt - payment
+            });
+            remaining -= payment;
+        }
+
+        content.innerHTML = distribution.map((d, i) => `
+            <div style="padding: 10px; background: white; border-radius: 6px; margin-bottom: 8px; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span><strong>${i + 1}.</strong> ${d.date} ${d.time}</span>
+                    <span style="color: var(--danger);">Deuda: ${Utils.formatCurrency(d.debt)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--success);">
+                        <i class="fas fa-arrow-right"></i> Pago: ${Utils.formatCurrency(d.payment)}
+                    </span>
+                    <span style="color: ${d.remaining === 0 ? 'var(--success)' : 'var(--warning)'}; font-weight: bold;">
+                        ${d.remaining === 0 ? '✓ Liquidado' : `Resta: ${Utils.formatCurrency(d.remaining)}`}
+                    </span>
+                </div>
+            </div>
+        `).join('');
+
+        preview.style.display = 'block';
+    },
+
+    processSmartPayment(sales, totalAmount, date) {
+        let remaining = totalAmount;
+        let paymentsProcessed = 0;
+
+        for (const sale of sales) {
+            if (remaining <= 0) break;
+            
+            const payment = Math.min(remaining, sale.remainingDebt);
+            
+            if (SalesModule.registerPayment(sale.id, payment, date)) {
+                paymentsProcessed++;
+                remaining -= payment;
+            }
+        }
+
+        if (paymentsProcessed > 0) {
+            Utils.showNotification(
+                `✅ Pago inteligente aplicado: ${Utils.formatCurrency(totalAmount - remaining)} distribuido en ${paymentsProcessed} crédito${paymentsProcessed > 1 ? 's' : ''}`,
+                'success',
+                5000
+            );
+        } else {
+            Utils.showNotification('Error al procesar el pago', 'error', 3000);
+        }
     },
 
     markSaleAsCredit(saleId) {

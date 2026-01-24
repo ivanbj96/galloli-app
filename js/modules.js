@@ -2814,10 +2814,9 @@ const PaymentHistoryModule = {
 
     // Detectar y eliminar pagos duplicados
     async removeDuplicates() {
-        console.log('🔍 Buscando pagos duplicados...');
+        const initialCount = this.payments.length;
         
         const seen = new Map();
-        const duplicates = [];
         const unique = [];
         
         // Ordenar por timestamp para mantener el más antiguo
@@ -2827,29 +2826,42 @@ const PaymentHistoryModule = {
             // Crear clave única basada en: saleId + amount + date + time
             const key = `${payment.saleId}-${payment.amount}-${payment.date}-${payment.time}`;
             
-            if (seen.has(key)) {
-                duplicates.push(payment);
-                console.log('🗑️ Duplicado encontrado:', payment);
-            } else {
+            if (!seen.has(key)) {
                 seen.set(key, true);
                 unique.push(payment);
             }
         }
         
-        if (duplicates.length > 0) {
+        const duplicatesCount = initialCount - unique.length;
+        
+        if (duplicatesCount > 0) {
+            console.log(`🗑️ ${duplicatesCount} pagos duplicados encontrados y eliminados`);
             this.payments = unique;
-            await this.savePayments();
-            console.log(`✅ ${duplicates.length} pagos duplicados eliminados`);
+            
+            // Guardar SIN disparar sincronización para evitar ciclo infinito
+            if (DB.db) {
+                // Limpiar toda la tabla y volver a insertar solo los únicos
+                const tx = DB.db.transaction(['paymentHistory'], 'readwrite');
+                const store = tx.objectStore('paymentHistory');
+                await store.clear();
+                
+                for (const payment of this.payments) {
+                    await store.put(payment);
+                }
+            } else {
+                localStorage.setItem('polloPaymentHistory', JSON.stringify(this.payments));
+            }
+            
             Utils.showNotification(
-                `🧹 ${duplicates.length} pago${duplicates.length > 1 ? 's' : ''} duplicado${duplicates.length > 1 ? 's' : ''} eliminado${duplicates.length > 1 ? 's' : ''}`,
+                `🧹 ${duplicatesCount} pago${duplicatesCount > 1 ? 's' : ''} duplicado${duplicatesCount > 1 ? 's' : ''} eliminado${duplicatesCount > 1 ? 's' : ''}`,
                 'success',
                 4000
             );
-            return duplicates.length;
-        } else {
-            console.log('✅ No se encontraron duplicados');
-            return 0;
+            
+            return duplicatesCount;
         }
+        
+        return 0;
     },
 
     // Guardar pagos en IndexedDB
@@ -2878,8 +2890,12 @@ const PaymentHistoryModule = {
         if (this.payments.length === 0) {
             await this.migrateExistingPayments();
         }
-        
-        // Limpiar duplicados automáticamente
+    },
+    
+    // Inicializar y limpiar duplicados solo una vez
+    async init() {
+        await this.loadPayments();
+        // Limpiar duplicados solo al iniciar la app
         await this.removeDuplicates();
     },
 

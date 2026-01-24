@@ -1079,97 +1079,88 @@ const App = {
                             background: var(--bg);
                             border: 1px solid var(--border);
                             border-radius: 12px;
-                            padding: 15px;
+                            padding: 12px;
                             transition: all 0.3s ease;
                             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                         " onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)';" 
                            onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'; this.style.transform='translateY(0)';">
                             
-                            <!-- Layout responsive: columna en móvil, fila en desktop -->
-                            <div style="display: flex; flex-direction: column; gap: 15px;">
-                                
-                                <!-- Fila superior: Icono + Cliente + Monto -->
-                                <div style="display: flex; align-items: center; gap: 15px; justify-content: space-between;">
-                                    
-                                    <!-- Icono y hora -->
-                                    <div style="text-align: center; flex-shrink: 0;">
-                                        <div style="
-                                            width: 50px;
-                                            height: 50px;
-                                            border-radius: 50%;
-                                            background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%);
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: center;
-                                            color: white;
-                                            font-size: 1.2rem;
-                                            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
-                                        ">
-                                            <i class="fas fa-dollar-sign"></i>
-                                        </div>
-                                        <div style="margin-top: 5px; font-size: 0.7rem; color: var(--gray); white-space: nowrap;">
-                                            ${payment.time}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Información del cliente -->
-                                    <div style="flex: 1; min-width: 0;">
-                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
-                                            <i class="fas fa-user" style="color: var(--primary); flex-shrink: 0;"></i>
-                                            <strong style="font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${payment.clientName}</strong>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Monto del pago -->
-                                    <div style="text-align: right; flex-shrink: 0;">
-                                        <div style="
-                                            font-size: 1.4rem;
-                                            font-weight: bold;
-                                            color: var(--success);
-                                            line-height: 1;
-                                            margin-bottom: 5px;
-                                            white-space: nowrap;
-                                        ">
-                                            ${Utils.formatCurrency(payment.amount)}
-                                        </div>
-                                        <div style="
-                                            display: inline-block;
-                                            padding: 3px 10px;
-                                            background: var(--success);
-                                            color: white;
-                                            border-radius: 20px;
-                                            font-size: 0.7rem;
-                                            font-weight: 500;
-                                        ">
-                                            <i class="fas fa-check"></i> Pagado
-                                        </div>
+                            <!-- Fila 1: Icono + Cliente -->
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                                <!-- Icono -->
+                                <div style="flex-shrink: 0;">
+                                    <div style="
+                                        width: 45px;
+                                        height: 45px;
+                                        border-radius: 50%;
+                                        background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: white;
+                                        font-size: 1.1rem;
+                                        box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
+                                    ">
+                                        <i class="fas fa-dollar-sign"></i>
                                     </div>
                                 </div>
                                 
-                                <!-- Detalles de la venta -->
+                                <!-- Cliente + Hora -->
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                                        <i class="fas fa-user" style="color: var(--primary); font-size: 0.85rem; flex-shrink: 0;"></i>
+                                        <strong style="font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${payment.clientName}</strong>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--gray);">
+                                        <i class="fas fa-clock"></i> ${payment.time}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fila 2: Monto + Badge -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 10px; background: #E8F5E9; border-radius: 8px;">
+                                <div>
+                                    <div style="font-size: 0.75rem; color: var(--gray); margin-bottom: 3px;">Monto Pagado</div>
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--success); line-height: 1;">
+                                        ${Utils.formatCurrency(payment.amount)}
+                                    </div>
+                                </div>
                                 <div style="
-                                    display: grid; 
-                                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); 
-                                    gap: 8px; 
-                                    padding-top: 10px; 
-                                    border-top: 1px solid var(--border);
+                                    padding: 6px 12px;
+                                    background: var(--success);
+                                    color: white;
+                                    border-radius: 20px;
+                                    font-size: 0.7rem;
+                                    font-weight: 500;
+                                    white-space: nowrap;
                                 ">
-                                    <div style="font-size: 0.8rem; color: var(--gray); overflow: hidden; text-overflow: ellipsis;">
-                                        <i class="fas fa-calendar" style="width: 14px;"></i> 
-                                        ${payment.saleDetails.saleDate}
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray); white-space: nowrap;">
-                                        <i class="fas fa-weight" style="width: 14px;"></i> 
-                                        ${payment.saleDetails.weight.toFixed(2)} lb
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray); white-space: nowrap;">
-                                        <i class="fas fa-egg" style="width: 14px;"></i> 
-                                        ${payment.saleDetails.quantity} pollos
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray); white-space: nowrap;">
-                                        <i class="fas fa-receipt" style="width: 14px;"></i> 
-                                        ${Utils.formatCurrency(payment.saleDetails.totalAmount)}
-                                    </div>
+                                    <i class="fas fa-check"></i> Pagado
+                                </div>
+                            </div>
+                            
+                            <!-- Fila 3: Detalles de la venta -->
+                            <div style="
+                                display: grid; 
+                                grid-template-columns: repeat(2, 1fr); 
+                                gap: 8px; 
+                                padding-top: 10px; 
+                                border-top: 1px solid var(--border);
+                            ">
+                                <div style="font-size: 0.75rem; color: var(--gray); overflow: hidden; text-overflow: ellipsis;">
+                                    <i class="fas fa-calendar" style="width: 14px;"></i> 
+                                    ${payment.saleDetails.saleDate}
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--gray); white-space: nowrap;">
+                                    <i class="fas fa-weight" style="width: 14px;"></i> 
+                                    ${payment.saleDetails.weight.toFixed(2)} lb
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--gray); white-space: nowrap;">
+                                    <i class="fas fa-egg" style="width: 14px;"></i> 
+                                    ${payment.saleDetails.quantity} pollos
+                                </div>
+                                <div style="font-size: 0.75rem; color: var(--gray); white-space: nowrap;">
+                                    <i class="fas fa-receipt" style="width: 14px;"></i> 
+                                    ${Utils.formatCurrency(payment.saleDetails.totalAmount)}
                                 </div>
                             </div>
                         </div>

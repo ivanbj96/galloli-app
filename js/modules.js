@@ -2812,6 +2812,46 @@ const PaymentHistoryModule = {
         };
     },
 
+    // Detectar y eliminar pagos duplicados
+    async removeDuplicates() {
+        console.log('🔍 Buscando pagos duplicados...');
+        
+        const seen = new Map();
+        const duplicates = [];
+        const unique = [];
+        
+        // Ordenar por timestamp para mantener el más antiguo
+        const sorted = [...this.payments].sort((a, b) => a.timestamp - b.timestamp);
+        
+        for (const payment of sorted) {
+            // Crear clave única basada en: saleId + amount + date + time
+            const key = `${payment.saleId}-${payment.amount}-${payment.date}-${payment.time}`;
+            
+            if (seen.has(key)) {
+                duplicates.push(payment);
+                console.log('🗑️ Duplicado encontrado:', payment);
+            } else {
+                seen.set(key, true);
+                unique.push(payment);
+            }
+        }
+        
+        if (duplicates.length > 0) {
+            this.payments = unique;
+            await this.savePayments();
+            console.log(`✅ ${duplicates.length} pagos duplicados eliminados`);
+            Utils.showNotification(
+                `🧹 ${duplicates.length} pago${duplicates.length > 1 ? 's' : ''} duplicado${duplicates.length > 1 ? 's' : ''} eliminado${duplicates.length > 1 ? 's' : ''}`,
+                'success',
+                4000
+            );
+            return duplicates.length;
+        } else {
+            console.log('✅ No se encontraron duplicados');
+            return 0;
+        }
+    },
+
     // Guardar pagos en IndexedDB
     async savePayments() {
         if (DB.db) {
@@ -2838,6 +2878,9 @@ const PaymentHistoryModule = {
         if (this.payments.length === 0) {
             await this.migrateExistingPayments();
         }
+        
+        // Limpiar duplicados automáticamente
+        await this.removeDuplicates();
     },
 
     // Migrar pagos existentes desde paymentHistory en las ventas

@@ -937,15 +937,6 @@ const App = {
 
         // Esperar a que se guarden todos los cambios
         await SalesModule.saveSales();
-        
-        // Sincronizar con el servidor si está disponible
-        if (typeof SyncEngine !== 'undefined' && window.AuthManager?.isAuthenticated()) {
-            try {
-                await SyncEngine.syncData();
-            } catch (err) {
-                console.warn('Error al sincronizar después del pago inteligente:', err);
-            }
-        }
 
         if (paymentsProcessed > 0) {
             Utils.showNotification(

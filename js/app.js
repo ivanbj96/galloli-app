@@ -1193,27 +1193,6 @@ loadConfigPage() {
                 </div>
             </div>
             
-            <!-- Notificaciones Manuales -->
-            <div class="config-group">
-                <h4><i class="fas fa-bell"></i> Notificaciones Manuales</h4>
-                <p style="margin-bottom: 15px; color: var(--gray); font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Verifica tareas pendientes y recibe notificaciones
-                </p>
-                <div class="config-actions">
-                    <button class="btn btn-warning" onclick="App.checkMermaPending()" style="width: 100%; margin-bottom: 10px;">
-                        <i class="fas fa-calculator"></i> Verificar Merma Pendiente
-                    </button>
-                    <button class="btn btn-primary" onclick="App.checkCreditsPending()" style="width: 100%; margin-bottom: 10px;">
-                        <i class="fas fa-credit-card"></i> Verificar Créditos Activos
-                    </button>
-                    <button class="btn btn-success" onclick="App.testAutoBackup()" style="width: 100%; margin-bottom: 10px;">
-                        <i class="fas fa-robot"></i> Probar Backup Automático
-                    </button>
-                    <button class="btn btn-outline" onclick="App.testAllNotifications()" style="width: 100%;">
-                        <i class="fas fa-vial"></i> Probar Todas las Notificaciones
-                    </button>
-                </div>
-            </div>
             
             <!-- Vista Previa (solo escritorio) -->
             <div class="config-preview" id="config-preview">
@@ -1248,56 +1227,6 @@ loadConfigPage() {
     }
 },
 
-// Verificar merma pendiente manualmente
-async checkMermaPending() {
-    if (typeof NotificationsModule !== 'undefined') {
-        const hasPending = await NotificationsModule.checkPendingMerma();
-        if (!hasPending) {
-            Utils.showNotification('✅ No hay merma pendiente', 'success', 3000);
-        }
-    } else {
-        Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
-    }
-},
-
-// Verificar créditos pendientes manualmente
-async checkCreditsPending() {
-    if (typeof NotificationsModule !== 'undefined') {
-        const hasPending = await NotificationsModule.checkPendingCredits();
-        if (!hasPending) {
-            Utils.showNotification('✅ No hay créditos pendientes', 'success', 3000);
-        }
-    } else {
-        Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
-    }
-},
-
-// Probar todas las notificaciones
-async testAllNotifications() {
-    if (typeof NotificationsModule !== 'undefined') {
-        Utils.showLoading(true);
-        
-        // Notificación de merma
-        await NotificationsModule.checkPendingMerma();
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Notificación de créditos
-        await NotificationsModule.checkPendingCredits();
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Notificación de backup
-        await NotificationsModule.showNotification(
-            '💾 Prueba de Backup',
-            'Esta es una notificación de prueba de backup',
-            { tag: 'test-backup', requireInteraction: false }
-        );
-        
-        Utils.showLoading(false);
-        Utils.showNotification('Notificaciones de prueba enviadas', 'success', 3000);
-    } else {
-        Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
-    }
-},
 
 // Métodos auxiliares para configuración
 openColorPicker(colorName, currentValue) {
@@ -4903,41 +4832,8 @@ async importConfig(file) {
         }
     },
 
-    // Verificar merma pendiente manualmente
-    async checkMermaPending() {
-        if (typeof PushNotifications !== 'undefined') {
-            const hasPending = await PushNotifications.checkMermaPending();
-            if (!hasPending) {
-                Utils.showNotification('✅ No hay merma pendiente', 'success', 3000);
-            }
-        } else {
-            Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
-        }
-    },
-
-    // Verificar créditos pendientes manualmente
-    async checkCreditsPending() {
-        if (typeof PushNotifications !== 'undefined') {
-            const hasPending = await PushNotifications.checkCreditsPending();
-            if (!hasPending) {
-                Utils.showNotification('✅ No hay créditos pendientes', 'success', 3000);
-            }
-        } else {
-            Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
-        }
-    },
-
-    // Probar todas las notificaciones
-    async testAllNotifications() {
-        if (typeof PushNotifications !== 'undefined') {
-            await PushNotifications.test();
-            Utils.showNotification('Notificaciones de prueba enviadas', 'success', 3000);
-        } else {
-            Utils.showNotification('Sistema de notificaciones no disponible', 'error', 3000);
-        }
-    },
     
-    // Probar backup automático
+    // Probar backup automático (mantener solo esta función)
     async testAutoBackup() {
         if (typeof AutoBackup === 'undefined') {
             Utils.showNotification('Sistema de backup automático no disponible', 'error', 3000);

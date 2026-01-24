@@ -3514,6 +3514,7 @@ const CloudSyncModule = {
     renderSyncPage() {
         const user = window.AuthManager.user;
         const business = window.AuthManager.business;
+        const isAdmin = ['super_admin', 'admin'].includes(user.role);
         
         return `
             <div class="page-header">
@@ -3521,50 +3522,97 @@ const CloudSyncModule = {
                 <p>Conectado como ${user.name}</p>
             </div>
             
-            <div style="max-width: 800px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <div style="text-align: center; margin-bottom: 2rem;">
-                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #388E3C); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-                        <i class="fas fa-check" style="font-size: 2.5rem; color: white;"></i>
-                    </div>
-                    <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">¡Conectado!</h2>
-                    <p style="color: #666; margin: 0;">${business.name}</p>
+            <div style="max-width: 1000px; margin: 2rem auto;">
+                <!-- Tabs de navegación -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid #eee; background: white; padding: 1rem; border-radius: 12px 12px 0 0;">
+                    <button class="sync-tab active" onclick="CloudSyncModule.switchSyncTab('account')" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2196F3; color: #2196F3; font-weight: bold;">
+                        <i class="fas fa-user"></i> Mi Cuenta
+                    </button>
+                    ${isAdmin ? `
+                    <button class="sync-tab" onclick="CloudSyncModule.switchSyncTab('users')" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
+                        <i class="fas fa-users"></i> Usuarios
+                    </button>
+                    <button class="sync-tab" onclick="CloudSyncModule.switchSyncTab('invitations')" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; color: #666;">
+                        <i class="fas fa-ticket-alt"></i> Invitaciones
+                    </button>
+                    ` : ''}
                 </div>
                 
-                <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
-                    <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px;">
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <i class="fas fa-user-circle" style="font-size: 2rem; color: #2196F3;"></i>
-                            <div>
-                                <div style="font-weight: bold;">${user.name}</div>
-                                <div style="color: #666; font-size: 0.9rem;">${user.role}</div>
+                <!-- Tab: Mi Cuenta -->
+                <div class="sync-tab-content" id="account-tab" style="background: white; padding: 2rem; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #388E3C); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                            <i class="fas fa-check" style="font-size: 2.5rem; color: white;"></i>
+                        </div>
+                        <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">¡Conectado!</h2>
+                        <p style="color: #666; margin: 0;">${business.name}</p>
+                    </div>
+                    
+                    <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
+                        <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <i class="fas fa-user-circle" style="font-size: 2rem; color: #2196F3;"></i>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold;">${user.name}</div>
+                                    <div style="color: #666; font-size: 0.9rem;">${this.getRoleLabel(user.role)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <i class="fas fa-sync" style="font-size: 2rem; color: #4CAF50;"></i>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold;">Sincronización Automática</div>
+                                    <div style="color: #666; font-size: 0.9rem;">Activa - Tiempo real</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px;">
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <i class="fas fa-sync" style="font-size: 2rem; color: #4CAF50;"></i>
-                            <div>
-                                <div style="font-weight: bold;">Sincronización Automática</div>
-                                <div style="color: #666; font-size: 0.9rem;">Activa - Tiempo real</div>
-                            </div>
+                    <div style="display: grid; gap: 1rem;">
+                        <button onclick="CloudSyncModule.syncNow()" style="padding: 1rem; background: linear-gradient(135deg, #2196F3, #1976D2); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            <i class="fas fa-sync"></i> Sincronizar Ahora
+                        </button>
+                        
+                        <button onclick="CloudSyncModule.logout()" style="padding: 1rem; background: white; color: #f44336; border: 2px solid #f44336; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </button>
+                    </div>
+                </div>
+                
+                ${isAdmin ? `
+                <!-- Tab: Usuarios -->
+                <div class="sync-tab-content" id="users-tab" style="display: none; background: white; padding: 2rem; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h2 style="margin: 0;"><i class="fas fa-users"></i> Usuarios del Negocio</h2>
+                        <button onclick="CloudSyncModule.loadUsers()" style="padding: 0.5rem 1rem; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-sync"></i> Recargar
+                        </button>
+                    </div>
+                    <div id="users-list">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>Cargando usuarios...</p>
                         </div>
                     </div>
                 </div>
                 
-                <div style="display: grid; gap: 1rem;">
-                    <button onclick="CloudSyncModule.syncNow()" style="padding: 1rem; background: linear-gradient(135deg, #2196F3, #1976D2); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                        <i class="fas fa-sync"></i> Sincronizar Ahora
-                    </button>
-                    
-                    <button onclick="CloudSyncModule.showInvitationCode()" style="padding: 1rem; background: white; color: #2196F3; border: 2px solid #2196F3; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                        <i class="fas fa-user-plus"></i> Invitar Usuario
-                    </button>
-                    
-                    <button onclick="CloudSyncModule.logout()" style="padding: 1rem; background: white; color: #f44336; border: 2px solid #f44336; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                    </button>
+                <!-- Tab: Invitaciones -->
+                <div class="sync-tab-content" id="invitations-tab" style="display: none; background: white; padding: 2rem; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h2 style="margin: 0;"><i class="fas fa-ticket-alt"></i> Códigos de Invitación</h2>
+                        <button onclick="CloudSyncModule.showCreateInvitation()" style="padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-plus"></i> Crear Código
+                        </button>
+                    </div>
+                    <div id="invitations-list">
+                        <div style="text-align: center; padding: 2rem; color: #666;">
+                            <p>Crea códigos de invitación para agregar nuevos usuarios</p>
+                        </div>
+                    </div>
                 </div>
+                ` : ''}
             </div>
         `;
     },
@@ -3708,17 +3756,321 @@ const CloudSyncModule = {
     async syncNow() {
         try {
             Utils.showLoading(true);
-            await window.SyncEngine.syncNow();
+            await window.SyncEngine.smartSync();
             Utils.showLoading(false);
-            alert('✅ Sincronización completada');
+            Utils.showNotification('✅ Sincronización completada', 'success', 3000);
         } catch (error) {
             Utils.showLoading(false);
-            alert('❌ Error en sincronización: ' + error.message);
+            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
         }
     },
     
+    switchSyncTab(tabName) {
+        // Actualizar tabs
+        document.querySelectorAll('.sync-tab').forEach(tab => {
+            tab.classList.remove('active');
+            tab.style.borderBottom = '3px solid transparent';
+            tab.style.color = '#666';
+        });
+        
+        const activeTab = event.target.closest('.sync-tab');
+        if (activeTab) {
+            activeTab.classList.add('active');
+            activeTab.style.borderBottom = '3px solid #2196F3';
+            activeTab.style.color = '#2196F3';
+        }
+        
+        // Mostrar contenido
+        document.querySelectorAll('.sync-tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
+        
+        const targetContent = document.getElementById(`${tabName}-tab`);
+        if (targetContent) {
+            targetContent.style.display = 'block';
+        }
+        
+        // Cargar datos si es necesario
+        if (tabName === 'users') {
+            this.loadUsers();
+        }
+    },
+    
+    async loadUsers() {
+        const listDiv = document.getElementById('users-list');
+        if (!listDiv) return;
+        
+        listDiv.innerHTML = '<div style="text-align: center; padding: 2rem;"><i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i></div>';
+        
+        try {
+            const response = await fetch('https://galloli-sync.ivanbj-96.workers.dev/api/users', {
+                headers: window.AuthManager.getAuthHeaders()
+            });
+            
+            if (!response.ok) throw new Error('Error cargando usuarios');
+            
+            const data = await response.json();
+            const users = data.users || [];
+            
+            if (users.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">No hay usuarios</div>';
+                return;
+            }
+            
+            listDiv.innerHTML = users.map(u => `
+                <div style="padding: 1.5rem; background: ${u.is_active ? '#f5f5f5' : '#ffebee'}; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                <i class="fas fa-user-circle" style="font-size: 2rem; color: ${u.is_active ? '#2196F3' : '#999'};"></i>
+                                <div>
+                                    <div style="font-weight: bold; ${u.is_active ? '' : 'text-decoration: line-through;'}">${u.name}</div>
+                                    <div style="color: #666; font-size: 0.9rem;">${this.getRoleLabel(u.role)}</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.85rem; color: #666;">
+                                ${u.email ? `<i class="fas fa-envelope"></i> ${u.email}` : ''}
+                                ${u.telegram_username ? `<i class="fab fa-telegram"></i> @${u.telegram_username}` : ''}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #999; margin-top: 0.25rem;">
+                                <i class="fas fa-clock"></i> Última actividad: ${u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES') : 'Nunca'}
+                            </div>
+                        </div>
+                        ${u.id !== window.AuthManager.user.id && u.role !== 'super_admin' ? `
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button onclick="CloudSyncModule.changeUserRole('${u.id}', '${u.name}')" style="padding: 0.5rem 1rem; background: #2196F3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                <i class="fas fa-user-tag"></i> Cambiar Rol
+                            </button>
+                            ${u.is_active ? `
+                            <button onclick="CloudSyncModule.deactivateUser('${u.id}', '${u.name}')" style="padding: 0.5rem 1rem; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                <i class="fas fa-ban"></i> Desactivar
+                            </button>
+                            ` : `
+                            <button onclick="CloudSyncModule.activateUser('${u.id}', '${u.name}')" style="padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                <i class="fas fa-check"></i> Activar
+                            </button>
+                            `}
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            listDiv.innerHTML = `<div style="text-align: center; padding: 2rem; color: #f44336;">Error: ${error.message}</div>`;
+        }
+    },
+    
+    async changeUserRole(userId, userName) {
+        const roles = [
+            { value: 'admin', label: 'Administrador' },
+            { value: 'vendedor', label: 'Vendedor' },
+            { value: 'repartidor', label: 'Repartidor' },
+            { value: 'contador', label: 'Contador' },
+            { value: 'viewer', label: 'Visor (Solo lectura)' }
+        ];
+        
+        const roleOptions = roles.map(r => `<option value="${r.value}">${r.label}</option>`).join('');
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-tag"></i> Cambiar Rol</h3>
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 1rem;">Usuario: <strong>${userName}</strong></p>
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nuevo Rol:</label>
+                    <select id="new-role" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 1rem;">
+                        ${roleOptions}
+                    </select>
+                    <button onclick="CloudSyncModule.saveUserRole('${userId}')" style="width: 100%; padding: 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+    
+    async saveUserRole(userId) {
+        const newRole = document.getElementById('new-role').value;
+        
+        try {
+            const response = await fetch(`https://galloli-sync.ivanbj-96.workers.dev/api/users/${userId}`, {
+                method: 'PUT',
+                headers: window.AuthManager.getAuthHeaders(),
+                body: JSON.stringify({ role: newRole })
+            });
+            
+            if (!response.ok) throw new Error('Error actualizando rol');
+            
+            document.querySelector('.modal').remove();
+            Utils.showNotification('✅ Rol actualizado correctamente', 'success', 3000);
+            this.loadUsers();
+        } catch (error) {
+            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+        }
+    },
+    
+    async deactivateUser(userId, userName) {
+        if (!confirm(`¿Desactivar a ${userName}?\n\nNo podrá acceder al sistema hasta que lo reactives.`)) return;
+        
+        try {
+            const response = await fetch(`https://galloli-sync.ivanbj-96.workers.dev/api/users/${userId}`, {
+                method: 'DELETE',
+                headers: window.AuthManager.getAuthHeaders()
+            });
+            
+            if (!response.ok) throw new Error('Error desactivando usuario');
+            
+            Utils.showNotification('✅ Usuario desactivado', 'success', 3000);
+            this.loadUsers();
+        } catch (error) {
+            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+        }
+    },
+    
+    async activateUser(userId, userName) {
+        try {
+            const response = await fetch(`https://galloli-sync.ivanbj-96.workers.dev/api/users/${userId}`, {
+                method: 'PUT',
+                headers: window.AuthManager.getAuthHeaders(),
+                body: JSON.stringify({ is_active: 1 })
+            });
+            
+            if (!response.ok) throw new Error('Error activando usuario');
+            
+            Utils.showNotification('✅ Usuario activado', 'success', 3000);
+            this.loadUsers();
+        } catch (error) {
+            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+        }
+    },
+    
+    showCreateInvitation() {
+        const roles = [
+            { value: 'admin', label: 'Administrador' },
+            { value: 'vendedor', label: 'Vendedor' },
+            { value: 'repartidor', label: 'Repartidor' },
+            { value: 'contador', label: 'Contador' },
+            { value: 'viewer', label: 'Visor (Solo lectura)' }
+        ];
+        
+        const roleOptions = roles.map(r => `<option value="${r.value}">${r.label}</option>`).join('');
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-ticket-alt"></i> Crear Código de Invitación</h3>
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Rol del Usuario:</label>
+                        <select id="invitation-role" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                            ${roleOptions}
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos Máximos:</label>
+                        <input type="number" id="invitation-max-uses" value="1" min="1" max="100" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Expira en (horas):</label>
+                        <input type="number" id="invitation-expires" value="24" min="1" max="720" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">Dejar vacío para que no expire</small>
+                    </div>
+                    
+                    <button onclick="CloudSyncModule.createInvitation()" style="width: 100%; padding: 1rem; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        <i class="fas fa-plus"></i> Generar Código
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+    
+    async createInvitation() {
+        const role = document.getElementById('invitation-role').value;
+        const maxUses = parseInt(document.getElementById('invitation-max-uses').value);
+        const expiresIn = parseInt(document.getElementById('invitation-expires').value) || null;
+        
+        try {
+            const response = await fetch('https://galloli-sync.ivanbj-96.workers.dev/api/business/invitation', {
+                method: 'POST',
+                headers: window.AuthManager.getAuthHeaders(),
+                body: JSON.stringify({
+                    role,
+                    max_uses: maxUses,
+                    expires_in_hours: expiresIn
+                })
+            });
+            
+            if (!response.ok) throw new Error('Error creando código');
+            
+            const data = await response.json();
+            
+            document.querySelector('.modal').remove();
+            
+            // Mostrar código generado
+            const codeModal = document.createElement('div');
+            codeModal.className = 'modal active';
+            codeModal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header" style="background: #4CAF50; color: white;">
+                        <h3><i class="fas fa-check-circle"></i> Código Generado</h3>
+                        <button class="close-modal" onclick="this.closest('.modal').remove()" style="color: white;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body" style="text-align: center;">
+                        <p style="margin-bottom: 1rem;">Comparte este código con el nuevo usuario:</p>
+                        <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px; margin-bottom: 1rem;">
+                            <div style="font-size: 2rem; font-weight: bold; letter-spacing: 0.5rem; color: #4CAF50;">${data.code}</div>
+                        </div>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            Rol: <strong>${this.getRoleLabel(data.role)}</strong><br>
+                            Usos: <strong>${data.max_uses}</strong><br>
+                            ${data.expires_at ? `Expira: <strong>${new Date(data.expires_at).toLocaleString('es-ES')}</strong>` : 'Sin expiración'}
+                        </p>
+                        <button onclick="navigator.clipboard.writeText('${data.code}'); alert('Código copiado')" style="padding: 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                            <i class="fas fa-copy"></i> Copiar Código
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(codeModal);
+            
+        } catch (error) {
+            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+        }
+    },
+    
+    getRoleLabel(role) {
+        const labels = {
+            'super_admin': '👑 Super Administrador',
+            'admin': '⚙️ Administrador',
+            'vendedor': '💼 Vendedor',
+            'repartidor': '🚚 Repartidor',
+            'contador': '📊 Contador',
+            'viewer': '👁️ Visor'
+        };
+        return labels[role] || role;
+    },
+    
     async showInvitationCode() {
-        alert('Códigos de invitación - Próximamente');
+        this.showCreateInvitation();
     },
     
     async logout() {

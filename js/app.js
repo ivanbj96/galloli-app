@@ -862,7 +862,7 @@ const App = {
         });
 
         const form = modal.querySelector('#smart-payment-form');
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const amount = parseFloat(document.getElementById('smart-payment-amount').value);
             const date = document.getElementById('smart-payment-date').value;
@@ -872,7 +872,7 @@ const App = {
                 return;
             }
 
-            this.processSmartPayment(clientSales, amount, date);
+            await this.processSmartPayment(clientSales, amount, date);
             modal.remove();
             this.loadCreditosPage();
             CreditosModule.updateCreditBadges();
@@ -920,7 +920,7 @@ const App = {
         preview.style.display = 'block';
     },
 
-    processSmartPayment(sales, totalAmount, date) {
+    async processSmartPayment(sales, totalAmount, date) {
         let remaining = totalAmount;
         let paymentsProcessed = 0;
 
@@ -932,6 +932,18 @@ const App = {
             if (SalesModule.registerPayment(sale.id, payment, date)) {
                 paymentsProcessed++;
                 remaining -= payment;
+            }
+        }
+
+        // Esperar a que se guarden todos los cambios
+        await SalesModule.saveSales();
+        
+        // Sincronizar con el servidor si está disponible
+        if (typeof SyncEngine !== 'undefined' && SyncEngine.isAuthenticated()) {
+            try {
+                await SyncEngine.syncData();
+            } catch (err) {
+                console.warn('Error al sincronizar después del pago inteligente:', err);
             }
         }
 

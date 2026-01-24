@@ -939,7 +939,7 @@ const App = {
         await SalesModule.saveSales();
         
         // Sincronizar con el servidor si está disponible
-        if (typeof SyncEngine !== 'undefined' && SyncEngine.isAuthenticated()) {
+        if (typeof SyncEngine !== 'undefined' && window.AuthManager?.isAuthenticated()) {
             try {
                 await SyncEngine.syncData();
             } catch (err) {

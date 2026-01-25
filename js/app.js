@@ -1379,11 +1379,8 @@ loadConfigPage() {
                     <button class="btn btn-outline" onclick="showErrorLog()" style="width: 100%; margin-bottom: 10px;">
                         <i class="fas fa-list"></i> Ver Log de Errores
                     </button>
-                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%; margin-bottom: 10px;">
+                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%;">
                         <i class="fas fa-trash"></i> Limpiar Log
-                    </button>
-                    <button class="btn btn-warning" onclick="App.cleanDuplicatePayments()" style="width: 100%;">
-                        <i class="fas fa-broom"></i> Limpiar Pagos Duplicados
                     </button>
                 </div>
             </div>

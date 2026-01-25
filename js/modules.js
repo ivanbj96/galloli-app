@@ -1595,24 +1595,7 @@ const SalesModule = {
             timestamp: Date.now()
         });
 
-        // NUEVO: Registrar en historial permanente
-        const client = ClientsModule.getClientById(sale.clientId);
-        if (client && typeof PaymentHistoryModule !== 'undefined') {
-            PaymentHistoryModule.recordPayment(
-                sale.id,
-                sale.clientId,
-                client.name,
-                paymentAmount,
-                paymentDate,
-                paymentTime,
-                {
-                    totalAmount: sale.totalAmount,
-                    weight: sale.weight,
-                    quantity: sale.quantity,
-                    date: sale.date
-                }
-            );
-        }
+        // YA NO registrar en PaymentHistoryModule - se construye dinámicamente desde sale.paymentHistory
 
         if (sale.remainingDebt <= 0.01) {
             sale.isPaid = true;
@@ -2740,71 +2723,74 @@ const ConfigModule = {
 
 // Módulo de Historial de Pagos - Registro permanente de todos los pagos
 const PaymentHistoryModule = {
-    payments: [],
-
-    // Registrar un pago en el historial permanente
-    recordPayment(saleId, clientId, clientName, amount, date, time, saleDetails) {
-        const payment = {
-            id: Date.now(),
-            saleId: saleId,
-            clientId: clientId,
-            clientName: clientName,
-            amount: amount,
-            date: date,
-            time: time,
-            timestamp: Date.now(),
-            saleDetails: {
-                totalAmount: saleDetails.totalAmount,
-                weight: saleDetails.weight,
-                quantity: saleDetails.quantity,
-                saleDate: saleDetails.date
-            }
-        };
-
-        this.payments.push(payment);
-        this.savePayments();
-        
-        console.log('💰 Pago registrado en historial permanente:', payment);
-    },
-
-    // Obtener todos los pagos
+    // YA NO se usa payments[] - se construye dinámicamente desde SalesModule.sales
+    
+    // Obtener todos los pagos (construido dinámicamente desde sale.paymentHistory)
     getAllPayments() {
-        return this.payments.sort((a, b) => b.timestamp - a.timestamp);
+        const allPayments = [];
+        
+        // Recorrer todas las ventas y extraer sus pagos
+        if (typeof SalesModule !== 'undefined' && SalesModule.sales) {
+            SalesModule.sales.forEach(sale => {
+                if (sale.paymentHistory && sale.paymentHistory.length > 0) {
+                    const client = ClientsModule.getClientById(sale.clientId);
+                    const clientName = client ? client.name : 'Cliente Desconocido';
+                    
+                    sale.paymentHistory.forEach(payment => {
+                        allPayments.push({
+                            id: payment.timestamp || Date.now(),
+                            saleId: sale.id,
+                            clientId: sale.clientId,
+                            clientName: clientName,
+                            amount: payment.amount,
+                            date: payment.date,
+                            time: payment.time,
+                            timestamp: payment.timestamp || new Date(payment.date).getTime(),
+                            saleDetails: {
+                                totalAmount: sale.totalAmount || sale.total,
+                                weight: sale.weight,
+                                quantity: sale.quantity,
+                                saleDate: sale.date
+                            }
+                        });
+                    });
+                }
+            });
+        }
+        
+        return allPayments.sort((a, b) => b.timestamp - a.timestamp);
     },
 
     // Obtener pagos por cliente
     getPaymentsByClient(clientId) {
-        return this.payments
-            .filter(p => p.clientId === clientId)
-            .sort((a, b) => b.timestamp - a.timestamp);
+        return this.getAllPayments()
+            .filter(p => p.clientId === clientId);
     },
 
     // Obtener pagos por rango de fechas
     getPaymentsByDateRange(startDate, endDate) {
-        return this.payments
-            .filter(p => p.date >= startDate && p.date <= endDate)
-            .sort((a, b) => b.timestamp - a.timestamp);
+        return this.getAllPayments()
+            .filter(p => p.date >= startDate && p.date <= endDate);
     },
 
     // Obtener pagos por cliente y rango de fechas
     getPaymentsByClientAndDateRange(clientId, startDate, endDate) {
-        return this.payments
-            .filter(p => p.clientId === clientId && p.date >= startDate && p.date <= endDate)
-            .sort((a, b) => b.timestamp - a.timestamp);
+        return this.getAllPayments()
+            .filter(p => p.clientId === clientId && p.date >= startDate && p.date <= endDate);
     },
 
     // Obtener total pagado por cliente
     getTotalPaidByClient(clientId) {
-        return this.payments
-            .filter(p => p.clientId === clientId)
+        return this.getPaymentsByClient(clientId)
             .reduce((sum, p) => sum + p.amount, 0);
     },
 
     // Obtener estadísticas de pagos
     getStats() {
-        const totalPayments = this.payments.length;
-        const totalAmount = this.payments.reduce((sum, p) => sum + p.amount, 0);
-        const uniqueClients = [...new Set(this.payments.map(p => p.clientId))].length;
+        const allPayments = this.getAllPayments();
+        const totalPayments = allPayments.length;
+        const totalAmount = allPayments.reduce((sum, p) => sum + p.amount, 0);
+        const uniqueClients = [...new Set(allPayments.map(p => p.clientId))].length;
         
         return {
             totalPayments,
@@ -2814,154 +2800,13 @@ const PaymentHistoryModule = {
         };
     },
 
-    // Detectar y eliminar pagos duplicados
-    async removeDuplicates() {
-        const initialCount = this.payments.length;
-        
-        const seen = new Map();
-        const unique = [];
-        
-        // Ordenar por timestamp para mantener el más antiguo
-        const sorted = [...this.payments].sort((a, b) => a.timestamp - a.timestamp);
-        
-        for (const payment of sorted) {
-            // Crear clave única basada en: saleId + amount + date + time
-            // Si hay múltiples pagos con la misma clave, solo mantener el primero
-            const key = `${payment.saleId}-${payment.amount}-${payment.date}-${payment.time}`;
-            
-            if (!seen.has(key)) {
-                seen.set(key, true);
-                unique.push(payment);
-            } else {
-                // Log para debug
-                console.log('🗑️ Duplicado detectado:', {
-                    cliente: payment.clientName,
-                    monto: payment.amount,
-                    fecha: payment.date,
-                    hora: payment.time
-                });
-            }
-        }
-        
-        const duplicatesCount = initialCount - unique.length;
-        
-        if (duplicatesCount > 0) {
-            console.log(`🗑️ Total: ${duplicatesCount} pagos duplicados encontrados y eliminados`);
-            this.payments = unique;
-            
-            // Guardar SIN disparar sincronización para evitar ciclo infinito
-            if (DB.db) {
-                // Limpiar toda la tabla y volver a insertar solo los únicos
-                await new Promise((resolve, reject) => {
-                    const tx = DB.db.transaction(['paymentHistory'], 'readwrite');
-                    const store = tx.objectStore('paymentHistory');
-                    
-                    const clearRequest = store.clear();
-                    clearRequest.onsuccess = async () => {
-                        // Insertar todos los pagos únicos
-                        for (const payment of this.payments) {
-                            store.put(payment);
-                        }
-                    };
-                    clearRequest.onerror = () => reject(clearRequest.error);
-                    
-                    tx.oncomplete = () => {
-                        console.log('✅ IndexedDB actualizado con pagos únicos');
-                        resolve();
-                    };
-                    tx.onerror = () => reject(tx.error);
-                });
-            } else {
-                localStorage.setItem('polloPaymentHistory', JSON.stringify(this.payments));
-            }
-            
-            Utils.showNotification(
-                `🧹 ${duplicatesCount} pago${duplicatesCount > 1 ? 's' : ''} duplicado${duplicatesCount > 1 ? 's' : ''} eliminado${duplicatesCount > 1 ? 's' : ''}`,
-                'success',
-                4000
-            );
-            
-            return duplicatesCount;
-        }
-        
-        console.log('✅ No se encontraron pagos duplicados');
-        return 0;
-    },
-
-    // Guardar pagos en IndexedDB
-    async savePayments() {
-        if (DB.db) {
-            for (const payment of this.payments) {
-                await DB.set('paymentHistory', payment);
-            }
-        } else {
-            localStorage.setItem('polloPaymentHistory', JSON.stringify(this.payments));
-        }
-    },
-
-    // Cargar pagos desde IndexedDB
-    async loadPayments() {
-        if (DB.db) {
-            this.payments = await DB.getAll('paymentHistory');
-        } else {
-            const saved = localStorage.getItem('polloPaymentHistory');
-            if (saved) {
-                this.payments = JSON.parse(saved);
-            }
-        }
-        
-        // Migrar pagos existentes desde las ventas si el historial está vacío
-        if (this.payments.length === 0) {
-            await this.migrateExistingPayments();
-        }
-    },
     
-    // Inicializar (sin limpiar duplicados automáticamente)
+    // YA NO se necesitan estas funciones - los datos vienen de sale.paymentHistory
     async init() {
-        await this.loadPayments();
-        // NO limpiar duplicados automáticamente - solo cuando el usuario lo solicite
-        // para evitar que la sincronización los vuelva a traer
+        // No hacer nada - los datos se construyen dinámicamente
+        console.log('✅ PaymentHistoryModule inicializado (modo dinámico desde ventas)');
     },
-
-    // Migrar pagos existentes desde paymentHistory en las ventas
-    async migrateExistingPayments() {
-        console.log('🔄 Migrando pagos existentes al historial permanente...');
-        
-        const sales = SalesModule.sales || [];
-        let migratedCount = 0;
-        
-        for (const sale of sales) {
-            if (sale.paymentHistory && sale.paymentHistory.length > 0) {
-                const client = ClientsModule.getClientById(sale.clientId);
-                const clientName = client ? client.name : 'Cliente Desconocido';
-                
-                for (const payment of sale.paymentHistory) {
-                    this.recordPayment(
-                        sale.id,
-                        sale.clientId,
-                        clientName,
-                        payment.amount,
-                        payment.date,
-                        payment.time,
-                        {
-                            totalAmount: sale.totalAmount || sale.total,
-                            weight: sale.weight,
-                            quantity: sale.quantity,
-                            date: sale.date
-                        }
-                    );
-                    migratedCount++;
-                }
-            }
-        }
-        
-        if (migratedCount > 0) {
-            console.log(`✅ ${migratedCount} pagos migrados al historial permanente`);
-            await this.savePayments();
-        }
-    },
-
-    // Exportar historial de pagos
+};
     exportPayments(clientId = null) {
         const payments = clientId ? this.getPaymentsByClient(clientId) : this.getAllPayments();
         const dataStr = JSON.stringify(payments, null, 2);

@@ -2916,11 +2916,11 @@ const PaymentHistoryModule = {
         }
     },
     
-    // Inicializar y limpiar duplicados solo una vez
+    // Inicializar (sin limpiar duplicados automáticamente)
     async init() {
         await this.loadPayments();
-        // Limpiar duplicados solo al iniciar la app
-        await this.removeDuplicates();
+        // NO limpiar duplicados automáticamente - solo cuando el usuario lo solicite
+        // para evitar que la sincronización los vuelva a traer
     },
 
     // Migrar pagos existentes desde paymentHistory en las ventas

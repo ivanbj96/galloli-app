@@ -1379,8 +1379,11 @@ loadConfigPage() {
                     <button class="btn btn-outline" onclick="showErrorLog()" style="width: 100%; margin-bottom: 10px;">
                         <i class="fas fa-list"></i> Ver Log de Errores
                     </button>
-                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%;">
+                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%; margin-bottom: 10px;">
                         <i class="fas fa-trash"></i> Limpiar Log
+                    </button>
+                    <button class="btn btn-warning" onclick="App.cleanDuplicatePayments()" style="width: 100%;">
+                        <i class="fas fa-broom"></i> Limpiar Pagos Duplicados
                     </button>
                 </div>
             </div>
@@ -1593,6 +1596,21 @@ async importConfig(file) {
         }, 1000);
     } catch (error) {
         Utils.showNotification('Error al importar configuración: ' + error.message, 'error', 5000);
+    }
+},
+
+async cleanDuplicatePayments() {
+    try {
+        const count = await PaymentHistoryModule.removeDuplicates();
+        if (count > 0) {
+            // Recargar la página actual para reflejar los cambios
+            this.loadPage(this.currentPage);
+        } else {
+            Utils.showNotification('No se encontraron pagos duplicados', 'info', 3000);
+        }
+    } catch (error) {
+        console.error('Error al limpiar duplicados:', error);
+        Utils.showNotification('Error al limpiar pagos duplicados', 'error', 3000);
     }
 },
 

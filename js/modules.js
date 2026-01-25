@@ -18,6 +18,7 @@ const ClientsModule = {
                 lng: locationData.longitude
             },
             timestamp: new Date().toISOString(),
+            lastModified: Date.now(),
             date: Utils.formatDate(),
             isActive: true, // NUEVO: Estado activo por defecto
             totalSales: 0,
@@ -451,6 +452,7 @@ const ClientsModule = {
         client.phone = phone;
         client.address = address;
         client.location = location;
+        client.lastModified = Date.now();
 
         // Actualizar coordenadas si están presentes
         if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
@@ -1160,6 +1162,7 @@ const SalesModule = {
             date: saleDate,
             time: saleTime,
             timestamp: new Date().getTime(),
+            lastModified: Date.now(),
             dayKey: saleDate
         };
 
@@ -1580,6 +1583,9 @@ const SalesModule = {
 
         sale.paidAmount += paymentAmount;
         sale.remainingDebt -= paymentAmount;
+        
+        // CRÍTICO: Actualizar timestamp de última modificación para sincronización
+        sale.lastModified = Date.now();
         
         if (!sale.paymentHistory) sale.paymentHistory = [];
         sale.paymentHistory.push({

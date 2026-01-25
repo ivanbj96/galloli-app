@@ -1603,9 +1603,21 @@ async cleanDuplicatePayments() {
     try {
         Utils.showLoading(true);
         const count = await PaymentHistoryModule.removeDuplicates();
-        Utils.showLoading(false);
         
         if (count > 0) {
+            // Subir los datos limpios al servidor para sincronizar
+            if (window.SyncEngine && window.AuthManager?.isAuthenticated()) {
+                console.log('📤 Subiendo historial limpio al servidor...');
+                try {
+                    await SyncEngine.uploadAllData('paymentHistory', PaymentHistoryModule.payments);
+                    console.log('✅ Historial limpio sincronizado con el servidor');
+                } catch (error) {
+                    console.error('❌ Error sincronizando con servidor:', error);
+                }
+            }
+            
+            Utils.showLoading(false);
+            
             // Recargar la página actual para reflejar los cambios
             if (this.currentPage === 'payment-history') {
                 this.loadPaymentHistoryPage();
@@ -1613,6 +1625,7 @@ async cleanDuplicatePayments() {
                 this.loadPage(this.currentPage);
             }
         } else {
+            Utils.showLoading(false);
             Utils.showNotification('No se encontraron pagos duplicados', 'info', 3000);
         }
     } catch (error) {

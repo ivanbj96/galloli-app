@@ -431,7 +431,11 @@ class SyncEngine {
     }
     
     getItemTimestamp(item) {
-        // Obtener timestamp del item
+        // Obtener timestamp del item (priorizar lastModified para cambios)
+        if (item.lastModified) {
+            if (typeof item.lastModified === 'number') return item.lastModified;
+            return new Date(item.lastModified).getTime();
+        }
         if (item.timestamp) {
             if (typeof item.timestamp === 'number') return item.timestamp;
             return new Date(item.timestamp).getTime();

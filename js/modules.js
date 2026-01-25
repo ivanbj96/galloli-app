@@ -2816,22 +2816,31 @@ const PaymentHistoryModule = {
         const unique = [];
         
         // Ordenar por timestamp para mantener el más antiguo
-        const sorted = [...this.payments].sort((a, b) => a.timestamp - b.timestamp);
+        const sorted = [...this.payments].sort((a, b) => a.timestamp - a.timestamp);
         
         for (const payment of sorted) {
             // Crear clave única basada en: saleId + amount + date + time
+            // Si hay múltiples pagos con la misma clave, solo mantener el primero
             const key = `${payment.saleId}-${payment.amount}-${payment.date}-${payment.time}`;
             
             if (!seen.has(key)) {
                 seen.set(key, true);
                 unique.push(payment);
+            } else {
+                // Log para debug
+                console.log('🗑️ Duplicado detectado:', {
+                    cliente: payment.clientName,
+                    monto: payment.amount,
+                    fecha: payment.date,
+                    hora: payment.time
+                });
             }
         }
         
         const duplicatesCount = initialCount - unique.length;
         
         if (duplicatesCount > 0) {
-            console.log(`🗑️ ${duplicatesCount} pagos duplicados encontrados y eliminados`);
+            console.log(`🗑️ Total: ${duplicatesCount} pagos duplicados encontrados y eliminados`);
             this.payments = unique;
             
             // Guardar SIN disparar sincronización para evitar ciclo infinito
@@ -2845,13 +2854,15 @@ const PaymentHistoryModule = {
                     clearRequest.onsuccess = async () => {
                         // Insertar todos los pagos únicos
                         for (const payment of this.payments) {
-                            await store.put(payment);
+                            store.put(payment);
                         }
-                        resolve();
                     };
                     clearRequest.onerror = () => reject(clearRequest.error);
                     
-                    tx.oncomplete = () => resolve();
+                    tx.oncomplete = () => {
+                        console.log('✅ IndexedDB actualizado con pagos únicos');
+                        resolve();
+                    };
                     tx.onerror = () => reject(tx.error);
                 });
             } else {
@@ -2867,6 +2878,7 @@ const PaymentHistoryModule = {
             return duplicatesCount;
         }
         
+        console.log('✅ No se encontraron pagos duplicados');
         return 0;
     },
 

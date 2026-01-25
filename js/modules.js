@@ -2806,7 +2806,7 @@ const PaymentHistoryModule = {
         // No hacer nada - los datos se construyen dinámicamente
         console.log('✅ PaymentHistoryModule inicializado (modo dinámico desde ventas)');
     },
-};
+
     exportPayments(clientId = null) {
         const payments = clientId ? this.getPaymentsByClient(clientId) : this.getAllPayments();
         const dataStr = JSON.stringify(payments, null, 2);

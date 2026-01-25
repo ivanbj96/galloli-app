@@ -668,9 +668,7 @@ class SyncEngine {
                 ConfigModule.applyConfig();
             }
             
-            if (window.PaymentHistoryModule) {
-                await PaymentHistoryModule.loadPayments();
-            }
+            // PaymentHistoryModule ya no necesita loadPayments - se construye dinámicamente
             
             // Recargar página actual
             if (window.App?.currentPage) {
@@ -765,18 +763,8 @@ class SyncEngine {
             console.warn('⚠️ MermaModule.saveMermaRecords no disponible');
         }
         
-        // Historial de pagos
-        if (window.PaymentHistoryModule?.savePayments) {
-            const original = PaymentHistoryModule.savePayments;
-            PaymentHistoryModule.savePayments = async () => {
-                await original.call(PaymentHistoryModule);
-                console.log('📤 Cambio detectado: paymentHistory');
-                this.notifyChange('paymentHistory');
-            };
-            interceptorsInstalled++;
-        } else {
-            console.warn('⚠️ PaymentHistoryModule.savePayments no disponible');
-        }
+        // PaymentHistoryModule ya no tiene savePayments - los datos vienen de sale.paymentHistory
+        // que se sincronizan automáticamente con SalesModule.saveSales
         
         // Diezmos - Configuración
         if (window.DiezmosModule?.saveConfig) {

@@ -2837,13 +2837,23 @@ const PaymentHistoryModule = {
             // Guardar SIN disparar sincronización para evitar ciclo infinito
             if (DB.db) {
                 // Limpiar toda la tabla y volver a insertar solo los únicos
-                const tx = DB.db.transaction(['paymentHistory'], 'readwrite');
-                const store = tx.objectStore('paymentHistory');
-                await store.clear();
-                
-                for (const payment of this.payments) {
-                    await store.put(payment);
-                }
+                await new Promise((resolve, reject) => {
+                    const tx = DB.db.transaction(['paymentHistory'], 'readwrite');
+                    const store = tx.objectStore('paymentHistory');
+                    
+                    const clearRequest = store.clear();
+                    clearRequest.onsuccess = async () => {
+                        // Insertar todos los pagos únicos
+                        for (const payment of this.payments) {
+                            await store.put(payment);
+                        }
+                        resolve();
+                    };
+                    clearRequest.onerror = () => reject(clearRequest.error);
+                    
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
             } else {
                 localStorage.setItem('polloPaymentHistory', JSON.stringify(this.payments));
             }

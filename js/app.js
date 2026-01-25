@@ -1601,15 +1601,23 @@ async importConfig(file) {
 
 async cleanDuplicatePayments() {
     try {
+        Utils.showLoading(true);
         const count = await PaymentHistoryModule.removeDuplicates();
+        Utils.showLoading(false);
+        
         if (count > 0) {
             // Recargar la página actual para reflejar los cambios
-            this.loadPage(this.currentPage);
+            if (this.currentPage === 'payment-history') {
+                this.loadPaymentHistoryPage();
+            } else {
+                this.loadPage(this.currentPage);
+            }
         } else {
             Utils.showNotification('No se encontraron pagos duplicados', 'info', 3000);
         }
     } catch (error) {
         console.error('Error al limpiar duplicados:', error);
+        Utils.showLoading(false);
         Utils.showNotification('Error al limpiar pagos duplicados', 'error', 3000);
     }
 },

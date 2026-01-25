@@ -1564,7 +1564,7 @@ const SalesModule = {
         return false;
     },
 
-    registerPayment(saleId, amount, date = null, silent = false) {
+    async registerPayment(saleId, amount, date = null, silent = false) {
         const sale = this.getSaleById(saleId);
         if (!sale) return false;
 
@@ -1626,7 +1626,7 @@ const SalesModule = {
             }
         }
 
-        this.saveSales();
+        await this.saveSales();
         return true;
     },
 

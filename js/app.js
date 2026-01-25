@@ -747,12 +747,12 @@ const App = {
         document.body.appendChild(modal);
 
         const form = modal.querySelector('#payment-form');
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const amount = parseFloat(document.getElementById('payment-amount').value);
             const date = document.getElementById('payment-date').value;
             
-            if (SalesModule.registerPayment(saleId, amount, date)) {
+            if (await SalesModule.registerPayment(saleId, amount, date)) {
                 Utils.showNotification(`Pago registrado: ${Utils.formatCurrency(amount)}`, 'success', 3000);
                 modal.remove();
                 this.loadCreditosPage();
@@ -929,7 +929,7 @@ const App = {
             
             const payment = Math.min(remaining, sale.remainingDebt);
             
-            if (SalesModule.registerPayment(sale.id, payment, date)) {
+            if (await SalesModule.registerPayment(sale.id, payment, date)) {
                 paymentsProcessed++;
                 remaining -= payment;
             }

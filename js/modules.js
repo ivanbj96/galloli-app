@@ -2736,10 +2736,6 @@ const ConfigModule = {
 const PaymentHistoryModule = {
     payments: [],
 
-    async init() {
-        await this.loadPayments();
-    },
-
     // Registrar un pago en el historial permanente
     recordPayment(saleId, clientId, clientName, amount, date, time, saleDetails) {
         const payment = {

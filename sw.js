@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '6.3.4'; // Fix: Backup automático usa EXACTAMENTE el mismo método que el manual
+const APP_VERSION = '7.0.6'; // Fix: Forzar actualización de caché para NotificationsModule
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

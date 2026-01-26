@@ -475,7 +475,9 @@ const App = {
         // Notificación push
         if (NotificationsModule) {
             const preview = DiezmosModule.getPreview(today);
-            NotificationsModule.notify('diezmos', `Diezmos guardados: ${Utils.formatCurrency(preview.total)}`);
+            NotificationsModule.show('💰 Diezmos Guardados', `Total: ${Utils.formatCurrency(preview.total)}`).catch(err => {
+                console.warn('No se pudo enviar notificación:', err);
+            });
         }
         
         this.loadDiezmosPage();
@@ -4135,7 +4137,9 @@ async cleanDuplicatePayments() {
             
             // Notificación push
             if (NotificationsModule) {
-                NotificationsModule.notify('merma', `Merma del día: ${result.merma}%`);
+                NotificationsModule.show('📊 Merma Calculada', `Merma del día: ${result.merma}%`).catch(err => {
+                    console.warn('No se pudo enviar notificación:', err);
+                });
             }
             
             document.getElementById('merma-form').reset();
@@ -4560,7 +4564,9 @@ async cleanDuplicatePayments() {
             
             // Notificación push
             if (NotificationsModule) {
-                NotificationsModule.notify('backup', 'Backup creado exitosamente');
+                NotificationsModule.show('💾 Backup Creado', 'Backup creado exitosamente').catch(err => {
+                    console.warn('No se pudo enviar notificación:', err);
+                });
             }
             
         } catch (error) {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.1.0'; // Feature: Backup automático desde servidor con Cron Trigger
+const APP_VERSION = '7.1.1'; // Fix: Iconos del manifest actualizados y timeout de IndexedDB optimizado
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -322,14 +322,14 @@ self.addEventListener('push', (event) => {
     const data = event.data?.json() || {
         title: 'GallOli',
         body: 'Nueva actualización disponible',
-        icon: './icons/icon-192x192.png'
+        icon: './icons/favicon.pub/android-chrome-192x192.png'
     };
     
     event.waitUntil(
         self.registration.showNotification(data.title, {
             body: data.body,
-            icon: data.icon || './icons/icon-192x192.png',
-            badge: data.badge || './icons/icon-72x72.png',
+            icon: data.icon || './icons/favicon.pub/android-chrome-192x192.png',
+            badge: data.badge || './icons/favicon.pub/favicon-48x48.png',
             vibrate: data.vibrate || [200, 100, 200],
             requireInteraction: data.requireInteraction || false,
             silent: data.silent || false,
@@ -363,8 +363,8 @@ async function checkScheduledReminders() {
     if (hour === 20 && minute === 0) {
         await self.registration.showNotification('💾 Recordatorio de Backup', {
             body: 'No olvides crear un backup de tus datos hoy',
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/badge-72x72.png',
+            icon: '/icons/favicon.pub/android-chrome-192x192.png',
+            badge: '/icons/favicon.pub/favicon-48x48.png',
             tag: 'backup-reminder',
             requireInteraction: false,
             silent: false,
@@ -379,8 +379,8 @@ async function checkScheduledReminders() {
     if (hour === 18 && minute === 0) {
         await self.registration.showNotification('🧮 Recordatorio de Merma', {
             body: 'Recuerda calcular la merma del día',
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/badge-72x72.png',
+            icon: '/icons/favicon.pub/android-chrome-192x192.png',
+            badge: '/icons/favicon.pub/favicon-48x48.png',
             tag: 'merma-reminder',
             requireInteraction: false,
             silent: false,
@@ -395,8 +395,8 @@ async function checkScheduledReminders() {
     if (hour === 21 && minute === 0) {
         await self.registration.showNotification('🙏 Recordatorio de Diezmos', {
             body: 'Revisa y guarda los diezmos del día',
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/badge-72x72.png',
+            icon: '/icons/favicon.pub/android-chrome-192x192.png',
+            badge: '/icons/favicon.pub/favicon-48x48.png',
             tag: 'diezmos-reminder',
             requireInteraction: false,
             silent: false,
@@ -425,8 +425,8 @@ async function handleWASMNotification(data) {
         
         await self.registration.showNotification(title, {
             body,
-            icon: options.icon || '/icons/icon-192x192.png',
-            badge: options.badge || '/icons/badge-72x72.png',
+            icon: options.icon || '/icons/favicon.pub/android-chrome-192x192.png',
+            badge: options.badge || '/icons/favicon.pub/favicon-48x48.png',
             tag: options.tag || 'wasm-notification',
             requireInteraction: options.requireInteraction !== false,
             vibrate: options.vibrate || [200, 100, 200],
@@ -485,8 +485,8 @@ setInterval(() => {
         if (userActivity.notificationsSent < 3) {
             self.registration.showNotification('🐔 GallOli te extraña', {
                 body: 'No olvides registrar tus ventas del día',
-                icon: '/icons/icon-192x192.png',
-                badge: '/icons/badge-72x72.png',
+                icon: '/icons/favicon.pub/android-chrome-192x192.png',
+                badge: '/icons/favicon.pub/favicon-48x48.png',
                 tag: 'inactivity-reminder',
                 requireInteraction: false,
                 vibrate: [100, 50, 100]
@@ -583,7 +583,7 @@ async function handleCreditAction(action, data, userInput) {
                     '❌ Monto Inválido',
                     {
                         body: 'Ingresa un monto válido para el abono',
-                        icon: './icons/icon-192x192.png',
+                        icon: './icons/favicon.pub/android-chrome-192x192.png',
                         tag: 'payment-error',
                         requireInteraction: true
                     }
@@ -596,7 +596,7 @@ async function handleCreditAction(action, data, userInput) {
                     '⚠️ Monto Excedido',
                     {
                         body: `El monto (${formatCurrency(amount)}) es mayor a la deuda (${formatCurrency(data.totalDebt)})`,
-                        icon: './icons/icon-192x192.png',
+                        icon: './icons/favicon.pub/android-chrome-192x192.png',
                         tag: 'payment-error',
                         requireInteraction: true
                     }
@@ -636,7 +636,7 @@ async function handleCreditAction(action, data, userInput) {
             '❌ Error',
             {
                 body: 'No se pudo procesar el pago. Intenta desde la app.',
-                icon: './icons/icon-192x192.png',
+                icon: './icons/favicon.pub/android-chrome-192x192.png',
                 tag: 'payment-error',
                 requireInteraction: true
             }

@@ -98,8 +98,8 @@ const PushNotifications = {
         try {
             const notificationOptions = {
                 body: body,
-                icon: options.icon || './icons/icon-192x192.png',
-                badge: options.badge || './icons/icon-72x72.png',
+                icon: options.icon || './icons/favicon.pub/android-chrome-192x192.png',
+                badge: options.badge || './icons/favicon.pub/favicon-48x48.png',
                 tag: options.tag || 'galloli-notification',
                 requireInteraction: options.requireInteraction || false,
                 silent: options.silent || false,
@@ -138,7 +138,7 @@ const PushNotifications = {
                     vibrate: [500, 200, 500, 200, 500],
                     data: { action: 'calculate-merma' },
                     actions: [
-                        { action: 'calculate', title: '🧮 Calcular Ahora', icon: './icons/icon-72x72.png' },
+                        { action: 'calculate', title: '🧮 Calcular Ahora', icon: './icons/favicon.pub/favicon-48x48.png' },
                         { action: 'dismiss', title: 'Más Tarde' }
                     ]
                 }
@@ -195,12 +195,12 @@ const PushNotifications = {
                         { 
                             action: 'pay-full', 
                             title: `💵 Pagar ${Utils.formatCurrency(data.totalDebt)}`,
-                            icon: './icons/icon-72x72.png'
+                            icon: './icons/favicon.pub/favicon-48x48.png'
                         },
                         { 
                             action: 'pay-partial', 
                             title: '💰 Abono Parcial',
-                            icon: './icons/icon-72x72.png',
+                            icon: './icons/favicon.pub/favicon-48x48.png',
                             type: 'text',
                             placeholder: 'Monto del abono'
                         },

@@ -21,29 +21,10 @@ class AuthManager {
         
         console.log('🔐 Inicializando sistema de autenticación...');
         
-        // Esperar a que IndexedDB esté listo (máximo 10 segundos)
-        if (!window.DB || !window.DB.db) {
-            console.log('⏳ Esperando IndexedDB...');
-            let attempts = 0;
-            const maxAttempts = 100; // 10 segundos máximo
-            
-            await new Promise((resolve) => {
-                const checkDB = setInterval(() => {
-                    attempts++;
-                    if (window.DB && window.DB.db) {
-                        clearInterval(checkDB);
-                        console.log('✅ IndexedDB listo después de', attempts * 100, 'ms');
-                        resolve();
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(checkDB);
-                        console.warn('⚠️ Timeout esperando IndexedDB - continuando de todos modos');
-                        resolve(); // Continuar de todos modos
-                    }
-                }, 100);
-            });
-        }
+        // IndexedDB ya está inicializado en app.js antes de llamar a AuthManager.init()
+        // No necesitamos esperar - simplemente intentamos cargar la sesión
+        // Si IndexedDB no está listo, loadSession() manejará el error gracefully
         
-        // Cargar sesión desde IndexedDB
         await this.loadSession();
         
         this.initialized = true;
@@ -52,6 +33,12 @@ class AuthManager {
 
     async loadSession() {
         try {
+            // Verificar que DB esté disponible
+            if (!window.DB || !window.DB.db) {
+                console.log('⚠️ IndexedDB no disponible aún - sesión no cargada');
+                return false;
+            }
+            
             const token = await this.getFromDB(AUTH_CONFIG.TOKEN_KEY);
             const user = await this.getFromDB(AUTH_CONFIG.USER_KEY);
             const business = await this.getFromDB(AUTH_CONFIG.BUSINESS_KEY);

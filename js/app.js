@@ -5201,8 +5201,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lastTouchEnd = now;
     }, false);
 
-    // Iniciar app
-    App.init();
+    // NOTA: App.init() se llama desde index.html cuando el DOM está listo
+    // No llamar aquí para evitar doble inicialización
 });
 
 // Limpiar recursos al cerrar/recargar la página

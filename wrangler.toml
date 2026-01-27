@@ -25,3 +25,8 @@ new_sqlite_classes = ["SessionManager"]
 # Secrets (configurar con: wrangler secret put <NAME>)
 # TELEGRAM_BOT_TOKEN
 # JWT_SECRET
+
+# Cron Triggers - Backup automático a las 10 PM hora de Nicaragua (UTC-6)
+# 10 PM Nicaragua = 4 AM UTC del día siguiente
+[triggers]
+crons = ["0 4 * * *"]

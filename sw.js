@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.0.7'; // Fix: Backup automático + sincronización de credenciales Telegram
+const APP_VERSION = '7.1.0'; // Feature: Backup automático desde servidor con Cron Trigger
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

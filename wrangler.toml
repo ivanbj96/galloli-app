@@ -2,9 +2,6 @@ name = "galloli-sync"
 main = "workers/index.js"
 compatibility_date = "2024-01-22"
 
-# Configuración de Pages (frontend)
-pages_build_output_dir = "."
-
 # Variables de entorno
 [vars]
 ENVIRONMENT = "production"

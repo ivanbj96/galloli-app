@@ -2884,7 +2884,7 @@ const BackupModule = {
                 totalSales: SalesModule.sales.length,
                 totalOrders: OrdersModule.orders.length,
                 totalExpenses: AccountingModule.expenses.length,
-                totalPayments: PaymentHistoryModule.payments.length,
+                totalPayments: PaymentHistoryModule.getAllPayments().length,
                 appName: ConfigModule.currentConfig.appName || 'GallOli'
             }
         };

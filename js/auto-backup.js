@@ -96,6 +96,16 @@ const AutoBackup = {
                 return;
             }
             
+            // Verificar si este dispositivo es el "líder" (el que debe hacer el backup)
+            const isLeader = await this.isBackupLeader();
+            
+            if (!isLeader) {
+                console.log('ℹ️ Este dispositivo NO es el líder - Otro dispositivo hará el backup');
+                return;
+            }
+            
+            console.log('👑 Este dispositivo ES el líder - Verificando cambios...');
+            
             // Verificar si hay cambios en los datos
             const hasChanges = await this.detectDataChanges();
             
@@ -105,6 +115,46 @@ const AutoBackup = {
             } else {
                 console.log('ℹ️ No hay cambios en los datos - No se creará backup');
             }
+        }
+    },
+    
+    // Determinar si este dispositivo es el líder para hacer backups
+    async isBackupLeader() {
+        try {
+            // Obtener el device_id de este dispositivo
+            const myDeviceId = localStorage.getItem('device_id');
+            
+            if (!myDeviceId) {
+                console.warn('⚠️ No hay device_id - No se puede determinar líder');
+                return false;
+            }
+            
+            // Obtener la lista de dispositivos activos desde el servidor
+            if (typeof CloudSync === 'undefined' || !CloudSync.isActive) {
+                // Si no hay sincronización activa, este dispositivo es el líder por defecto
+                console.log('ℹ️ Sin sincronización - Este dispositivo es líder por defecto');
+                return true;
+            }
+            
+            // Guardar que este dispositivo está activo
+            await this.saveToDB('lastActiveTime', Date.now());
+            
+            // Por simplicidad: el dispositivo con el device_id más pequeño (más antiguo) es el líder
+            // En una implementación más robusta, se consultaría al servidor
+            const storedLeader = await this.getFromDB('backupLeader');
+            
+            if (!storedLeader) {
+                // Primera vez - este dispositivo se convierte en líder
+                await this.saveToDB('backupLeader', myDeviceId);
+                return true;
+            }
+            
+            return storedLeader === myDeviceId;
+            
+        } catch (error) {
+            console.error('Error determinando líder:', error);
+            // En caso de error, permitir que este dispositivo sea líder
+            return true;
         }
     },
     

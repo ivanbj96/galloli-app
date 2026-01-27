@@ -510,6 +510,16 @@ class SyncEngine {
         console.log('💾 Aplicando datos localmente...');
         
         for (const [dataType, items] of Object.entries(mergedData)) {
+            // Caso especial: credenciales de Telegram
+            if (dataType === 'telegramCredentials' && items.length > 0) {
+                const creds = items[0]; // Solo hay una credencial
+                if (creds.botToken && creds.chatId && typeof AutoBackup !== 'undefined') {
+                    await AutoBackup.saveCredentials(creds.botToken, creds.chatId);
+                    console.log('  telegramCredentials: sincronizadas');
+                }
+                continue;
+            }
+            
             const storeName = this.getStoreName(dataType);
             
             // Limpiar store actual
@@ -531,6 +541,19 @@ class SyncEngine {
     async getLocalData() {
         console.log('📦 Obteniendo datos locales...');
         
+        // Obtener credenciales de Telegram desde AutoBackup
+        let telegramCredentials = null;
+        if (typeof AutoBackup !== 'undefined') {
+            try {
+                const creds = await AutoBackup.getCredentials();
+                if (creds.botToken && creds.chatId) {
+                    telegramCredentials = creds;
+                }
+            } catch (error) {
+                console.warn('No se pudieron obtener credenciales de Telegram:', error);
+            }
+        }
+        
         return {
             clients: await DB.getAll('clients') || [],
             sales: await DB.getAll('sales') || [],
@@ -540,7 +563,8 @@ class SyncEngine {
             mermaRecords: await DB.getAll('mermaRecords') || [],
             diezmos: await DB.getAll('diezmos') || [],
             paymentHistory: await DB.getAll('paymentHistory') || [],
-            config: await DB.getAll('config') || []
+            config: await DB.getAll('config') || [],
+            telegramCredentials: telegramCredentials ? [telegramCredentials] : []
         };
     }
 

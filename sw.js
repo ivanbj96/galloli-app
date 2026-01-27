@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.0.6'; // Fix: Forzar actualización de caché para NotificationsModule
+const APP_VERSION = '7.0.7'; // Fix: Backup automático + sincronización de credenciales Telegram
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

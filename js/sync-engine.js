@@ -19,11 +19,19 @@ class SyncEngine {
 
     async init() {
         console.log('🔄 Inicializando sincronización P2P...');
+        console.log('📊 Estado de autenticación:', {
+            hasAuthManager: !!window.AuthManager,
+            isAuthenticated: window.AuthManager?.isAuthenticated(),
+            user: window.AuthManager?.user,
+            business: window.AuthManager?.business
+        });
         
         if (!window.AuthManager?.isAuthenticated()) {
-            console.log('⚠️ No autenticado');
+            console.log('⚠️ No autenticado - sincronización no iniciada');
             return;
         }
+
+        console.log('✅ Usuario autenticado - iniciando sincronización...');
 
         // 1. Conectar WebSocket
         this.connectWebSocket();

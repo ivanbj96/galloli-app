@@ -21,24 +21,47 @@ class AuthManager {
         
         console.log('🔐 Inicializando sistema de autenticación...');
         
-        // IndexedDB ya está inicializado en app.js antes de llamar a AuthManager.init()
-        // No necesitamos esperar - simplemente intentamos cargar la sesión
-        // Si IndexedDB no está listo, loadSession() manejará el error gracefully
+        // Esperar a que IndexedDB esté listo (con timeout de 5 segundos)
+        // Esto es necesario porque DB.init() es asíncrono y puede no estar listo aún
+        await this.waitForIndexedDB();
         
+        // Cargar sesión desde IndexedDB
         await this.loadSession();
         
         this.initialized = true;
         console.log('✅ Sistema de autenticación inicializado');
     }
 
+    async waitForIndexedDB() {
+        if (window.DB && window.DB.db) {
+            console.log('✅ IndexedDB ya está listo');
+            return;
+        }
+        
+        console.log('⏳ Esperando IndexedDB...');
+        
+        return new Promise((resolve) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 segundos máximo
+            
+            const checkDB = setInterval(() => {
+                attempts++;
+                
+                if (window.DB && window.DB.db) {
+                    clearInterval(checkDB);
+                    console.log(`✅ IndexedDB listo después de ${attempts * 100}ms`);
+                    resolve();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkDB);
+                    console.warn('⚠️ Timeout esperando IndexedDB (5s) - continuando sin sesión guardada');
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+
     async loadSession() {
         try {
-            // Verificar que DB esté disponible
-            if (!window.DB || !window.DB.db) {
-                console.log('⚠️ IndexedDB no disponible aún - sesión no cargada');
-                return false;
-            }
-            
             const token = await this.getFromDB(AUTH_CONFIG.TOKEN_KEY);
             const user = await this.getFromDB(AUTH_CONFIG.USER_KEY);
             const business = await this.getFromDB(AUTH_CONFIG.BUSINESS_KEY);
@@ -49,9 +72,11 @@ class AuthManager {
                 this.business = business;
                 console.log('✅ Sesión cargada:', user.name);
                 return true;
+            } else {
+                console.log('ℹ️ No hay sesión guardada');
             }
         } catch (error) {
-            console.error('Error cargando sesión:', error);
+            console.error('❌ Error cargando sesión:', error);
         }
         return false;
     }
@@ -306,7 +331,14 @@ class AuthManager {
 
     // Verificar si está autenticado
     isAuthenticated() {
-        return !!(this.token && this.user && this.business);
+        const authenticated = !!(this.token && this.user && this.business);
+        console.log('🔐 Verificando autenticación:', {
+            hasToken: !!this.token,
+            hasUser: !!this.user,
+            hasBusiness: !!this.business,
+            authenticated
+        });
+        return authenticated;
     }
 
     // Obtener headers con autenticación

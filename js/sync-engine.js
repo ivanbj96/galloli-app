@@ -753,6 +753,15 @@ class SyncEngine {
 
     interceptChanges() {
         console.log('🎯 Interceptando cambios locales...');
+        console.log('📊 Módulos disponibles:', {
+            ClientsModule: !!window.ClientsModule?.saveClients,
+            SalesModule: !!window.SalesModule?.saveSales,
+            OrdersModule: !!window.OrdersModule?.saveOrders,
+            AccountingModule: !!window.AccountingModule?.saveExpenses,
+            MermaModule: !!window.MermaModule?.saveDailyPrices,
+            DiezmosModule: !!window.DiezmosModule?.saveConfig,
+            ConfigModule: !!window.ConfigModule?.saveConfig
+        });
         
         let interceptorsInstalled = 0;
         

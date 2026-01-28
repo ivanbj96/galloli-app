@@ -380,13 +380,40 @@ class SyncEngine {
             // Crear mapa por ID
             const itemsMap = new Map();
             
+            // DIAGNÓSTICO: Contar IDs duplicados
+            const remoteIds = new Map();
+            remote.forEach(item => {
+                const id = this.getItemId(item, type);
+                remoteIds.set(id, (remoteIds.get(id) || 0) + 1);
+            });
+            
+            const duplicates = Array.from(remoteIds.entries()).filter(([id, count]) => count > 1);
+            if (duplicates.length > 0) {
+                console.warn(`⚠️ ${type}: ${duplicates.length} IDs duplicados en servidor:`, duplicates.slice(0, 3));
+            }
+            
             // Agregar items remotos
             remote.forEach(item => {
                 const id = this.getItemId(item, type);
-                itemsMap.set(id, {
-                    ...item,
-                    _source: 'remote'
-                });
+                
+                // Si ya existe este ID, mantener el más reciente
+                const existing = itemsMap.get(id);
+                if (existing) {
+                    const existingTime = this.getItemTimestamp(existing);
+                    const itemTime = this.getItemTimestamp(item);
+                    
+                    if (itemTime > existingTime) {
+                        itemsMap.set(id, {
+                            ...item,
+                            _source: 'remote'
+                        });
+                    }
+                } else {
+                    itemsMap.set(id, {
+                        ...item,
+                        _source: 'remote'
+                    });
+                }
             });
             
             // Agregar/sobrescribir con items locales (comparando timestamps)

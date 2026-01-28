@@ -384,34 +384,46 @@ class SyncEngine {
             const remoteIds = new Map();
             remote.forEach(item => {
                 const id = this.getItemId(item, type);
-                remoteIds.set(id, (remoteIds.get(id) || 0) + 1);
+                if (!remoteIds.has(id)) {
+                    remoteIds.set(id, []);
+                }
+                remoteIds.get(id).push(item);
             });
             
-            const duplicates = Array.from(remoteIds.entries()).filter(([id, count]) => count > 1);
+            const duplicates = Array.from(remoteIds.entries()).filter(([id, items]) => items.length > 1);
             if (duplicates.length > 0) {
-                console.warn(`⚠️ ${type}: ${duplicates.length} IDs duplicados en servidor:`, duplicates.slice(0, 3));
+                console.warn(`⚠️ ${type}: ${duplicates.length} IDs duplicados en servidor - limpiando...`);
+                
+                // Para cada ID duplicado, mantener solo el más reciente
+                duplicates.forEach(([id, items]) => {
+                    const newest = items.reduce((prev, current) => {
+                        const prevTime = this.getItemTimestamp(prev);
+                        const currentTime = this.getItemTimestamp(current);
+                        return currentTime > prevTime ? current : prev;
+                    });
+                    
+                    console.log(`  🧹 ID ${id}: ${items.length} duplicados → manteniendo el más reciente`);
+                });
             }
             
-            // Agregar items remotos
-            remote.forEach(item => {
-                const id = this.getItemId(item, type);
-                
-                // Si ya existe este ID, mantener el más reciente
-                const existing = itemsMap.get(id);
-                if (existing) {
-                    const existingTime = this.getItemTimestamp(existing);
-                    const itemTime = this.getItemTimestamp(item);
-                    
-                    if (itemTime > existingTime) {
-                        itemsMap.set(id, {
-                            ...item,
-                            _source: 'remote'
-                        });
-                    }
-                } else {
+            // Agregar items remotos (solo el más reciente si hay duplicados)
+            remoteIds.forEach((items, id) => {
+                if (items.length === 1) {
                     itemsMap.set(id, {
-                        ...item,
+                        ...items[0],
                         _source: 'remote'
+                    });
+                } else {
+                    // Mantener el más reciente
+                    const newest = items.reduce((prev, current) => {
+                        const prevTime = this.getItemTimestamp(prev);
+                        const currentTime = this.getItemTimestamp(current);
+                        return currentTime > prevTime ? current : prev;
+                    });
+                    
+                    itemsMap.set(id, {
+                        ...newest,
+                        _source: 'remote_deduped'
                     });
                 }
             });
@@ -449,7 +461,7 @@ class SyncEngine {
                 return cleanItem;
             });
             
-            console.log(`  ${type}: ${local.length} local + ${remote.length} remote = ${merged[type].length} merged`);
+            console.log(`  ${type}: ${local.length} local + ${remote.length} remote = ${merged[type].length} merged (${duplicates.length} duplicados limpiados)`);
         }
         
         return merged;

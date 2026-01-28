@@ -259,38 +259,25 @@ class SyncEngine {
             case 'sales':
                 if (window.SalesModule) {
                     await SalesModule.loadSales();
-                    if (window.App?.currentPage === 'sales') {
-                        SalesModule.updateSalesList(window.App.currentDate);
-                    }
                 }
                 break;
                 
             case 'orders':
                 if (window.OrdersModule) {
                     await OrdersModule.loadOrders();
-                    if (window.App?.currentPage === 'orders') {
-                        OrdersModule.updateOrdersList();
-                    }
                 }
                 break;
                 
             case 'expenses':
                 if (window.AccountingModule) {
                     await AccountingModule.loadExpenses();
-                    if (window.App?.currentPage === 'accounting') {
-                        AccountingModule.updateAccounting(window.App.currentDate);
-                    }
                 }
                 break;
                 
             case 'prices':
-                if (window.MermaModule) {
-                    await MermaModule.loadDailyPrices();
-                }
-                break;
-                
             case 'mermaRecords':
                 if (window.MermaModule) {
+                    await MermaModule.loadDailyPrices();
                     await MermaModule.loadMermaRecords();
                 }
                 break;
@@ -298,9 +285,6 @@ class SyncEngine {
             case 'diezmos':
                 if (window.DiezmosModule) {
                     await DiezmosModule.loadRecords();
-                    if (window.App?.currentPage === 'diezmos') {
-                        DiezmosModule.updateDiezmosList();
-                    }
                 }
                 break;
                 
@@ -309,16 +293,13 @@ class SyncEngine {
                     await ConfigModule.loadConfig();
                     ConfigModule.applyConfig();
                 }
-                if (window.DiezmosModule) {
-                    await DiezmosModule.loadConfig();
-                }
                 break;
-                
-            case 'paymentHistory':
-                if (window.PaymentHistoryModule) {
-                    await PaymentHistoryModule.loadPayments();
-                }
-                break;
+        }
+        
+        // SIEMPRE recargar la página actual para reflejar cambios
+        if (window.App?.currentPage) {
+            console.log('🔄 Recargando página actual:', window.App.currentPage);
+            window.App.loadPage(window.App.currentPage);
         }
     }
 

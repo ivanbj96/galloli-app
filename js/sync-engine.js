@@ -328,7 +328,20 @@ class SyncEngine {
             // 5. Aplicar datos localmente
             await this.applyMergedData(mergedData);
             
-            // 6. Recargar toda la UI
+            // 6. Limpiar duplicados del servidor (solo si hubo duplicados)
+            const totalDuplicates = Object.values(mergedData).reduce((sum, items) => {
+                // Contar cuántos duplicados había en remoteData vs mergedData
+                const remoteCount = (remoteData[Object.keys(mergedData).find(k => mergedData[k] === items)] || []).length;
+                const mergedCount = items.length;
+                return sum + (remoteCount - mergedCount);
+            }, 0);
+            
+            if (totalDuplicates > 0) {
+                console.log(`🧹 Limpiando ${totalDuplicates} duplicados del servidor...`);
+                await this.cleanupServerDuplicates();
+            }
+            
+            // 7. Recargar toda la UI
             await this.reloadAllModules();
             
             console.log('✅ Sincronización inteligente completada');
@@ -680,6 +693,26 @@ class SyncEngine {
             for (const item of items) {
                 await this.saveLocal(dataType, item);
             }
+        }
+    }
+
+    async cleanupServerDuplicates() {
+        try {
+            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/cleanup-duplicates`, {
+                method: 'POST',
+                headers: window.AuthManager.getAuthHeaders()
+            });
+            
+            if (!response.ok) {
+                console.warn('No se pudieron limpiar duplicados del servidor');
+                return;
+            }
+            
+            const result = await response.json();
+            console.log(`✅ ${result.duplicates_deleted} duplicados eliminados del servidor`);
+            
+        } catch (error) {
+            console.error('Error limpiando duplicados del servidor:', error);
         }
     }
 

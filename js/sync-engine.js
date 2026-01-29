@@ -365,7 +365,7 @@ class SyncEngine {
         console.log('🔀 Haciendo merge inteligente...');
         
         const merged = {};
-        const dataTypes = ['clients', 'sales', 'orders', 'expenses', 'prices', 'mermaRecords', 'diezmos', 'paymentHistory', 'config'];
+        const dataTypes = ['clients', 'sales', 'orders', 'expenses', 'prices', 'mermaRecords', 'diezmos', 'paymentHistory', 'config', 'telegramCredentials'];
         
         for (const type of dataTypes) {
             const local = localData[type] || [];
@@ -551,12 +551,21 @@ class SyncEngine {
         console.log('💾 Aplicando datos localmente...');
         
         for (const [dataType, items] of Object.entries(mergedData)) {
-            // Caso especial: credenciales de Telegram
-            if (dataType === 'telegramCredentials' && items.length > 0) {
-                const creds = items[0]; // Solo hay una credencial
-                if (creds.botToken && creds.chatId && typeof AutoBackup !== 'undefined') {
-                    await AutoBackup.saveCredentials(creds.botToken, creds.chatId);
-                    console.log('  telegramCredentials: sincronizadas');
+            // Caso especial: credenciales de Telegram - SIEMPRE mantener las locales si existen
+            if (dataType === 'telegramCredentials') {
+                // Primero verificar si ya hay credenciales locales
+                const existingCreds = await AutoBackup.getCredentials();
+                
+                if (existingCreds.botToken && existingCreds.chatId) {
+                    // Ya hay credenciales locales - mantenerlas
+                    console.log('  telegramCredentials: manteniendo credenciales locales existentes');
+                } else if (items.length > 0) {
+                    // No hay credenciales locales pero sí remotas - usar las remotas
+                    const creds = items[0];
+                    if (creds.botToken && creds.chatId && typeof AutoBackup !== 'undefined') {
+                        await AutoBackup.saveCredentials(creds.botToken, creds.chatId);
+                        console.log('  telegramCredentials: sincronizadas desde servidor');
+                    }
                 }
                 continue;
             }
@@ -631,7 +640,8 @@ class SyncEngine {
                 mermaRecords: [],
                 diezmos: [],
                 paymentHistory: [],
-                config: []
+                config: [],
+                telegramCredentials: []
             };
             
             (result.data || []).forEach(item => {
@@ -643,7 +653,18 @@ class SyncEngine {
             return data;
         } catch (error) {
             console.error('Error obteniendo datos remotos:', error);
-            return { clients: [], sales: [], orders: [], expenses: [], prices: [], mermaRecords: [], diezmos: [], paymentHistory: [], config: [] };
+            return { 
+                clients: [], 
+                sales: [], 
+                orders: [], 
+                expenses: [], 
+                prices: [], 
+                mermaRecords: [], 
+                diezmos: [], 
+                paymentHistory: [], 
+                config: [],
+                telegramCredentials: []
+            };
         }
     }
 

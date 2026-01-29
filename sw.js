@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.2.0'; // Feature: Sistema de notificaciones mejorado con diagnóstico detallado
+const APP_VERSION = '7.2.2'; // Fix: Credenciales de Telegram se mantienen permanentemente
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

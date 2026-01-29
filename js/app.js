@@ -1381,8 +1381,11 @@ loadConfigPage() {
                     <button class="btn btn-outline" onclick="showErrorLog()" style="width: 100%; margin-bottom: 10px;">
                         <i class="fas fa-list"></i> Ver Log de Errores
                     </button>
-                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%;">
+                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%; margin-bottom: 10px;">
                         <i class="fas fa-trash"></i> Limpiar Log
+                    </button>
+                    <button class="btn btn-success" onclick="PushNotifications.test()" style="width: 100%;">
+                        <i class="fas fa-bell"></i> Probar Notificaciones Push
                     </button>
                 </div>
             </div>

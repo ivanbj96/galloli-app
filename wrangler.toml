@@ -26,7 +26,7 @@ new_sqlite_classes = ["SessionManager"]
 # TELEGRAM_BOT_TOKEN
 # JWT_SECRET
 
-# Cron Triggers - Backup automático a las 10 PM hora de Nicaragua (UTC-6)
-# 10 PM Nicaragua = 4 AM UTC del día siguiente
+# Cron Triggers - Backup automático a las 10 PM hora de Ecuador (UTC-5)
+# 10 PM Ecuador = 3 AM UTC del día siguiente
 [triggers]
-crons = ["0 4 * * *"]
+crons = ["0 3 * * *"]

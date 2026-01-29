@@ -210,7 +210,7 @@
     </div>
 
     <script src="js/utils.js"></script>
-    <script src="js/push-notifications.js"></script>
+    <script src="js/notify-system.js"></script>
     <script>
         const statusEl = document.getElementById('status');
         const logEl = document.getElementById('log');
@@ -265,7 +265,7 @@
                 try {
                     await navigator.serviceWorker.register('./sw.js');
                     const registration = await navigator.serviceWorker.ready;
-                    NotificationsModule.swRegistration = registration;
+                    PushNotifications.swRegistration = registration;
                     log('✅ Service Worker registrado');
                 } catch (error) {
                     log('❌ Error registrando Service Worker: ' + error.message);
@@ -276,7 +276,8 @@
             
             // Verificar permisos actuales
             if (Notification.permission === 'granted') {
-                NotificationsModule.permission = 'granted';
+                PushNotifications.permission = 'granted';
+                PushNotifications.isInitialized = true;
                 updateStatus('✅ Permisos concedidos - Listo para probar', 'success');
                 enableButtons();
             } else if (Notification.permission === 'denied') {
@@ -290,9 +291,10 @@
         
         btnRequest.addEventListener('click', async () => {
             log('Solicitando permisos...');
-            const granted = await NotificationsModule.requestPermission();
+            const granted = await PushNotifications.requestPermission();
             
             if (granted) {
+                PushNotifications.isInitialized = true;
                 updateStatus('✅ Permisos concedidos - Listo para probar', 'success');
                 btnRequest.disabled = true;
                 enableButtons();
@@ -303,7 +305,7 @@
         
         btnTestBasic.addEventListener('click', async () => {
             log('Enviando notificación básica...');
-            const success = await NotificationsModule.showNotification(
+            const success = await PushNotifications.show(
                 '🧪 Prueba Básica',
                 'Esta es una notificación de prueba básica',
                 { tag: 'test-basic' }
@@ -318,7 +320,7 @@
         
         btnTestVibrate.addEventListener('click', async () => {
             log('Enviando notificación con vibración...');
-            const success = await NotificationsModule.showNotification(
+            const success = await PushNotifications.show(
                 '📳 Prueba con Vibración',
                 'Tu dispositivo debería vibrar ahora',
                 { 
@@ -336,7 +338,7 @@
         
         btnTestPersistent.addEventListener('click', async () => {
             log('Enviando notificación persistente...');
-            const success = await NotificationsModule.showNotification(
+            const success = await PushNotifications.show(
                 '🔔 Prueba Persistente',
                 'Esta notificación requiere interacción',
                 { 
@@ -358,7 +360,7 @@
             updateStatus('🧪 Ejecutando pruebas...', 'warning');
             
             // Prueba 1
-            await NotificationsModule.showNotification(
+            await PushNotifications.show(
                 '🧪 Prueba 1/3',
                 'Notificación básica',
                 { tag: 'test-all-1' }
@@ -367,7 +369,7 @@
             
             // Prueba 2 (después de 2 segundos)
             setTimeout(async () => {
-                await NotificationsModule.showNotification(
+                await PushNotifications.show(
                     '🧪 Prueba 2/3',
                     'Notificación con vibración',
                     { 
@@ -380,7 +382,7 @@
             
             // Prueba 3 (después de 4 segundos)
             setTimeout(async () => {
-                await NotificationsModule.showNotification(
+                await PushNotifications.show(
                     '🧪 Prueba 3/3',
                     'Todas las pruebas completadas ✅',
                     { 

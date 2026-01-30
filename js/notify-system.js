@@ -43,12 +43,10 @@ const PushNotifications = {
             return false;
         }
 
-        // Solicitar permisos
-        console.log('🔐 Solicitando permisos...');
-        const granted = await this.requestPermission();
-        
-        if (granted) {
-            console.log('✅ Permisos concedidos - Sistema listo');
+        // Si los permisos ya están concedidos, inicializar completamente
+        if (Notification.permission === 'granted') {
+            console.log('✅ Permisos ya concedidos - Inicializando sistema completo');
+            this.permission = 'granted';
             this.isInitialized = true;
             
             // Verificar tareas pendientes inmediatamente (después de 3 segundos)
@@ -65,15 +63,40 @@ const PushNotifications = {
             }, 5 * 60 * 1000);
             
             console.log('✅ Verificaciones periódicas programadas (cada 5 minutos)');
-        } else {
-            console.warn('⚠️ Permisos NO concedidos - Sistema deshabilitado');
+            console.log('🔔 ========================================');
+            console.log('🔔 INICIALIZACIÓN COMPLETADA: ÉXITO');
+            console.log('🔔 ========================================');
+            return true;
         }
         
-        console.log('🔔 ========================================');
-        console.log('🔔 INICIALIZACIÓN COMPLETADA:', granted ? 'ÉXITO' : 'FALLIDA');
-        console.log('🔔 ========================================');
+        // Si los permisos están en default, NO solicitar automáticamente
+        // (el usuario debe hacer clic en el botón de prueba o configuración)
+        if (Notification.permission === 'default') {
+            console.log('⚠️ Permisos pendientes - esperando acción del usuario');
+            console.log('💡 El usuario debe:');
+            console.log('   1. Ir a Configuración');
+            console.log('   2. Hacer clic en "Probar Notificaciones Push"');
+            console.log('   3. Conceder permisos cuando se soliciten');
+            console.log('🔔 ========================================');
+            console.log('🔔 INICIALIZACIÓN COMPLETADA: PERMISOS PENDIENTES');
+            console.log('🔔 ========================================');
+            return false;
+        }
         
-        return granted;
+        // Si los permisos están denegados
+        if (Notification.permission === 'denied') {
+            console.error('❌ Permisos DENEGADOS por el usuario');
+            console.log('💡 Para habilitar notificaciones:');
+            console.log('   1. Haz clic en el ícono de candado en la barra de direcciones');
+            console.log('   2. Busca "Notificaciones" y cambia a "Permitir"');
+            console.log('   3. Recarga la página');
+            console.log('🔔 ========================================');
+            console.log('🔔 INICIALIZACIÓN COMPLETADA: PERMISOS DENEGADOS');
+            console.log('🔔 ========================================');
+            return false;
+        }
+        
+        return false;
     },
 
     // Solicitar permisos

@@ -3656,27 +3656,44 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NOTIFICACIONES PUSH - CORREGIDO
+    // NOTIFICACIONES PUSH - MEJORADO
     async initPushNotifications() {
-        console.log('🔔 Inicializando notificaciones push...');
+        console.log('🔔 ========================================');
+        console.log('🔔 INICIALIZANDO NOTIFICACIONES EN APP');
+        console.log('🔔 ========================================');
         
         if (typeof PushNotifications === 'undefined') {
             console.error('❌ PushNotifications no está definido');
+            console.log('💡 Verifica que js/notify-system.js esté cargado');
             return false;
         }
 
         try {
+            // Esperar un poco para asegurar que el Service Worker esté listo
+            console.log('⏳ Esperando 2 segundos para que el Service Worker esté listo...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            console.log('🚀 Iniciando sistema de notificaciones...');
             const initialized = await PushNotifications.init();
             
             if (initialized) {
-                console.log('✅ Sistema de notificaciones inicializado');
+                console.log('✅ Sistema de notificaciones inicializado correctamente');
+                console.log('🔔 ========================================');
                 return true;
             } else {
                 console.warn('⚠️ No se pudieron inicializar las notificaciones');
+                console.warn('   Posibles causas:');
+                console.warn('   - Permisos denegados');
+                console.warn('   - Service Worker no disponible');
+                console.warn('   - Navegador no soporta notificaciones');
+                console.log('🔔 ========================================');
                 return false;
             }
         } catch (error) {
             console.error('❌ Error inicializando notificaciones:', error);
+            console.error('   Mensaje:', error.message);
+            console.error('   Stack:', error.stack);
+            console.log('🔔 ========================================');
             return false;
         }
     },

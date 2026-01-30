@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.2.2'; // Fix: Credenciales de Telegram se mantienen permanentemente
+const APP_VERSION = '7.2.3'; // Fix: Edición de ventas ahora guarda cambios correctamente
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

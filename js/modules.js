@@ -1370,21 +1370,21 @@ const SalesModule = {
         document.body.appendChild(modal);
         
         const form = modal.querySelector('#edit-sale-form');
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            this.updateSale(saleId, {
+            await this.updateSale(saleId, {
                 clientId: parseInt(document.getElementById('edit-sale-client').value),
                 weight: parseFloat(document.getElementById('edit-sale-weight').value),
                 quantity: parseInt(document.getElementById('edit-sale-quantity').value),
                 price: parseFloat(document.getElementById('edit-sale-price').value),
-                date: document.getElementById('edit-sale-date').value,
+                date: document.getElementById('edit-sale-date').value),
                 isPaid: document.getElementById('edit-sale-payment').value === 'paid'
             });
             modal.remove();
         });
     },
 
-    updateSale(saleId, updates) {
+    async updateSale(saleId, updates) {
         const sale = this.getSaleById(saleId);
         if (!sale) return false;
 
@@ -1430,8 +1430,8 @@ const SalesModule = {
             }
         }
 
-        this.saveSales();
-        ClientsModule.saveClients();
+        await this.saveSales();
+        await ClientsModule.saveClients();
         
         // Actualizar contabilidad de ambas fechas si cambió la fecha
         if (typeof AccountingModule !== 'undefined') {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.2.5'; // Fix: Error de sintaxis en edición de ventas y cache de archivos correctos
+const APP_VERSION = '7.3.0'; // Fix: Limpieza completa de cache para resolver errores
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

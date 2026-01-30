@@ -1377,7 +1377,7 @@ const SalesModule = {
                 weight: parseFloat(document.getElementById('edit-sale-weight').value),
                 quantity: parseInt(document.getElementById('edit-sale-quantity').value),
                 price: parseFloat(document.getElementById('edit-sale-price').value),
-                date: document.getElementById('edit-sale-date').value),
+                date: document.getElementById('edit-sale-date').value,
                 isPaid: document.getElementById('edit-sale-payment').value === 'paid'
             });
             modal.remove();

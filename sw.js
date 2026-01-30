@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.2.4'; // Fix: Notificaciones se inicializan correctamente si ya hay permisos
+const APP_VERSION = '7.2.5'; // Fix: Error de sintaxis en edición de ventas y cache de archivos correctos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -22,8 +22,9 @@ async function getStaticResources() {
             '/js/app.js',
             '/js/offline-maps.js',
             '/js/creditos.js',
-            '/js/push-notifications.js',
-            '/js/wasm-notifications.js',
+            '/js/notify-system.js',
+            '/js/payment-processor.js',
+            '/js/auto-backup.js',
             '/manifest.json'
         ];
 

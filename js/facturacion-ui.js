@@ -267,11 +267,29 @@ const FacturacionUI = {
             
             if (factura) {
                 Utils.showNotification('✅ Factura emitida y autorizada por el SRI', 'success', 5000);
+                
+                // Descargar PDF automáticamente
+                await FacturacionElectronicaModule.generarRIDE(factura);
+                
                 SalesModule.updateSalesList(sale.date);
             }
         } catch (error) {
             Utils.showLoading(false);
             Utils.showNotification('❌ Error: ' + error.message, 'error', 5000);
+        }
+    },
+    
+    async verFactura(facturaId) {
+        const factura = FacturacionElectronicaModule.facturas.find(f => f.id === facturaId);
+        if (!factura) return;
+        
+        try {
+            Utils.showLoading(true);
+            await FacturacionElectronicaModule.generarRIDE(factura);
+            Utils.showLoading(false);
+        } catch (error) {
+            Utils.showLoading(false);
+            Utils.showNotification('❌ Error descargando factura: ' + error.message, 'error', 3000);
         }
     }
 };

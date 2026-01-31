@@ -198,7 +198,9 @@ const FacturacionElectronicaModule = {
                 clienteRuc: cliente.ruc || cliente.cedula,
                 clienteNombre: cliente.name,
                 total: venta.total,
+                peso: venta.weight,
                 fecha: venta.date,
+                formaPago: venta.isPaid ? 'EFECTIVO' : 'CREDITO',
                 timestamp: Date.now()
             };
             
@@ -293,9 +295,57 @@ const FacturacionElectronicaModule = {
     
     // Generar RIDE (PDF)
     async generarRIDE(factura) {
-        // Implementar generación de PDF con formato RIDE oficial
-        // Incluir código QR con clave de acceso
-        console.log('Generando RIDE para factura:', factura.claveAcceso);
+        try {
+            const response = await fetch('https://facturacion-sri.ivanbj-96.workers.dev/api/facturacion/generar-ride', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    factura: {
+                        claveAcceso: factura.claveAcceso,
+                        secuencial: factura.secuencial,
+                        ambiente: factura.ambiente,
+                        tipoEmision: 'NORMAL',
+                        clienteNombre: factura.clienteNombre,
+                        clienteRuc: factura.clienteRuc,
+                        total: factura.total,
+                        peso: factura.peso,
+                        fecha: factura.fecha,
+                        numeroAutorizacion: factura.numeroAutorizacion,
+                        fechaAutorizacion: factura.fechaAutorizacion,
+                        formaPago: factura.formaPago || 'EFECTIVO'
+                    },
+                    config: {
+                        razonSocial: this.config.razonSocial,
+                        nombreComercial: this.config.nombreComercial,
+                        ruc: this.config.ruc,
+                        dirMatriz: this.config.dirMatriz,
+                        establecimiento: this.config.establecimiento,
+                        puntoEmision: this.config.puntoEmision
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Error generando RIDE');
+            }
+            
+            // Descargar PDF
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FACTURA-${factura.secuencial}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('RIDE generado exitosamente');
+            
+        } catch (error) {
+            console.error('Error generando RIDE:', error);
+            throw new Error('No se pudo generar el PDF: ' + error.message);
+        }
     },
     
     // Utilidades

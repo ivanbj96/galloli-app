@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.3.2'; // Fix: Syntax error en deleteSale - async event listener
+const APP_VERSION = '7.3.3'; // PDF RIDE para facturas electrónicas
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

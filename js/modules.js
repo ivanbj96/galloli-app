@@ -1405,6 +1405,7 @@ const SalesModule = {
         sale.isPaid = updates.isPaid;
         sale.paidAmount = updates.isPaid ? sale.total : 0;
         sale.remainingDebt = updates.isPaid ? 0 : sale.total;
+        sale.lastModified = Date.now();
 
         const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
         if (mermaRecord) {
@@ -1451,7 +1452,7 @@ const SalesModule = {
         return true;
     },
 
-    deleteSale(saleId) {
+    async deleteSale(saleId) {
         const sale = this.getSaleById(saleId);
         if (!sale) return false;
 
@@ -1525,8 +1526,13 @@ const SalesModule = {
             // Eliminar venta del array
             this.sales = this.sales.filter(s => s.id !== saleId);
             
+            // Eliminar de IndexedDB
+            if (DB.db) {
+                await DB.delete('sales', saleId);
+            }
+            
             // Guardar cambios
-            this.saveSales();
+            await this.saveSales();
 
             // Actualizar contabilidad
             if (typeof AccountingModule !== 'undefined') {

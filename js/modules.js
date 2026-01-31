@@ -1513,7 +1513,7 @@ const SalesModule = {
         
         // Configurar botón de confirmación
         const confirmBtn = modal.querySelector('#confirm-delete-btn');
-        confirmBtn.addEventListener('click', () => {
+        confirmBtn.addEventListener('click', async () => {
             // Actualizar estadísticas del cliente
             if (client) {
                 client.totalSales -= 1;

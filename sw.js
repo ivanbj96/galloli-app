@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.3.1'; // Fix: Persistencia de edición/eliminación de ventas
+const APP_VERSION = '7.3.2'; // Fix: Syntax error en deleteSale - async event listener
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

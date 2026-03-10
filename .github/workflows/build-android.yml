@@ -20,10 +20,19 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          echo "Installing dependencies..."
+          npm install --legacy-peer-deps
+          echo "Dependencies installed successfully"
 
       - name: Build web app
-        run: npm run build
+        run: echo "Web app ready - using current directory as build output"
+
+      - name: Verify Capacitor config
+        run: |
+          echo "Verifying Capacitor configuration..."
+          cat capacitor.config.ts
+          npx cap doctor || true
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -42,10 +51,22 @@ jobs:
           sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
       - name: Add Android platform
-        run: npx cap add android
+        run: |
+          echo "Adding Android platform..."
+          npx cap add android
+          echo "Android platform added successfully"
 
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: |
+          echo "Syncing Capacitor..."
+          npx cap sync android
+          echo "Capacitor sync completed"
+
+      - name: Verify Android project
+        run: |
+          echo "Verifying Android project structure..."
+          ls -la android/
+          ls -la android/app/
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew

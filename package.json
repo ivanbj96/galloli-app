@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "dev": "npx http-server . -p 3000 -c-1",
-    "build": "echo 'No build step needed for vanilla JS'",
+    "build": "echo 'Build completed - using current directory as webDir'",
     "deploy": "wrangler pages deploy . --project-name=galloli --branch=main",
     "deploy:worker": "wrangler deploy",
     "android:init": "npx cap init galloli com.galloli.app --web-dir .",
@@ -13,8 +13,10 @@
     "android:sync": "npx cap sync android",
     "android:build": "cd android && ./gradlew assembleDebug",
     "android:run": "npx cap run android",
+    "android:clean": "cd android && ./gradlew clean",
     "capacitor:sync": "npx cap sync",
-    "capacitor:open": "npx cap open android"
+    "capacitor:open": "npx cap open android",
+    "capacitor:update": "npx cap update"
   },
   "keywords": [
     "pollo",
@@ -28,19 +30,19 @@
   "author": "Ivan Quiñonez",
   "license": "MIT",
   "devDependencies": {
-    "@capacitor/cli": "^5.7.0",
+    "@capacitor/cli": "^8.1.0",
     "http-server": "^14.1.1",
     "wrangler": "^3.78.0"
   },
   "dependencies": {
-    "@capacitor/android": "^5.7.0",
-    "@capacitor/core": "^5.7.0",
-    "@capacitor/push-notifications": "^5.1.0",
-    "@capacitor/local-notifications": "^5.0.7",
-    "@capacitor/splash-screen": "^5.0.7",
-    "@capacitor/status-bar": "^5.0.7",
-    "@capacitor/filesystem": "^5.2.0",
-    "@capacitor/share": "^5.0.7"
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/share": "^8.0.0"
   },
   "repository": {
     "type": "git",
@@ -48,6 +50,6 @@
   },
   "homepage": "https://galloli.pages.dev",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   }
 }

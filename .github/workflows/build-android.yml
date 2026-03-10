@@ -2,98 +2,61 @@ name: Build Android APK
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g., v1.0.0)'
-        required: true
-        default: 'v1.0.0'
+    branches: [main]
+  workflow_dispatch:  # Permite ejecutar manualmente
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
-    name: Build Android APK with Capacitor
-    
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
           cache: 'npm'
-          
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build web app
+        run: npm run build
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
-          
+          java-version: '21'          # ⚠️ MUST be 21 for Capacitor 8
+
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Install Capacitor
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK components
         run: |
-          npm install -g @capacitor/cli
-          npm install @capacitor/core @capacitor/android
-          
-      - name: Initialize Capacitor
-        run: |
-          if [ ! -f capacitor.config.ts ]; then
-            npx cap init galloli com.galloli.app --web-dir .
-          fi
-          
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
       - name: Add Android platform
-        run: |
-          if [ ! -d android ]; then
-            npx cap add android
-          fi
-          
+        run: npx cap add android
+
       - name: Sync Capacitor
         run: npx cap sync android
-        
-      - name: Build Android APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
-          
-      - name: Upload APK
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: galloli-android-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
-      - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: android/app/build/outputs/apk/debug/app-debug.apk
-          name: GallOli ${{ github.ref_name }}
-          body: |
-            ## GallOli Android App ${{ github.ref_name }}
-            
-            ### Características:
-            - ✅ Gestión completa de ventas de pollos
-            - ✅ Control de créditos y pagos
-            - ✅ Cálculo automático de merma
-            - ✅ Backup automático a Telegram
-            - ✅ Sincronización multi-dispositivo
-            - ✅ Notificaciones push
-            - ✅ Modo offline
-            
-            ### Instalación:
-            1. Descarga el archivo APK
-            2. Habilita "Fuentes desconocidas" en Android
-            3. Instala la aplicación
-            
-            ### Requisitos:
-            - Android 7.0+ (API 24)
-            - 50MB de espacio libre
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          retention-days: 30

@@ -1,37 +1,68 @@
-# Ignorar todo por defecto
-*
-
-# Permitir solo archivos del proyecto
-!.gitignore
-!.deployignore
-!deploy.bat
-!README.md
-!wrangler.toml
-!index.html
-!manifest.json
-!sw.js
-!test-notifications.html
-
-# Permitir directorios del proyecto
-!css/
-!css/**
-!icons/
-!icons/**
-!js/
-!js/**
-
-# Ignorar directorios del sistema
-.git/
-.vscode/
-.kiro/
-.wrangler/
-.stfolder/
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Archivos del sistema
-desktop.ini
+# Capacitor
+android/
+ios/
+dist/
+
+# Build outputs
+build/
+.output/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
 Thumbs.db
-*.lnk
-*.tmp
+
+# Logs
 *.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Cloudflare
+.wrangler/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.backup
 *.bak

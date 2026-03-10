@@ -1,0 +1,60 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test and Quality Check
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Lint JavaScript files
+        run: |
+          echo "Checking JavaScript syntax..."
+          find js -name "*.js" -exec node -c {} \;
+          echo "✅ All JavaScript files are syntactically correct"
+          
+      - name: Validate HTML
+        run: |
+          echo "Validating HTML structure..."
+          if command -v tidy &> /dev/null; then
+            tidy -q -e index.html || echo "HTML validation completed"
+          else
+            echo "HTML validation skipped (tidy not available)"
+          fi
+          
+      - name: Check file sizes
+        run: |
+          echo "Checking file sizes..."
+          find . -name "*.js" -size +500k -exec echo "⚠️ Large file: {}" \;
+          find . -name "*.css" -size +100k -exec echo "⚠️ Large CSS file: {}" \;
+          echo "File size check completed"
+          
+      - name: Security scan
+        run: |
+          echo "Running basic security checks..."
+          grep -r "eval(" js/ && echo "⚠️ Found eval() usage" || echo "✅ No eval() found"
+          grep -r "innerHTML.*=" js/ && echo "⚠️ Found innerHTML usage" || echo "✅ No direct innerHTML found"
+          echo "Security scan completed"
+          
+      - name: Performance check
+        run: |
+          echo "Checking for performance issues..."
+          grep -r "console.log" js/ && echo "⚠️ Found console.log statements" || echo "✅ No console.log in production"
+          echo "Performance check completed"

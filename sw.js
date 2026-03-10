@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.3.3'; // PDF RIDE para facturas electrónicas
+const APP_VERSION = '7.4.0'; // Feature: GitHub Actions configurado para CI/CD y generación de APKs
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

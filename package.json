@@ -1,0 +1,53 @@
+{
+  "name": "galloli",
+  "version": "7.3.0",
+  "description": "Sistema completo de gestión para venta de pollos frescos",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx http-server . -p 3000 -c-1",
+    "build": "echo 'No build step needed for vanilla JS'",
+    "deploy": "wrangler pages deploy . --project-name=galloli --branch=main",
+    "deploy:worker": "wrangler deploy",
+    "android:init": "npx cap init galloli com.galloli.app --web-dir .",
+    "android:add": "npx cap add android",
+    "android:sync": "npx cap sync android",
+    "android:build": "cd android && ./gradlew assembleDebug",
+    "android:run": "npx cap run android",
+    "capacitor:sync": "npx cap sync",
+    "capacitor:open": "npx cap open android"
+  },
+  "keywords": [
+    "pollo",
+    "ventas",
+    "gestion",
+    "pwa",
+    "offline",
+    "capacitor",
+    "android"
+  ],
+  "author": "Ivan Quiñonez",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/cli": "^5.7.0",
+    "http-server": "^14.1.1",
+    "wrangler": "^3.78.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^5.7.0",
+    "@capacitor/core": "^5.7.0",
+    "@capacitor/push-notifications": "^5.1.0",
+    "@capacitor/local-notifications": "^5.0.7",
+    "@capacitor/splash-screen": "^5.0.7",
+    "@capacitor/status-bar": "^5.0.7",
+    "@capacitor/filesystem": "^5.2.0",
+    "@capacitor/share": "^5.0.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/galloli.git"
+  },
+  "homepage": "https://galloli.pages.dev",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

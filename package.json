@@ -32,17 +32,18 @@
   "devDependencies": {
     "@capacitor/cli": "^8.1.0",
     "http-server": "^14.1.1",
+    "typescript": "^5.9.3",
     "wrangler": "^3.78.0"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",
     "@capacitor/core": "^8.1.0",
-    "@capacitor/push-notifications": "^8.0.0",
-    "@capacitor/local-notifications": "^8.0.0",
-    "@capacitor/splash-screen": "^8.0.0",
-    "@capacitor/status-bar": "^8.0.0",
     "@capacitor/filesystem": "^8.0.0",
-    "@capacitor/share": "^8.0.0"
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0"
   },
   "repository": {
     "type": "git",

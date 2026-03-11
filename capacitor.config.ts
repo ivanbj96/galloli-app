@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.galloli.app',
   appName: 'GallOli',
-  webDir: './',
+  webDir: 'dist',
   // Para desarrollo con Lovable (hot-reload):
   // server: {
   //   url: 'https://TU-ID.lovableproject.com?forceHideBadge=true',

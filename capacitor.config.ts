@@ -4,6 +4,11 @@ const config: CapacitorConfig = {
   appId: 'com.galloli.app',
   appName: 'GallOli',
   webDir: '.',
+  // Para desarrollo con Lovable (hot-reload):
+  // server: {
+  //   url: 'https://TU-ID.lovableproject.com?forceHideBadge=true',
+  //   cleartext: true,
+  // },
   server: {
     androidScheme: 'https'
   },

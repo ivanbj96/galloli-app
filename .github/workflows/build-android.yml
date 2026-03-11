@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [main]
-  workflow_dispatch:  # Permite ejecutar manualmente
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,29 +16,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22'  # Capacitor 8 requiere Node.js 22
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          echo "Installing dependencies..."
-          npm install --legacy-peer-deps
-          echo "Dependencies installed successfully"
-
-      - name: Build web app
-        run: echo "Web app ready - using current directory as build output"
-
-      - name: Verify Capacitor config
-        run: |
-          echo "Verifying Capacitor configuration..."
-          cat capacitor.config.ts
-          npx cap doctor || true
+        run: npm install --legacy-peer-deps
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'          # ⚠️ MUST be 21 for Capacitor 8
+          java-version: '21'  # Capacitor 8 requiere JDK 21
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -48,32 +36,20 @@ jobs:
 
       - name: Install Android SDK components
         run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"  # Android SDK 35 para Capacitor 8
 
       - name: Add Android platform
         run: |
-          echo "Adding Android platform..."
-          npx cap add android
-          echo "Android platform added successfully"
+          npx cap add android || echo "Platform may already exist"
 
       - name: Sync Capacitor
-        run: |
-          echo "Syncing Capacitor..."
-          npx cap sync android
-          echo "Capacitor sync completed"
-
-      - name: Verify Android project
-        run: |
-          echo "Verifying Android project structure..."
-          ls -la android/
-          ls -la android/app/
-
-      - name: Make Gradle executable
-        run: chmod +x android/gradlew
+        run: npx cap sync android
 
       - name: Build Debug APK
         working-directory: android
-        run: ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

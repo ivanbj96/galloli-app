@@ -1,6 +1,6 @@
 {
   "name": "galloli",
-  "version": "7.3.0",
+  "version": "7.3.1",
   "description": "Sistema completo de gestión para venta de pollos frescos",
   "main": "index.html",
   "scripts": {

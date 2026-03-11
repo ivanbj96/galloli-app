@@ -5,7 +5,8 @@ const SYNC_CONFIG = {
     API_URL: 'https://galloli-sync.ivanbj-96.workers.dev',
     WS_URL: 'wss://galloli-sync.ivanbj-96.workers.dev/ws',
     SYNC_INTERVAL: 30000, // 30 segundos (fallback)
-    RETRY_DELAY: 3000
+    RETRY_DELAY: 3000,
+    WS_RECONNECT_TIMEOUT: 5000 // Reconectar cada 5 segundos
 };
 
 class SyncEngine {
@@ -15,6 +16,9 @@ class SyncEngine {
         this.isSyncing = false;
         this.syncInterval = null;
         this.reconnectTimeout = null;
+        this.wsReconnectAttempts = 0;
+        this.wsMaxReconnectAttempts = 10;
+        this.SYNC_CONFIG = SYNC_CONFIG;
     }
 
     async init() {
@@ -33,18 +37,23 @@ class SyncEngine {
 
         console.log('✅ Usuario autenticado - iniciando sincronización...');
 
-        // 1. Conectar WebSocket
+        // 1. Inicializar cola offline
+        if (window.OfflineQueueManager) {
+            await window.OfflineQueueManager.init();
+        }
+
+        // 2. Conectar WebSocket
         this.connectWebSocket();
 
-        // 2. Sincronización inicial inteligente con merge
+        // 3. Sincronización inicial inteligente con merge
         await this.smartSync();
 
-        // 3. Esperar a que los módulos estén listos antes de interceptar
+        // 4. Esperar a que los módulos estén listos antes de interceptar
         setTimeout(() => {
             this.interceptChanges();
         }, 2000);
 
-        // 4. Detectar online/offline
+        // 5. Detectar online/offline
         window.addEventListener('online', () => this.handleOnline());
         window.addEventListener('offline', () => this.handleOffline());
 
@@ -66,13 +75,20 @@ class SyncEngine {
         
         const wsUrl = `${SYNC_CONFIG.WS_URL}?business_id=${business.id}&user_id=${deviceId}&user_name=${encodeURIComponent(user.name)}`;
         
-        console.log('🔌 Conectando WebSocket...');
+        console.log(`🔌 Conectando WebSocket... (intento ${this.wsReconnectAttempts + 1})`);
         
         try {
             this.ws = new WebSocket(wsUrl);
             
             this.ws.onopen = () => {
                 console.log('✅ WebSocket conectado');
+                this.wsReconnectAttempts = 0; // Reset reintentos al conectarse
+                
+                // Si hay cambios en la cola, procesarlos
+                if (window.OfflineQueueManager?.queue?.length > 0) {
+                    console.log('📤 Conectado - procesando cambios pendientes...');
+                    window.OfflineQueueManager.processBatch();
+                }
             };
             
             this.ws.onmessage = (event) => {
@@ -89,10 +105,24 @@ class SyncEngine {
             };
             
             this.ws.onclose = () => {
-                console.log('🔌 WebSocket desconectado');
+                console.log('🔌 WebSocket desconectado - reintentando...');
                 this.ws = null;
-                // Reconectar después de 3 segundos
-                this.reconnectTimeout = setTimeout(() => this.connectWebSocket(), SYNC_CONFIG.RETRY_DELAY);
+                
+                // Reconectar con backoff exponencial (máximo 30 segundos)
+                if (this.wsReconnectAttempts < this.wsMaxReconnectAttempts) {
+                    const delayMs = Math.min(1000 * Math.pow(2, this.wsReconnectAttempts), 30000);
+                    this.wsReconnectAttempts++;
+                    
+                    console.log(`⏳ Reconectando en ${delayMs}ms...`);
+                    
+                    this.reconnectTimeout = setTimeout(() => {
+                        if (navigator.onLine) {
+                            this.connectWebSocket();
+                        }
+                    }, delayMs);
+                } else {
+                    console.warn('⚠️ Max reintentos de WebSocket alcanzado - usa poll fallback');
+                }
             };
         } catch (error) {
             console.error('Error creando WebSocket:', error);
@@ -923,33 +953,56 @@ class SyncEngine {
         console.log(`✅ ${interceptorsInstalled} interceptores instalados`);
     }
 
-    notifyChange(dataType) {
+    async notifyChange(dataType, dataId = null, action = 'update') {
+        console.log(`📤 Cambio detectado: ${dataType}${dataId ? '/' + dataId : ''} (${action})`);
+        
         // 1. Enviar notificación simple via WebSocket para tiempo real
         if (this.ws?.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({
-                type: 'change',
-                data: {
-                    data_type: dataType,
-                    action: 'sync_request',
-                    timestamp: Date.now()
-                }
-            }));
-            console.log('✅ Notificación enviada via WebSocket:', dataType);
+            try {
+                this.ws.send(JSON.stringify({
+                    type: 'change',
+                    data: {
+                        data_type: dataType,
+                        action: action,
+                        timestamp: Date.now()
+                    }
+                }));
+                console.log('✅ Notificación enviada via WebSocket:', dataType);
+            } catch (error) {
+                console.warn('⚠️ Error enviando notificación WebSocket:', error);
+            }
         } else {
-            console.warn('⚠️ WebSocket no conectado');
+            console.warn('⚠️ WebSocket no conectado - usando cola offline');
         }
         
-        // 2. Subir datos al backend (sin esperar respuesta)
-        this.uploadChanges(dataType).catch(err => {
-            console.error('Error subiendo cambios:', err);
-        });
+        // 2. Subir datos al backend (con fallback a cola offline)
+        try {
+            await this.uploadChanges(dataType, dataId, action);
+        } catch (error) {
+            console.error('❌ Error subiendo cambios:', error);
+            
+            // Si falla, agregar a la cola offline
+            if (window.OfflineQueueManager && dataId) {
+                const storeName = this.getStoreName(dataType);
+                const item = await DB.get(storeName, dataId);
+                if (item) {
+                    await window.OfflineQueueManager.addChange(dataType, dataId, action, item);
+                }
+            }
+        }
     }
     
-    async uploadChanges(dataType) {
+    async uploadChanges(dataType, specificDataId = null, action = 'update') {
         try {
-            // Obtener solo el item más reciente del tipo específico
+            // Obtener datos locales
             const storeName = this.getStoreName(dataType);
-            const localData = await DB.getAll(storeName) || [];
+            let localData = await DB.getAll(storeName) || [];
+            
+            // Si se especifica un ID específico, solo procesar ese
+            if (specificDataId) {
+                const item = await DB.get(storeName, specificDataId);
+                localData = item ? [item] : [];
+            }
             
             if (localData.length === 0) return;
             
@@ -1035,13 +1088,30 @@ class SyncEngine {
     handleOnline() {
         console.log('🌐 Conexión restaurada');
         this.isOnline = true;
+        
+        // Primero intentar WebSocket
         this.connectWebSocket();
-        this.smartSync();
+        
+        // Procesar cambios en la cola offline
+        if (window.OfflineQueueManager) {
+            console.log('📤 Procesando cambios pendientes...');
+            window.OfflineQueueManager.processBatch();
+        }
+        
+        // Hacer sincronización completa
+        setTimeout(() => {
+            this.smartSync();
+        }, 1000);
     }
 
     handleOffline() {
         console.log('📴 Sin conexión');
         this.isOnline = false;
+        
+        // Detener procesamiento de cola
+        if (window.OfflineQueueManager) {
+            window.OfflineQueueManager.stopProcessing();
+        }
     }
 }
 

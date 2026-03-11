@@ -4,7 +4,7 @@
 // Solo se borran si explícitamente se elimina la base de datos o se limpia el almacenamiento del sitio
 
 // Versión global de la DB
-window.DB_VERSION = 3;
+window.DB_VERSION = 4;
 
 const DB = {
     name: 'GallOliDB',
@@ -68,6 +68,13 @@ const DB = {
                 }
                 if (!db.objectStoreNames.contains('auth')) {
                     db.createObjectStore('auth', { keyPath: 'key' });
+                }
+                // Store para la cola de cambios offline (v4)
+                if (!db.objectStoreNames.contains('syncQueue')) {
+                    const syncQueueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
+                    syncQueueStore.createIndex('status', 'status', { unique: false });
+                    syncQueueStore.createIndex('createdAt', 'createdAt', { unique: false });
+                    syncQueueStore.createIndex('dataType', 'dataType', { unique: false });
                 }
             };
         });

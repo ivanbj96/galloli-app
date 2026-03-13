@@ -1434,6 +1434,16 @@ const SalesModule = {
         await this.saveSales();
         await ClientsModule.saveClients();
         
+        // CRÍTICO: Notificar al sistema de sincronización sobre la actualización
+        if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+            await SyncEngine.notifyChange('sales', saleId, 'update');
+            // Si cambió de cliente, notificar también los clientes
+            if (oldClientId !== sale.clientId) {
+                await SyncEngine.notifyChange('clients', oldClientId, 'update');
+                await SyncEngine.notifyChange('clients', sale.clientId, 'update');
+            }
+        }
+        
         // Actualizar contabilidad de ambas fechas si cambió la fecha
         if (typeof AccountingModule !== 'undefined') {
             AccountingModule.updateAccounting(oldDate);
@@ -1534,6 +1544,11 @@ const SalesModule = {
             // Guardar cambios
             await this.saveSales();
 
+            // CRÍTICO: Notificar al sistema de sincronización sobre la eliminación
+            if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+                await SyncEngine.notifyChange('sales', saleId, 'delete');
+            }
+
             // Actualizar contabilidad
             if (typeof AccountingModule !== 'undefined') {
                 AccountingModule.updateAccounting(sale.date);
@@ -1622,6 +1637,12 @@ const SalesModule = {
         }
 
         await this.saveSales();
+        
+        // CRÍTICO: Notificar al sistema de sincronización si no es silencioso
+        if (!silent && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+            await SyncEngine.notifyChange('sales', sale.id, 'update');
+        }
+        
         return true;
     },
 

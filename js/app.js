@@ -925,20 +925,30 @@ const App = {
     async processSmartPayment(sales, totalAmount, date) {
         let remaining = totalAmount;
         let paymentsProcessed = 0;
+        const processedSaleIds = [];
 
         for (const sale of sales) {
             if (remaining <= 0) break;
             
             const payment = Math.min(remaining, sale.remainingDebt);
             
-            if (await SalesModule.registerPayment(sale.id, payment, date)) {
+            if (await SalesModule.registerPayment(sale.id, payment, date, true)) {
                 paymentsProcessed++;
                 remaining -= payment;
+                processedSaleIds.push(sale.id);
             }
         }
 
         // Esperar a que se guarden todos los cambios
         await SalesModule.saveSales();
+
+        // CRÍTICO: Notificar al sistema de sincronización sobre los pagos procesados
+        if (paymentsProcessed > 0 && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+            // Notificar cada venta modificada
+            for (const saleId of processedSaleIds) {
+                await SyncEngine.notifyChange('sales', saleId, 'update');
+            }
+        }
 
         if (paymentsProcessed > 0) {
             Utils.showNotification(

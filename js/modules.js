@@ -1524,48 +1524,53 @@ const SalesModule = {
         // Configurar botón de confirmación
         const confirmBtn = modal.querySelector('#confirm-delete-btn');
         confirmBtn.addEventListener('click', async () => {
-            // Actualizar estadísticas del cliente
-            if (client) {
-                client.totalSales -= 1;
-                client.totalAmount -= sale.total;
-                client.totalWeight -= sale.weight;
-                client.totalQuantity -= sale.quantity;
-                ClientsModule.saveClients();
+            try {
+                // CRÍTICO: Notificar al sistema de sincronización ANTES de eliminar
+                if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+                    await SyncEngine.notifyChange('sales', saleId, 'delete');
+                }
+
+                // Actualizar estadísticas del cliente
+                if (client) {
+                    client.totalSales -= 1;
+                    client.totalAmount -= sale.total;
+                    client.totalWeight -= sale.weight;
+                    client.totalQuantity -= sale.quantity;
+                    await ClientsModule.saveClients();
+                }
+
+                // Eliminar venta del array
+                this.sales = this.sales.filter(s => s.id !== saleId);
+                
+                // Eliminar de IndexedDB
+                if (DB.db) {
+                    await DB.delete('sales', saleId);
+                }
+                
+                // Guardar cambios
+                await this.saveSales();
+
+                // Actualizar contabilidad
+                if (typeof AccountingModule !== 'undefined') {
+                    AccountingModule.updateAccounting(sale.date);
+                }
+
+                // Actualizar badges de créditos si era una venta a crédito
+                if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
+                    CreditosModule.updateCreditBadges();
+                }
+
+                // Actualizar lista
+                this.updateSalesList(sale.date);
+                
+                // Cerrar modal
+                modal.remove();
+
+                Utils.showNotification('✅ Venta eliminada y sincronizada', 'success', 3000);
+            } catch (error) {
+                console.error('❌ Error al eliminar venta:', error);
+                Utils.showNotification('❌ Error al eliminar venta', 'error', 3000);
             }
-
-            // Eliminar venta del array
-            this.sales = this.sales.filter(s => s.id !== saleId);
-            
-            // Eliminar de IndexedDB
-            if (DB.db) {
-                await DB.delete('sales', saleId);
-            }
-            
-            // Guardar cambios
-            await this.saveSales();
-
-            // CRÍTICO: Notificar al sistema de sincronización sobre la eliminación
-            if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                await SyncEngine.notifyChange('sales', saleId, 'delete');
-            }
-
-            // Actualizar contabilidad
-            if (typeof AccountingModule !== 'undefined') {
-                AccountingModule.updateAccounting(sale.date);
-            }
-
-            // Actualizar badges de créditos si era una venta a crédito
-            if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
-                CreditosModule.updateCreditBadges();
-            }
-
-            // Actualizar lista
-            this.updateSalesList(sale.date);
-            
-            // Cerrar modal
-            modal.remove();
-
-            Utils.showNotification('Venta eliminada correctamente', 'success', 3000);
         });
         
         return true;

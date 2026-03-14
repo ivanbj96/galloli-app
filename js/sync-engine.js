@@ -963,11 +963,12 @@ class SyncEngine {
                     type: 'change',
                     data: {
                         data_type: dataType,
+                        data_id: dataId,
                         action: action,
                         timestamp: Date.now()
                     }
                 }));
-                console.log('✅ Notificación enviada via WebSocket:', dataType);
+                console.log('✅ Notificación enviada via WebSocket:', dataType, action);
             } catch (error) {
                 console.warn('⚠️ Error enviando notificación WebSocket:', error);
             }
@@ -975,7 +976,22 @@ class SyncEngine {
             console.warn('⚠️ WebSocket no conectado - usando cola offline');
         }
         
-        // 2. Subir datos al backend (con fallback a cola offline)
+        // 2. Para eliminaciones, enviar directamente al servidor
+        if (action === 'delete' && dataId) {
+            try {
+                await this.sendDeleteToServer(dataType, dataId);
+                console.log('✅ Eliminación sincronizada con servidor:', dataType, dataId);
+            } catch (error) {
+                console.error('❌ Error sincronizando eliminación:', error);
+                // Agregar a cola offline para reintentar
+                if (window.OfflineQueueManager) {
+                    await window.OfflineQueueManager.addChange(dataType, dataId, action, null);
+                }
+            }
+            return;
+        }
+        
+        // 3. Para updates, subir datos al backend (con fallback a cola offline)
         try {
             await this.uploadChanges(dataType, dataId, action);
         } catch (error) {
@@ -990,6 +1006,38 @@ class SyncEngine {
                 }
             }
         }
+    }
+    
+    async sendDeleteToServer(dataType, dataId) {
+        if (!dataId) {
+            console.warn('⚠️ No se puede eliminar sin dataId');
+            return;
+        }
+
+        const changes = [{
+            data_type: dataType,
+            data_id: dataId,
+            action: 'delete',
+            data: null,
+            timestamp: Date.now()
+        }];
+
+        const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...window.AuthManager.getAuthHeaders()
+            },
+            body: JSON.stringify({ changes })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error al sincronizar eliminación: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ Eliminación enviada al servidor:', result);
+        return result;
     }
     
     async uploadChanges(dataType, specificDataId = null, action = 'update') {

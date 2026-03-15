@@ -1670,6 +1670,19 @@ const SalesModule = {
 
     async saveSales() {
         if (DB.db) {
+            // CRÍTICO: Primero obtener todas las ventas existentes en DB
+            const existingSales = await DB.getAll('sales') || [];
+            const currentIds = new Set(this.sales.map(s => s.id));
+            
+            // Eliminar ventas que ya no están en el array
+            for (const existingSale of existingSales) {
+                if (!currentIds.has(existingSale.id)) {
+                    await DB.delete('sales', existingSale.id);
+                    console.log('🗑️ Venta eliminada de IndexedDB:', existingSale.id);
+                }
+            }
+            
+            // Guardar/actualizar ventas actuales
             for (const sale of this.sales) {
                 await DB.set('sales', sale);
             }

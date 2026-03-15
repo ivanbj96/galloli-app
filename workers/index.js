@@ -1199,11 +1199,22 @@ async function handleSync(request, env, path, corsHeaders, currentUser) {
         
         // Actualizar o crear en sync_data
         if (action === 'delete') {
-          await env.DB.prepare(`
-            UPDATE sync_data 
-            SET deleted = 1, deleted_at = ?, updated_by = ?, updated_at = ?
-            WHERE id = ? AND business_id = ?
-          `).bind(Date.now(), currentUser.id, Date.now(), data_id, currentUser.business_id).run();
+          // Buscar por data_type y el ID dentro del JSON data
+          const existing = await env.DB.prepare(`
+            SELECT id FROM sync_data 
+            WHERE business_id = ? AND data_type = ? AND json_extract(data, '$.id') = ? AND deleted = 0
+          `).bind(currentUser.business_id, data_type, data_id).first();
+          
+          if (existing) {
+            await env.DB.prepare(`
+              UPDATE sync_data 
+              SET deleted = 1, deleted_at = ?, updated_by = ?, updated_at = ?
+              WHERE id = ? AND business_id = ?
+            `).bind(Date.now(), currentUser.id, Date.now(), existing.id, currentUser.business_id).run();
+            console.log(`🗑️ Marcado como eliminado: ${data_type}/${data_id}`);
+          } else {
+            console.warn(`⚠️ No se encontró ${data_type}/${data_id} para eliminar`);
+          }
         } else {
           const existing = await env.DB.prepare(`
             SELECT version FROM sync_data WHERE id = ? AND business_id = ?

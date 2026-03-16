@@ -3537,7 +3537,6 @@ async cleanDuplicatePayments() {
                 totalElement.style.color = 'var(--gray)';
             }
         },
-,
 
     // NUEVO: Mostrar/ocultar formulario rápido de cliente
     toggleQuickClientForm() {

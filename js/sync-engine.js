@@ -19,7 +19,6 @@ class SyncEngine {
         this.wsReconnectAttempts = 0;
         this.wsMaxReconnectAttempts = 10;
         this.SYNC_CONFIG = SYNC_CONFIG;
-        this.pendingDeletes = new Map(); // Map<dataType, Set<dataId>>
     }
 
     async init() {
@@ -46,8 +45,8 @@ class SyncEngine {
         // 2. Conectar WebSocket
         this.connectWebSocket();
 
-        // 3. DESHABILITADO: Sincronización inicial para permitir eliminaciones
-        // await this.smartSync();
+        // 3. Sincronización inicial inteligente con merge
+        await this.smartSync();
 
         // 4. Esperar a que los módulos estén listos antes de interceptar
         setTimeout(() => {
@@ -175,16 +174,9 @@ class SyncEngine {
             // Hacer merge
             const itemsMap = new Map();
             
-            // Agregar items remotos (EXCLUYENDO los que están en pendingDeletes)
+            // Agregar items remotos
             remoteItems.forEach(item => {
                 const id = this.getItemId(item, dataType);
-                
-                // CRÍTICO: Excluir items que están en pendingDeletes
-                if (this.pendingDeletes.has(dataType) && this.pendingDeletes.get(dataType).has(String(id))) {
-                    console.log(`  🗑️ Excluyendo ${dataType}/${id} - eliminación pendiente`);
-                    return;
-                }
-                
                 itemsMap.set(id, item);
             });
             
@@ -440,12 +432,6 @@ class SyncEngine {
             
             // Agregar items remotos (solo el más reciente si hay duplicados)
             remoteIds.forEach((items, id) => {
-                // CRÍTICO: Excluir items que están en pendingDeletes
-                if (this.pendingDeletes.has(type) && this.pendingDeletes.get(type).has(String(id))) {
-                    console.log(`  🗑️ Excluyendo ${type}/${id} - eliminación pendiente`);
-                    return;
-                }
-                
                 if (items.length === 1) {
                     itemsMap.set(id, {
                         ...items[0],
@@ -990,22 +976,7 @@ class SyncEngine {
             console.warn('⚠️ WebSocket no conectado - usando cola offline');
         }
         
-        // 2. Para eliminaciones, enviar directamente al servidor
-        if (action === 'delete' && dataId) {
-            try {
-                await this.sendDeleteToServer(dataType, dataId);
-                console.log('✅ Eliminación sincronizada con servidor:', dataType, dataId);
-            } catch (error) {
-                console.error('❌ Error sincronizando eliminación:', error);
-                // Agregar a cola offline para reintentar
-                if (window.OfflineQueueManager) {
-                    await window.OfflineQueueManager.addChange(dataType, dataId, action, null);
-                }
-            }
-            return;
-        }
-        
-        // 3. Para updates, subir datos al backend (con fallback a cola offline)
+        // 2. Para updates, subir datos al backend (con fallback a cola offline)
         try {
             await this.uploadChanges(dataType, dataId, action);
         } catch (error) {
@@ -1019,58 +990,6 @@ class SyncEngine {
                     await window.OfflineQueueManager.addChange(dataType, dataId, action, item);
                 }
             }
-        }
-    }
-    
-    async sendDeleteToServer(dataType, dataId) {
-        if (!dataId) {
-            console.warn('⚠️ No se puede eliminar sin dataId');
-            return;
-        }
-
-        // Agregar a pendingDeletes para que el merge lo respete
-        if (!this.pendingDeletes.has(dataType)) {
-            this.pendingDeletes.set(dataType, new Set());
-        }
-        this.pendingDeletes.get(dataType).add(String(dataId));
-        console.log(`🗑️ Agregado a pendingDeletes: ${dataType}/${dataId}`);
-
-        const changes = [{
-            data_type: dataType,
-            data_id: dataId,
-            action: 'delete',
-            data: null,
-            timestamp: Date.now()
-        }];
-
-        try {
-            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...window.AuthManager.getAuthHeaders()
-                },
-                body: JSON.stringify({ changes })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error al sincronizar eliminación: ${response.status}`);
-            }
-
-            const result = await response.json();
-            console.log('✅ Eliminación enviada al servidor:', result);
-            
-            // Remover de pendingDeletes solo si se sincronizó exitosamente
-            this.pendingDeletes.get(dataType).delete(String(dataId));
-            if (this.pendingDeletes.get(dataType).size === 0) {
-                this.pendingDeletes.delete(dataType);
-            }
-            
-            return result;
-        } catch (error) {
-            console.error('❌ Error enviando eliminación:', error);
-            // Mantener en pendingDeletes para reintentar
-            throw error;
         }
     }
     
@@ -1180,10 +1099,10 @@ class SyncEngine {
             window.OfflineQueueManager.processBatch();
         }
         
-        // DESHABILITADO: Sincronización completa para permitir eliminaciones
-        // setTimeout(() => {
-        //     this.smartSync();
-        // }, 1000);
+        // Hacer sincronización completa
+        setTimeout(() => {
+            this.smartSync();
+        }, 1000);
     }
 
     handleOffline() {

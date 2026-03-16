@@ -1295,10 +1295,6 @@ const SalesModule = {
                             onclick="SalesModule.showEditModal(${sale.id})">
                         <i class="fas fa-edit"></i> Editar
                     </button>
-                    <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" 
-                            onclick="SalesModule.deleteSale(${sale.id})">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
                 </div>
             `;
             salesList.appendChild(li);
@@ -1459,122 +1455,6 @@ const SalesModule = {
         
         this.updateSalesList(sale.date);
         Utils.showNotification('Venta actualizada correctamente', 'success', 3000);
-        return true;
-    },
-
-    async deleteSale(saleId) {
-        const sale = this.getSaleById(saleId);
-        if (!sale) return false;
-
-        const client = ClientsModule.getClientById(sale.clientId);
-        const clientName = client ? client.name : 'Cliente';
-
-        // Crear modal de confirmación personalizado
-        const modal = document.createElement('div');
-        modal.className = 'modal active';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 500px;">
-                <div class="modal-header" style="background: var(--danger); color: white;">
-                    <h3><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h3>
-                    <button class="close-modal" onclick="this.closest('.modal').remove()" style="color: white;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <i class="fas fa-trash-alt" style="font-size: 3rem; color: var(--danger); margin-bottom: 15px;"></i>
-                        <h3 style="margin-bottom: 10px;">¿Eliminar esta venta?</h3>
-                        <p style="color: var(--gray); margin-bottom: 20px;">Esta acción no se puede deshacer</p>
-                    </div>
-                    
-                    <div style="background: var(--light); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <p style="margin: 5px 0;"><strong><i class="fas fa-user"></i> Cliente:</strong> ${clientName}</p>
-                        <p style="margin: 5px 0;"><strong><i class="fas fa-calendar"></i> Fecha:</strong> ${sale.date} ${sale.time}</p>
-                        <p style="margin: 5px 0;"><strong><i class="fas fa-weight"></i> Peso:</strong> ${sale.weight.toFixed(2)} lb</p>
-                        <p style="margin: 5px 0;"><strong><i class="fas fa-egg"></i> Cantidad:</strong> ${sale.quantity} pollos</p>
-                        <p style="margin: 5px 0; font-size: 1.1rem; color: var(--danger);"><strong><i class="fas fa-dollar-sign"></i> Total:</strong> ${Utils.formatCurrency(sale.total)}</p>
-                    </div>
-                    
-                    <div style="background: #FFF3CD; padding: 12px; border-radius: 8px; border-left: 4px solid #FF9800; margin-bottom: 20px;">
-                        <p style="margin: 0; color: #856404; font-size: 0.9rem;">
-                            <i class="fas fa-info-circle"></i> <strong>Esta acción afectará:</strong>
-                        </p>
-                        <ul style="margin: 10px 0 0 20px; color: #856404; font-size: 0.85rem;">
-                            <li>Estadísticas del cliente</li>
-                            <li>Contabilidad del día</li>
-                            <li>Reportes generales</li>
-                            ${!sale.isPaid ? '<li style="color: var(--danger); font-weight: bold;">Créditos pendientes</li>' : ''}
-                        </ul>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-outline" onclick="this.closest('.modal').remove()" style="flex: 1;">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                        <button class="btn btn-danger" id="confirm-delete-btn" style="flex: 1;">
-                            <i class="fas fa-trash"></i> Eliminar Venta
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Configurar botón de confirmación
-        const confirmBtn = modal.querySelector('#confirm-delete-btn');
-        confirmBtn.addEventListener('click', async () => {
-            try {
-                // 1. Actualizar estadísticas del cliente
-                if (client) {
-                    client.totalSales -= 1;
-                    client.totalAmount -= sale.total;
-                    client.totalWeight -= sale.weight;
-                    client.totalQuantity -= sale.quantity;
-                    await ClientsModule.saveClients();
-                }
-
-                // 2. Eliminar venta del array
-                this.sales = this.sales.filter(s => s.id !== saleId);
-                
-                // 3. CRÍTICO: Guardar el array actualizado (igual que updateSale)
-                await this.saveSales();
-                
-                // 4. Guardar cliente actualizado
-                await ClientsModule.saveClients();
-
-                // 5. Notificar al sistema de sincronización (igual que updateSale)
-                if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                    await SyncEngine.notifyChange('sales', saleId, 'delete');
-                    // Notificar también el cliente afectado
-                    if (client) {
-                        await SyncEngine.notifyChange('clients', client.id, 'update');
-                    }
-                }
-
-                // 5. Actualizar contabilidad
-                if (typeof AccountingModule !== 'undefined') {
-                    AccountingModule.updateAccounting(sale.date);
-                }
-
-                // 6. Actualizar badges de créditos si era una venta a crédito
-                if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
-                    CreditosModule.updateCreditBadges();
-                }
-
-                // 7. Actualizar lista
-                this.updateSalesList(sale.date);
-                
-                // 8. Cerrar modal
-                modal.remove();
-
-                Utils.showNotification('✅ Venta eliminada correctamente', 'success', 3000);
-            } catch (error) {
-                console.error('❌ Error al eliminar venta:', error);
-                Utils.showNotification('❌ Error al eliminar venta', 'error', 3000);
-            }
-        });
-        
         return true;
     },
 

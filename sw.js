@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.7'; // Fix: Manejo directo de eliminaciones remotas via WebSocket para actualización inmediata
+const APP_VERSION = '7.6.8'; // Fix: Agregar async a handleWebSocketMessage para usar await
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -138,7 +138,7 @@ class SyncEngine {
         }
     }
 
-    handleWebSocketMessage(message) {
+    async handleWebSocketMessage(message) {
         console.log('📨 Mensaje recibido:', message.type);
         
         switch (message.type) {

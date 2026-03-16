@@ -1190,6 +1190,9 @@ const SalesModule = {
         // Normalizar formato de fecha para comparación
         const targetDate = date.includes('/') ? this.convertDateFormat(date) : date;
         return this.sales.filter(sale => {
+            // FILTRAR VENTAS ELIMINADAS
+            if (sale.deleted) return false;
+            
             const saleDate = sale.date.includes('/') ? this.convertDateFormat(sale.date) : sale.date;
             return saleDate === targetDate;
         });
@@ -1216,6 +1219,9 @@ const SalesModule = {
         const end = new Date(endDate).getTime();
         
         return this.sales.filter(sale => {
+            // FILTRAR VENTAS ELIMINADAS
+            if (sale.deleted) return false;
+            
             const saleDate = new Date(sale.date).getTime();
             return saleDate >= start && saleDate <= end;
         });
@@ -1521,103 +1527,42 @@ const SalesModule = {
         }
 
         try {
-            // CRÍTICO: PRIMERO registrar eliminación en el servidor
-            console.log('🗑️ Registrando eliminación en servidor primero...');
+            console.log('🗑️ Eliminando venta:', saleId);
             
-            // Verificación más robusta del SyncEngine
-            if (typeof window.SyncEngine !== 'undefined' && 
-                window.SyncEngine && 
-                typeof window.SyncEngine.notifyChange === 'function') {
-                
-                try {
-                    await window.SyncEngine.notifyChange('sales', saleId, 'delete');
-                    console.log('✅ Eliminación registrada en servidor');
-                } catch (syncError) {
-                    console.error('❌ Error registrando eliminación en servidor:', syncError);
-                    // Guardar para sincronizar después
-                    this.addPendingDeletion(saleId);
-                    Utils.showNotification('Advertencia: Eliminación pendiente de sincronización', 'warning', 5000);
-                }
-            } else {
-                console.warn('⚠️ SyncEngine no disponible - guardando eliminación pendiente');
-                // Guardar para sincronizar después
-                this.addPendingDeletion(saleId);
-                Utils.showNotification('Eliminación guardada, se sincronizará automáticamente', 'info', 3000);
-            }
-
-            // LUEGO proceder con eliminación local
-            console.log('🗑️ Procediendo con eliminación local...');
-
-            // Actualizar estadísticas del cliente (SIN triggerar sync automático)
+            // 1. MARCAR LA VENTA COMO ELIMINADA (igual que editar)
+            // En lugar de eliminar inmediatamente, marcamos como eliminada
+            sale.deleted = true;
+            sale.deletedAt = Date.now();
+            sale.lastModified = Date.now();
+            
+            // 2. ACTUALIZAR ESTADÍSTICAS DEL CLIENTE
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
                 client.totalSales -= 1;
                 client.totalAmount -= sale.total;
                 client.totalWeight -= sale.weight;
                 client.totalQuantity -= sale.quantity;
-                
-                // Guardar cliente SIN triggerar interceptores automáticos
-                if (DB.db) {
-                    await DB.set('clients', client);
-                } else {
-                    localStorage.setItem('polloClients', JSON.stringify(ClientsModule.clients));
-                }
-                
-                // Notificar cambio en el cliente manualmente (si SyncEngine está disponible)
-                if (typeof window.SyncEngine !== 'undefined' && 
-                    window.SyncEngine && 
-                    typeof window.SyncEngine.notifyChange === 'function') {
-                    try {
-                        await window.SyncEngine.notifyChange('clients', sale.clientId, 'update');
-                    } catch (syncError) {
-                        console.warn('⚠️ Error notificando cambio de cliente:', syncError);
-                    }
-                }
+                await ClientsModule.saveClients();
             }
-
-            // Eliminar la venta del array local
-            const saleIndex = this.sales.findIndex(s => s.id === saleId);
-            if (saleIndex !== -1) {
-                this.sales.splice(saleIndex, 1);
-            }
-
-            // CRÍTICO: Eliminar INMEDIATAMENTE de IndexedDB
-            if (DB.db) {
-                await DB.delete('sales', saleId);
-                console.log('🗑️ Venta eliminada directamente de IndexedDB:', saleId);
-            } else {
-                localStorage.setItem('polloSales', JSON.stringify(this.sales));
-            }
-
-            // Actualizar contabilidad de la fecha
+            
+            // 3. GUARDAR LA VENTA MARCADA COMO ELIMINADA
+            // Esto activará los interceptores automáticos igual que la edición
+            await this.saveSales();
+            
+            // 4. ACTUALIZAR CONTABILIDAD
             if (typeof AccountingModule !== 'undefined') {
                 AccountingModule.updateAccounting(sale.date);
             }
-
-            // Actualizar badges de créditos si era una venta a crédito
+            
+            // 5. ACTUALIZAR BADGES DE CRÉDITOS
             if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
                 CreditosModule.updateCreditBadges();
             }
-
-            // Actualizar la lista de ventas
+            
+            // 6. ACTUALIZAR LA LISTA DE VENTAS
             this.updateSalesList(sale.date);
             
-            // CRÍTICO: Forzar sincronización completa después de la eliminación
-            if (typeof window.SyncEngine !== 'undefined' && 
-                window.SyncEngine && 
-                typeof window.SyncEngine.forceFullSync === 'function') {
-                try {
-                    console.log('🔄 Forzando sincronización completa después de eliminación...');
-                    setTimeout(async () => {
-                        await window.SyncEngine.forceFullSync();
-                        console.log('✅ Sincronización post-eliminación completada');
-                    }, 1000); // Esperar 1 segundo para que el servidor procese
-                } catch (syncError) {
-                    console.warn('⚠️ Error en sincronización post-eliminación:', syncError);
-                }
-            }
-            
-            console.log('✅ Venta eliminada completamente (servidor + local)');
+            console.log('✅ Venta marcada como eliminada');
             Utils.showNotification('Venta eliminada correctamente', 'success', 3000);
             return true;
 
@@ -1700,11 +1645,12 @@ const SalesModule = {
     },
 
     getCreditSales() {
-        return this.sales.filter(sale => !sale.isPaid && (sale.remainingDebt || 0) > 0);
+        return this.sales.filter(sale => !sale.deleted && !sale.isPaid && (sale.remainingDebt || 0) > 0);
     },
 
     getCreditsByClient(clientId) {
         return this.sales.filter(sale => 
+            !sale.deleted &&
             sale.clientId === clientId && 
             !sale.isPaid && 
             (sale.remainingDebt || 0) > 0
@@ -1748,13 +1694,16 @@ const SalesModule = {
                 this.sales = JSON.parse(saved);
             }
         }
-        this.sales = this.sales.map(sale => ({
-            ...sale,
-            isPaid: sale.isPaid !== undefined ? sale.isPaid : true,
-            paidAmount: sale.paidAmount !== undefined ? sale.paidAmount : sale.total,
-            remainingDebt: sale.remainingDebt !== undefined ? sale.remainingDebt : 0,
-            paymentHistory: sale.paymentHistory || []
-        }));
+        // FILTRAR VENTAS ELIMINADAS y normalizar datos
+        this.sales = this.sales
+            .filter(sale => !sale.deleted) // NO cargar ventas eliminadas
+            .map(sale => ({
+                ...sale,
+                isPaid: sale.isPaid !== undefined ? sale.isPaid : true,
+                paidAmount: sale.paidAmount !== undefined ? sale.paidAmount : sale.total,
+                remainingDebt: sale.remainingDebt !== undefined ? sale.remainingDebt : 0,
+                paymentHistory: sale.paymentHistory || []
+            }));
     },
 
     // Función para agregar eliminaciones pendientes

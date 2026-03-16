@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.9'; // Fix: Eliminación directa de IndexedDB y sincronización forzada post-eliminación
+const APP_VERSION = '7.7.0'; // Fix: Filtrado completo de ventas eliminadas en todas las funciones y sincronización
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

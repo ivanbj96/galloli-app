@@ -564,11 +564,19 @@ class SyncEngine {
                 }
             });
             
-            // Convertir mapa a array
-            merged[type] = Array.from(itemsMap.values()).map(item => {
-                const { _source, ...cleanItem } = item;
-                return cleanItem;
-            });
+            // Convertir mapa a array y FILTRAR VENTAS ELIMINADAS
+            merged[type] = Array.from(itemsMap.values())
+                .filter(item => {
+                    // Si es una venta, filtrar las eliminadas
+                    if (type === 'sales' && item.deleted) {
+                        return false;
+                    }
+                    return true;
+                })
+                .map(item => {
+                    const { _source, ...cleanItem } = item;
+                    return cleanItem;
+                });
             
             console.log(`  ${type}: ${local.length} local + ${remote.length} remote = ${merged[type].length} merged (${duplicates.length} duplicados limpiados)`);
         }

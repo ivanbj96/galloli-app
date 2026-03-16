@@ -19,6 +19,7 @@ class SyncEngine {
         this.wsReconnectAttempts = 0;
         this.wsMaxReconnectAttempts = 10;
         this.SYNC_CONFIG = SYNC_CONFIG;
+        this.pendingDeletes = new Map(); // Map<dataType, Set<dataId>>
     }
 
     async init() {
@@ -432,6 +433,12 @@ class SyncEngine {
             
             // Agregar items remotos (solo el más reciente si hay duplicados)
             remoteIds.forEach((items, id) => {
+                // CRÍTICO: Excluir items que están en pendingDeletes
+                if (this.pendingDeletes.has(type) && this.pendingDeletes.get(type).has(String(id))) {
+                    console.log(`  🗑️ Excluyendo ${type}/${id} - eliminación pendiente`);
+                    return;
+                }
+                
                 if (items.length === 1) {
                     itemsMap.set(id, {
                         ...items[0],
@@ -1014,6 +1021,13 @@ class SyncEngine {
             return;
         }
 
+        // Agregar a pendingDeletes para que el merge lo respete
+        if (!this.pendingDeletes.has(dataType)) {
+            this.pendingDeletes.set(dataType, new Set());
+        }
+        this.pendingDeletes.get(dataType).add(String(dataId));
+        console.log(`🗑️ Agregado a pendingDeletes: ${dataType}/${dataId}`);
+
         const changes = [{
             data_type: dataType,
             data_id: dataId,
@@ -1022,22 +1036,35 @@ class SyncEngine {
             timestamp: Date.now()
         }];
 
-        const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...window.AuthManager.getAuthHeaders()
-            },
-            body: JSON.stringify({ changes })
-        });
+        try {
+            const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...window.AuthManager.getAuthHeaders()
+                },
+                body: JSON.stringify({ changes })
+            });
 
-        if (!response.ok) {
-            throw new Error(`Error al sincronizar eliminación: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`Error al sincronizar eliminación: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('✅ Eliminación enviada al servidor:', result);
+            
+            // Remover de pendingDeletes solo si se sincronizó exitosamente
+            this.pendingDeletes.get(dataType).delete(String(dataId));
+            if (this.pendingDeletes.get(dataType).size === 0) {
+                this.pendingDeletes.delete(dataType);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('❌ Error enviando eliminación:', error);
+            // Mantener en pendingDeletes para reintentar
+            throw error;
         }
-
-        const result = await response.json();
-        console.log('✅ Eliminación enviada al servidor:', result);
-        return result;
     }
     
     async uploadChanges(dataType, specificDataId = null, action = 'update') {

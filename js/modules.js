@@ -1537,12 +1537,13 @@ const SalesModule = {
                 // 2. Eliminar venta del array
                 this.sales = this.sales.filter(s => s.id !== saleId);
                 
-                // 3. Eliminar de IndexedDB directamente
-                if (DB.db) {
-                    await DB.delete('sales', saleId);
-                }
+                // 3. CRÍTICO: Guardar el array actualizado (igual que updateSale)
+                await this.saveSales();
+                
+                // 4. Guardar cliente actualizado
+                await ClientsModule.saveClients();
 
-                // 4. Notificar al sistema de sincronización
+                // 5. Notificar al sistema de sincronización (igual que updateSale)
                 if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
                     await SyncEngine.notifyChange('sales', saleId, 'delete');
                     // Notificar también el cliente afectado

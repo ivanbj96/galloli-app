@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.4.8'; // Fix: Deshabilitado smartSync automático para permitir eliminaciones
+const APP_VERSION = '7.4.9'; // Fix: Sincronización manual disponible - eliminaciones funcionan correctamente
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

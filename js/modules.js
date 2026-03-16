@@ -1131,7 +1131,7 @@ const SalesModule = {
         await this.loadSales();
     },
 
-    addSale(clientId, weight, quantity, price, customDate = null, isPaid = true, initialPayment = 0) {
+    addSale(clientId, weight, quantity, price, customDate = null, isPaid = true, initialPayment = 0, customCostPerLb = null) {
         const saleDate = customDate || Utils.formatDate();
         const mermaRecord = MermaModule.getMermaRecordByDate(saleDate);
         
@@ -1145,6 +1145,9 @@ const SalesModule = {
         const paidAmount = isPaid ? total : initialPaid;
         const remainingDebt = isPaid ? 0 : (total - initialPaid);
         
+        // Determinar costo: usar customCostPerLb si se proporciona, sino usar merma
+        const costPerLb = customCostPerLb !== null ? parseFloat(customCostPerLb) : (mermaRecord ? mermaRecord.realCostPerLb : 0);
+        
         const sale = {
             id: Date.now(),
             clientId,
@@ -1152,8 +1155,8 @@ const SalesModule = {
             quantity: parseInt(quantity),
             averageWeight: parseFloat(averageWeight.toFixed(2)),
             price: salePrice,
-            costPerLb: mermaRecord ? mermaRecord.realCostPerLb : 0,
-            profitPerLb: mermaRecord ? (salePrice - mermaRecord.realCostPerLb) : salePrice,
+            costPerLb: costPerLb,
+            profitPerLb: salePrice - costPerLb,
             total,
             isPaid,
             paidAmount,
@@ -1354,6 +1357,19 @@ const SalesModule = {
                                    id="edit-sale-price" value="${sale.price}" required>
                         </div>
                         <div class="form-group">
+                            <label class="form-label">
+                                Costo por lb ($)
+                                <i class="fas fa-info-circle" style="color: var(--gray); cursor: help;" 
+                                   title="Opcional: Para pollos pelados con costo diferente a la merma"></i>
+                            </label>
+                            <input type="number" step="0.01" min="0" class="form-input" 
+                                   id="edit-sale-cost" value="${sale.costPerLb || ''}" 
+                                   placeholder="Dejar vacío para usar costo de merma">
+                            <small style="color: var(--gray); display: block; margin-top: 5px;">
+                                <i class="fas fa-drumstick-bite"></i> Usa este campo solo para pollos pelados con costo directo
+                            </small>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">Tipo de Pago</label>
                             <select class="form-input" id="edit-sale-payment" required>
                                 <option value="paid" ${sale.isPaid ? 'selected' : ''}>Efectivo (Pagado)</option>
@@ -1378,13 +1394,16 @@ const SalesModule = {
         const form = modal.querySelector('#edit-sale-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const customCost = document.getElementById('edit-sale-cost').value ? 
+                              parseFloat(document.getElementById('edit-sale-cost').value) : null;
             await this.updateSale(saleId, {
                 clientId: parseInt(document.getElementById('edit-sale-client').value),
                 weight: parseFloat(document.getElementById('edit-sale-weight').value),
                 quantity: parseInt(document.getElementById('edit-sale-quantity').value),
                 price: parseFloat(document.getElementById('edit-sale-price').value),
                 date: document.getElementById('edit-sale-date').value,
-                isPaid: document.getElementById('edit-sale-payment').value === 'paid'
+                isPaid: document.getElementById('edit-sale-payment').value === 'paid',
+                customCostPerLb: customCost
             });
             modal.remove();
         });
@@ -1413,10 +1432,17 @@ const SalesModule = {
         sale.remainingDebt = updates.isPaid ? 0 : sale.total;
         sale.lastModified = Date.now();
 
+        // Determinar costo: usar customCostPerLb si se proporciona, sino usar merma
         const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
-        if (mermaRecord) {
+        if (updates.customCostPerLb !== null && updates.customCostPerLb !== undefined) {
+            sale.costPerLb = updates.customCostPerLb;
+            sale.profitPerLb = sale.price - updates.customCostPerLb;
+        } else if (mermaRecord) {
             sale.costPerLb = mermaRecord.realCostPerLb;
             sale.profitPerLb = sale.price - mermaRecord.realCostPerLb;
+        } else {
+            sale.costPerLb = 0;
+            sale.profitPerLb = sale.price;
         }
 
         if (oldClientId !== sale.clientId) {

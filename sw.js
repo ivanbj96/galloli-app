@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.7.1'; // Fix: Verificar disponibilidad de API Notification antes de usarla
+const APP_VERSION = '7.8.0'; // Feature: Costo personalizado para pollos pelados (costo directo diferente a merma)
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

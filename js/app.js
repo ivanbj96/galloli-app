@@ -1,4 +1,4 @@
-﻿// app.js - COMPLETO Y FUNCIONAL
+﻿﻿// app.js - COMPLETO Y FUNCIONAL
 const App = {
     currentPage: 'dashboard',
     currentDate: Utils.getTodayDate(),
@@ -2228,6 +2228,19 @@ async cleanDuplicatePayments() {
                         </div>
                         
                         <div class="form-group">
+                            <label class="form-label" for="sale-cost">
+                                Costo por lb ($) 
+                                <i class="fas fa-info-circle" style="color: var(--gray); cursor: help;" 
+                                   title="Opcional: Para pollos pelados con costo diferente a la merma"></i>
+                            </label>
+                            <input type="number" step="0.01" min="0" class="form-input" id="sale-cost" 
+                                   placeholder="Dejar vacío para usar costo de merma" oninput="App.updateSalePreview()">
+                            <small style="color: var(--gray); display: block; margin-top: 5px;">
+                                <i class="fas fa-drumstick-bite"></i> Usa este campo solo para pollos pelados con costo directo
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
                             <label class="form-label" for="sale-payment-method">Método de Pago</label>
                             <select class="form-input" id="sale-payment-method" required onchange="App.toggleInitialPayment()">
                                 <option value="cash">Efectivo (Pagado)</option>
@@ -2256,11 +2269,23 @@ async cleanDuplicatePayments() {
                                     <strong>Precio por lb:</strong><br>
                                     <span id="preview-price" style="color: var(--secondary); font-size: 1.1rem; font-weight: bold;">$0.00</span>
                                 </div>
+                                <div>
+                                    <strong>Costo por lb:</strong><br>
+                                    <span id="preview-cost" style="color: var(--warning); font-size: 1.1rem; font-weight: bold;">$0.00</span>
+                                </div>
+                                <div>
+                                    <strong>Ganancia por lb:</strong><br>
+                                    <span id="preview-profit" style="color: var(--success); font-size: 1.1rem; font-weight: bold;">$0.00</span>
+                                </div>
                             </div>
                             <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
                             <div style="text-align: center;">
                                 <strong style="font-size: 0.9rem; color: var(--gray);">TOTAL A COBRAR</strong><br>
                                 <span id="preview-total" style="color: var(--success); font-size: 2rem; font-weight: bold;">$0.00</span>
+                            </div>
+                            <div style="text-align: center; margin-top: 10px;">
+                                <strong style="font-size: 0.9rem; color: var(--gray);">GANANCIA TOTAL</strong><br>
+                                <span id="preview-total-profit" style="color: var(--primary); font-size: 1.5rem; font-weight: bold;">$0.00</span>
                             </div>
                         </div>
                         
@@ -3350,6 +3375,8 @@ async cleanDuplicatePayments() {
         const quantity = parseInt(document.getElementById('sale-quantity').value);
         const price = document.getElementById('sale-price').value ? 
                      parseFloat(document.getElementById('sale-price').value) : null;
+        const customCost = document.getElementById('sale-cost')?.value ? 
+                          parseFloat(document.getElementById('sale-cost').value) : null;
         const paymentMethod = document.getElementById('sale-payment-method').value;
         const initialPayment = document.getElementById('sale-initial-payment').value ? 
                               parseFloat(document.getElementById('sale-initial-payment').value) : 0;
@@ -3387,7 +3414,7 @@ async cleanDuplicatePayments() {
         }
 
         const isPaid = paymentMethod === 'cash';
-        const sale = SalesModule.addSale(clientId, weight, quantity, price, saleDate, isPaid, initialPayment);
+        const sale = SalesModule.addSale(clientId, weight, quantity, price, saleDate, isPaid, initialPayment, customCost);
         
         // NUEVO: Notificación automática ok
         const client = ClientsModule.getClientById(clientId);
@@ -3442,48 +3469,75 @@ async cleanDuplicatePayments() {
     },
 
     // NUEVO: Actualizar vista previa de venta en tiempo real
-    updateSalePreview() {
-        const weight = parseFloat(document.getElementById('sale-weight').value) || 0;
-        const quantity = parseInt(document.getElementById('sale-quantity').value) || 0;
-        const priceInput = document.getElementById('sale-price').value;
-        
-        const preview = document.getElementById('sale-preview');
-        if (!preview) return;
-        
-        // Mostrar vista previa solo si hay datos
-        if (weight > 0 || quantity > 0) {
-            preview.style.display = 'block';
-        } else {
-            preview.style.display = 'none';
-            return;
-        }
-        
-        // Calcular peso promedio
-        const avgWeight = quantity > 0 ? (weight / quantity) : 0;
-        document.getElementById('preview-avg-weight').textContent = avgWeight.toFixed(2) + ' lb/pollo';
-        
-        // Determinar precio (usar precio ingresado o precio de merma)
-        const mermaPrice = MermaModule.getTodayMermaPrice();
-        const price = priceInput ? parseFloat(priceInput) : (mermaPrice || 0);
-        
-        // Mostrar precio con indicador de origen
-        const priceText = priceInput ? 
-            `$${price.toFixed(2)}` : 
-            (mermaPrice ? `$${price.toFixed(2)} (merma)` : '$0.00 (sin precio)');
-        document.getElementById('preview-price').textContent = priceText;
-        
-        // Calcular total
-        const total = weight * price;
-        document.getElementById('preview-total').textContent = Utils.formatCurrency(total);
-        
-        // Cambiar color del total según si es válido
-        const totalElement = document.getElementById('preview-total');
-        if (total > 0 && weight > 0 && quantity > 0 && price > 0) {
-            totalElement.style.color = 'var(--success)';
-        } else {
-            totalElement.style.color = 'var(--gray)';
-        }
-    },
+    // NUEVO: Actualizar vista previa de venta en tiempo real
+        updateSalePreview() {
+            const weight = parseFloat(document.getElementById('sale-weight').value) || 0;
+            const quantity = parseInt(document.getElementById('sale-quantity').value) || 0;
+            const priceInput = document.getElementById('sale-price').value;
+            const costInput = document.getElementById('sale-cost')?.value;
+
+            const preview = document.getElementById('sale-preview');
+            if (!preview) return;
+
+            // Mostrar vista previa solo si hay datos
+            if (weight > 0 || quantity > 0) {
+                preview.style.display = 'block';
+            } else {
+                preview.style.display = 'none';
+                return;
+            }
+
+            // Calcular peso promedio
+            const avgWeight = quantity > 0 ? (weight / quantity) : 0;
+            document.getElementById('preview-avg-weight').textContent = avgWeight.toFixed(2) + ' lb/pollo';
+
+            // Determinar precio (usar precio ingresado o precio de merma)
+            const mermaPrice = MermaModule.getTodayMermaPrice();
+            const price = priceInput ? parseFloat(priceInput) : (mermaPrice || 0);
+
+            // Mostrar precio con indicador de origen
+            const priceText = priceInput ? 
+                `$${price.toFixed(2)}` : 
+                (mermaPrice ? `$${price.toFixed(2)} (merma)` : '$0.00 (sin precio)');
+            document.getElementById('preview-price').textContent = priceText;
+
+            // Determinar costo (usar costo ingresado o costo de merma)
+            const saleDate = document.getElementById('sale-date')?.value || Utils.getTodayDate();
+            const mermaRecord = MermaModule.getMermaRecordByDate(saleDate);
+            const cost = costInput ? parseFloat(costInput) : (mermaRecord ? mermaRecord.realCostPerLb : 0);
+
+            // Mostrar costo con indicador de origen
+            const costText = costInput ? 
+                `$${cost.toFixed(2)} (directo)` : 
+                (mermaRecord ? `$${cost.toFixed(2)} (merma)` : '$0.00 (sin costo)');
+            document.getElementById('preview-cost').textContent = costText;
+
+            // Calcular ganancia por lb
+            const profitPerLb = price - cost;
+            const profitText = `$${profitPerLb.toFixed(2)}`;
+            const profitElement = document.getElementById('preview-profit');
+            profitElement.textContent = profitText;
+            profitElement.style.color = profitPerLb >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            // Calcular total
+            const total = weight * price;
+            document.getElementById('preview-total').textContent = Utils.formatCurrency(total);
+
+            // Calcular ganancia total
+            const totalProfit = weight * profitPerLb;
+            const totalProfitElement = document.getElementById('preview-total-profit');
+            totalProfitElement.textContent = Utils.formatCurrency(totalProfit);
+            totalProfitElement.style.color = totalProfit >= 0 ? 'var(--primary)' : 'var(--danger)';
+
+            // Cambiar color del total según si es válido
+            const totalElement = document.getElementById('preview-total');
+            if (total > 0 && weight > 0 && quantity > 0 && price > 0) {
+                totalElement.style.color = 'var(--success)';
+            } else {
+                totalElement.style.color = 'var(--gray)';
+            }
+        },
+,
 
     // NUEVO: Mostrar/ocultar formulario rápido de cliente
     toggleQuickClientForm() {

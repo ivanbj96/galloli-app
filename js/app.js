@@ -3749,6 +3749,12 @@ async cleanDuplicatePayments() {
     showLocalNotification(title, body, icon = '🐔') {
         console.log('🔔 Intentando mostrar notificación:', title, body);
         
+        // Verificar si Notification está disponible
+        if (typeof Notification === 'undefined') {
+            console.log('❌ API de Notification no disponible en este navegador');
+            return false;
+        }
+        
         if (Notification.permission !== 'granted') {
             console.log('❌ Sin permisos para notificaciones');
             return false;

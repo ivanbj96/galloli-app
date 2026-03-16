@@ -175,9 +175,16 @@ class SyncEngine {
             // Hacer merge
             const itemsMap = new Map();
             
-            // Agregar items remotos
+            // Agregar items remotos (EXCLUYENDO los que están en pendingDeletes)
             remoteItems.forEach(item => {
                 const id = this.getItemId(item, dataType);
+                
+                // CRÍTICO: Excluir items que están en pendingDeletes
+                if (this.pendingDeletes.has(dataType) && this.pendingDeletes.get(dataType).has(String(id))) {
+                    console.log(`  🗑️ Excluyendo ${dataType}/${id} - eliminación pendiente`);
+                    return;
+                }
+                
                 itemsMap.set(id, item);
             });
             

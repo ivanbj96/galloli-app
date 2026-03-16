@@ -58,6 +58,15 @@ class SyncEngine {
         window.addEventListener('offline', () => this.handleOffline());
 
         console.log('✅ Sincronización P2P activa');
+        
+        // Sincronizar eliminaciones pendientes de ventas
+        if (typeof SalesModule !== 'undefined' && typeof SalesModule.syncPendingDeletions === 'function') {
+            try {
+                await SalesModule.syncPendingDeletions();
+            } catch (error) {
+                console.warn('⚠️ Error sincronizando eliminaciones pendientes:', error);
+            }
+        }
     }
 
     connectWebSocket() {

@@ -1524,11 +1524,25 @@ const SalesModule = {
             // CRÍTICO: PRIMERO registrar eliminación en el servidor
             console.log('🗑️ Registrando eliminación en servidor primero...');
             
-            if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                await SyncEngine.notifyChange('sales', saleId, 'delete');
-                console.log('✅ Eliminación registrada en servidor');
+            // Verificación más robusta del SyncEngine
+            if (typeof window.SyncEngine !== 'undefined' && 
+                window.SyncEngine && 
+                typeof window.SyncEngine.notifyChange === 'function') {
+                
+                try {
+                    await window.SyncEngine.notifyChange('sales', saleId, 'delete');
+                    console.log('✅ Eliminación registrada en servidor');
+                } catch (syncError) {
+                    console.error('❌ Error registrando eliminación en servidor:', syncError);
+                    // Guardar para sincronizar después
+                    this.addPendingDeletion(saleId);
+                    Utils.showNotification('Advertencia: Eliminación pendiente de sincronización', 'warning', 5000);
+                }
             } else {
-                console.warn('⚠️ SyncEngine no disponible - eliminación solo local');
+                console.warn('⚠️ SyncEngine no disponible - guardando eliminación pendiente');
+                // Guardar para sincronizar después
+                this.addPendingDeletion(saleId);
+                Utils.showNotification('Eliminación guardada, se sincronizará automáticamente', 'info', 3000);
             }
 
             // LUEGO proceder con eliminación local
@@ -1549,9 +1563,15 @@ const SalesModule = {
                     localStorage.setItem('polloClients', JSON.stringify(ClientsModule.clients));
                 }
                 
-                // Notificar cambio en el cliente manualmente
-                if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                    await SyncEngine.notifyChange('clients', sale.clientId, 'update');
+                // Notificar cambio en el cliente manualmente (si SyncEngine está disponible)
+                if (typeof window.SyncEngine !== 'undefined' && 
+                    window.SyncEngine && 
+                    typeof window.SyncEngine.notifyChange === 'function') {
+                    try {
+                        await window.SyncEngine.notifyChange('clients', sale.clientId, 'update');
+                    } catch (syncError) {
+                        console.warn('⚠️ Error notificando cambio de cliente:', syncError);
+                    }
                 }
             }
 
@@ -1734,6 +1754,44 @@ const SalesModule = {
             remainingDebt: sale.remainingDebt !== undefined ? sale.remainingDebt : 0,
             paymentHistory: sale.paymentHistory || []
         }));
+    },
+
+    // Función para agregar eliminaciones pendientes
+    addPendingDeletion(saleId) {
+        const pendingDeletions = JSON.parse(localStorage.getItem('pendingSalesDeletions') || '[]');
+        if (!pendingDeletions.includes(saleId)) {
+            pendingDeletions.push(saleId);
+            localStorage.setItem('pendingSalesDeletions', JSON.stringify(pendingDeletions));
+            console.log(`📝 Eliminación pendiente guardada: ${saleId}`);
+        }
+    },
+
+    // Función para sincronizar eliminaciones pendientes cuando SyncEngine esté disponible
+    async syncPendingDeletions() {
+        if (typeof window.SyncEngine !== 'undefined' && 
+            window.SyncEngine && 
+            typeof window.SyncEngine.notifyChange === 'function') {
+            
+            // Verificar si hay eliminaciones pendientes en localStorage
+            const pendingDeletions = JSON.parse(localStorage.getItem('pendingSalesDeletions') || '[]');
+            
+            if (pendingDeletions.length > 0) {
+                console.log(`🔄 Sincronizando ${pendingDeletions.length} eliminaciones pendientes...`);
+                
+                for (const saleId of pendingDeletions) {
+                    try {
+                        await window.SyncEngine.notifyChange('sales', saleId, 'delete');
+                        console.log(`✅ Eliminación sincronizada: ${saleId}`);
+                    } catch (error) {
+                        console.error(`❌ Error sincronizando eliminación ${saleId}:`, error);
+                    }
+                }
+                
+                // Limpiar eliminaciones pendientes
+                localStorage.removeItem('pendingSalesDeletions');
+                console.log('✅ Todas las eliminaciones pendientes sincronizadas');
+            }
+        }
     }
 };
 

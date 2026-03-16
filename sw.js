@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.4'; // Fix: Usar endpoint correcto /api/sync/push para eliminaciones
+const APP_VERSION = '7.6.5'; // Fix: Actualizar interfaz visual de ventas cuando se sincroniza eliminación remota
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -2221,34 +2221,63 @@ const AccountingModule = {
         const totalIncome = sales.reduce((sum, sale) => sum + sale.total, 0);
         const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
         
-        // Calcular ganancia bruta: (PVP - Costo Merma) × Libras
+        // Separar ventas por tipo de costo
+        const salesWithMermaCost = sales.filter(sale => {
+            const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
+            return mermaRecord && sale.costPerLb === mermaRecord.realCostPerLb;
+        });
+        const salesWithCustomCost = sales.filter(sale => {
+            const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
+            return !mermaRecord || sale.costPerLb !== mermaRecord.realCostPerLb;
+        });
+        
+        // Calcular ganancia bruta: (PVP - Costo) × Libras
         let grossProfit = 0;
-        let totalMermaCost = 0;
+        let totalCostOfGoods = 0;
+        let mermaCostTotal = 0;
+        let customCostTotal = 0;
         
         sales.forEach(sale => {
             const costPerLb = sale.costPerLb || 0;
             const profitPerLb = sale.price - costPerLb;
+            const saleCost = costPerLb * sale.weight;
+            
             grossProfit += profitPerLb * sale.weight;
-            totalMermaCost += costPerLb * sale.weight;
+            totalCostOfGoods += saleCost;
+            
+            // Clasificar el costo
+            const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
+            if (mermaRecord && sale.costPerLb === mermaRecord.realCostPerLb) {
+                mermaCostTotal += saleCost;
+            } else {
+                customCostTotal += saleCost;
+            }
         });
         
-        // Ganancia neta = Ganancia bruta - Gastos (SIEMPRE se restan los gastos)
+        // Ganancia neta = Ganancia bruta - Gastos
         const netProfit = grossProfit - totalExpenses;
-        const profitMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
+        const grossMargin = totalIncome > 0 ? (grossProfit / totalIncome) * 100 : 0;
+        const netMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
 
-        // Actualizar UI - SOLO si los elementos existen
+        // Actualizar UI - Tarjetas principales
         const totalIncomeElement = document.getElementById('total-income');
         const totalCostsElement = document.getElementById('total-costs');
+        const grossProfitElement = document.getElementById('gross-profit');
         const netProfitElement = document.getElementById('net-profit');
+        const grossMarginElement = document.getElementById('gross-margin');
         const profitMarginElement = document.getElementById('profit-margin');
-        const costDetailsElement = document.getElementById('cost-details');
         
         if (totalIncomeElement) {
             totalIncomeElement.textContent = Utils.formatCurrency(totalIncome);
         }
         
         if (totalCostsElement) {
-            totalCostsElement.textContent = Utils.formatCurrency(totalMermaCost + totalExpenses);
+            totalCostsElement.textContent = Utils.formatCurrency(totalCostOfGoods + totalExpenses);
+        }
+        
+        if (grossProfitElement) {
+            grossProfitElement.textContent = Utils.formatCurrency(grossProfit);
+            grossProfitElement.style.color = grossProfit >= 0 ? 'var(--success)' : 'var(--danger)';
         }
         
         if (netProfitElement) {
@@ -2256,39 +2285,148 @@ const AccountingModule = {
             netProfitElement.style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
         }
         
-        if (profitMarginElement) {
-            profitMarginElement.textContent = profitMargin.toFixed(2) + '%';
+        if (grossMarginElement) {
+            grossMarginElement.textContent = grossMargin.toFixed(2) + '%';
+            grossMarginElement.style.color = grossMargin >= 0 ? 'var(--success)' : 'var(--danger)';
         }
         
-        // Detalles de costos
-        if (costDetailsElement) {
+        if (profitMarginElement) {
+            profitMarginElement.textContent = netMargin.toFixed(2) + '%';
+            profitMarginElement.style.color = netMargin >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
+        
+        // Resumen de ventas
+        const salesSummaryElement = document.getElementById('sales-summary');
+        if (salesSummaryElement) {
             const totalWeight = sales.reduce((sum, sale) => sum + sale.weight, 0);
+            const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0);
             const avgPVP = totalWeight > 0 ? totalIncome / totalWeight : 0;
-            const avgCostPerLb = totalWeight > 0 ? totalMermaCost / totalWeight : 0;
+            const avgCost = totalWeight > 0 ? totalCostOfGoods / totalWeight : 0;
+            const avgProfit = totalWeight > 0 ? grossProfit / totalWeight : 0;
             
-            // Mostrar información relevante según lo que exista
-            let detailsHTML = '';
-            
+            let summaryHTML = '';
             if (sales.length > 0) {
-                detailsHTML += `
-                    <p><i class="fas fa-balance-scale"></i> <strong>Libras vendidas:</strong> ${totalWeight.toFixed(2)} lb</p>
-                    <p><i class="fas fa-dollar-sign"></i> <strong>PVP promedio:</strong> ${Utils.formatCurrency(avgPVP)}/lb</p>
-                    <p><i class="fas fa-calculator"></i> <strong>Costo merma promedio:</strong> ${Utils.formatCurrency(avgCostPerLb)}/lb</p>
-                    <p><i class="fas fa-chart-line"></i> <strong>Ganancia bruta:</strong> ${Utils.formatCurrency(grossProfit)} ${totalWeight > 0 ? '(' + Utils.formatCurrency((avgPVP - avgCostPerLb)) + '/lb)' : ''}</p>
+                summaryHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <strong style="color: var(--primary);">📊 Ventas</strong>
+                            <p style="margin: 5px 0;">Total: ${sales.length}</p>
+                            <p style="margin: 5px 0;">Pollos: ${totalQuantity}</p>
+                            <p style="margin: 5px 0;">Libras: ${totalWeight.toFixed(2)} lb</p>
+                        </div>
+                        <div>
+                            <strong style="color: var(--secondary);">💰 Precios</strong>
+                            <p style="margin: 5px 0;">PVP prom: ${Utils.formatCurrency(avgPVP)}/lb</p>
+                            <p style="margin: 5px 0;">Costo prom: ${Utils.formatCurrency(avgCost)}/lb</p>
+                            <p style="margin: 5px 0;">Ganancia prom: ${Utils.formatCurrency(avgProfit)}/lb</p>
+                        </div>
+                        <div>
+                            <strong style="color: var(--success);">📈 Totales</strong>
+                            <p style="margin: 5px 0;">Ingresos: ${Utils.formatCurrency(totalIncome)}</p>
+                            <p style="margin: 5px 0;">Costos: ${Utils.formatCurrency(totalCostOfGoods)}</p>
+                            <p style="margin: 5px 0;">Ganancia: ${Utils.formatCurrency(grossProfit)}</p>
+                        </div>
+                    </div>
                 `;
             } else {
-                detailsHTML += `<p style="color: var(--gray);"><i class="fas fa-info-circle"></i> No hay ventas registradas en esta fecha</p>`;
+                summaryHTML = '<p style="color: var(--gray); text-align: center;"><i class="fas fa-info-circle"></i> No hay ventas registradas en esta fecha</p>';
+            }
+            salesSummaryElement.innerHTML = summaryHTML;
+        }
+        
+        // Desglose de costos
+        const costBreakdownElement = document.getElementById('cost-breakdown');
+        if (costBreakdownElement) {
+            let breakdownHTML = '';
+            
+            if (sales.length > 0) {
+                const mermaWeight = salesWithMermaCost.reduce((sum, sale) => sum + sale.weight, 0);
+                const customWeight = salesWithCustomCost.reduce((sum, sale) => sum + sale.weight, 0);
+                
+                breakdownHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--warning);">
+                            <strong style="color: var(--warning);">🐔 Pollos en Pluma (Merma)</strong>
+                            <p style="margin: 10px 0 5px;">Ventas: ${salesWithMermaCost.length}</p>
+                            <p style="margin: 5px 0;">Libras: ${mermaWeight.toFixed(2)} lb</p>
+                            <p style="margin: 5px 0;">Costo total: ${Utils.formatCurrency(mermaCostTotal)}</p>
+                            <p style="margin: 5px 0;">Costo/lb: ${mermaWeight > 0 ? Utils.formatCurrency(mermaCostTotal / mermaWeight) : '$0.00'}/lb</p>
+                        </div>
+                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--info);">
+                            <strong style="color: var(--info);">🍗 Pollos Pelados (Directo)</strong>
+                            <p style="margin: 10px 0 5px;">Ventas: ${salesWithCustomCost.length}</p>
+                            <p style="margin: 5px 0;">Libras: ${customWeight.toFixed(2)} lb</p>
+                            <p style="margin: 5px 0;">Costo total: ${Utils.formatCurrency(customCostTotal)}</p>
+                            <p style="margin: 5px 0;">Costo/lb: ${customWeight > 0 ? Utils.formatCurrency(customCostTotal / customWeight) : '$0.00'}/lb</p>
+                        </div>
+                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--danger);">
+                            <strong style="color: var(--danger);">💸 Gastos Operativos</strong>
+                            <p style="margin: 10px 0 5px;">Gastos: ${expenses.length}</p>
+                            <p style="margin: 5px 0;">Total: ${Utils.formatCurrency(totalExpenses)}</p>
+                            ${expenses.length > 0 ? `
+                                <details style="margin-top: 10px;">
+                                    <summary style="cursor: pointer; color: var(--primary);">Ver detalles</summary>
+                                    <div style="margin-top: 10px; font-size: 0.9rem;">
+                                        ${expenses.map(exp => `
+                                            <p style="margin: 5px 0; padding: 5px; background: var(--light); border-radius: 4px;">
+                                                ${exp.description}: ${Utils.formatCurrency(exp.amount)}
+                                            </p>
+                                        `).join('')}
+                                    </div>
+                                </details>
+                            ` : '<p style="margin: 5px 0; color: var(--gray); font-size: 0.9rem;">Sin gastos</p>'}
+                        </div>
+                    </div>
+                `;
+            } else {
+                breakdownHTML = '<p style="color: var(--gray); text-align: center;"><i class="fas fa-info-circle"></i> No hay datos para mostrar</p>';
             }
             
-            detailsHTML += `<p><i class="fas fa-receipt"></i> <strong>Gastos del día:</strong> ${Utils.formatCurrency(totalExpenses)}</p>`;
+            costBreakdownElement.innerHTML = breakdownHTML;
+        }
+        
+        // Detalles completos (mantener compatibilidad)
+        const costDetailsElement = document.getElementById('cost-details');
+        if (costDetailsElement) {
+            const totalWeight = sales.reduce((sum, sale) => sum + sale.weight, 0);
             
-            if (expenses.length === 0) {
-                detailsHTML += `<p style="color: var(--gray); font-size: 0.9rem;"><i class="fas fa-info-circle"></i> No hay gastos registrados</p>`;
-            }
-            
-            detailsHTML += `
-                <hr style="margin: 10px 0;">
-                <p style="font-size: 1.1rem;"><i class="fas fa-money-bill-wave"></i> <strong>Ganancia Neta:</strong> <span style="color: ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}">${Utils.formatCurrency(netProfit)}</span></p>
+            let detailsHTML = `
+                <div style="padding: 15px; background: var(--light); border-radius: 8px;">
+                    <h4 style="margin: 0 0 15px; color: var(--primary);"><i class="fas fa-calculator"></i> Cálculo Detallado</h4>
+                    
+                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
+                        <strong>1. Ingresos por Ventas</strong>
+                        <p style="margin: 5px 0 5px 20px;">Total vendido: ${Utils.formatCurrency(totalIncome)}</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
+                        <strong>2. Costo de Mercancía Vendida</strong>
+                        <p style="margin: 5px 0 5px 20px;">Pollos en pluma: ${Utils.formatCurrency(mermaCostTotal)}</p>
+                        <p style="margin: 5px 0 5px 20px;">Pollos pelados: ${Utils.formatCurrency(customCostTotal)}</p>
+                        <p style="margin: 5px 0 5px 20px; font-weight: bold; color: var(--warning);">Subtotal: ${Utils.formatCurrency(totalCostOfGoods)}</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
+                        <strong>3. Ganancia Bruta</strong>
+                        <p style="margin: 5px 0 5px 20px;">Ingresos - Costo mercancía</p>
+                        <p style="margin: 5px 0 5px 20px; font-weight: bold; color: var(--success);">${Utils.formatCurrency(totalIncome)} - ${Utils.formatCurrency(totalCostOfGoods)} = ${Utils.formatCurrency(grossProfit)}</p>
+                        <p style="margin: 5px 0 5px 20px;">Margen bruto: ${grossMargin.toFixed(2)}%</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
+                        <strong>4. Gastos Operativos</strong>
+                        <p style="margin: 5px 0 5px 20px;">Total gastos: ${Utils.formatCurrency(totalExpenses)}</p>
+                    </div>
+                    
+                    <div style="padding: 15px; background: ${netProfit >= 0 ? '#d4edda' : '#f8d7da'}; border-radius: 6px; border: 2px solid ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                        <strong style="font-size: 1.2rem;">5. Ganancia Neta Final</strong>
+                        <p style="margin: 10px 0 5px 20px;">Ganancia bruta - Gastos</p>
+                        <p style="margin: 5px 0 5px 20px; font-size: 1.3rem; font-weight: bold; color: ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                            ${Utils.formatCurrency(grossProfit)} - ${Utils.formatCurrency(totalExpenses)} = ${Utils.formatCurrency(netProfit)}
+                        </p>
+                        <p style="margin: 5px 0 5px 20px;">Margen neto: ${netMargin.toFixed(2)}%</p>
+                    </div>
+                </div>
             `;
             
             costDetailsElement.innerHTML = detailsHTML;

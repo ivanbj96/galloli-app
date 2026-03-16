@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.8.1'; // Fix: Error de sintaxis (coma extra) en app.js
+const APP_VERSION = '7.9.0'; // Feature: Contabilidad detallada al 100% con desglose completo de costos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

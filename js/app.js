@@ -2908,17 +2908,39 @@ async cleanDuplicatePayments() {
                         <div class="stat-value" id="total-costs">$0</div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-label">Ganancia Bruta</div>
+                        <div class="stat-value" id="gross-profit">$0</div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-label">Ganancia Neta</div>
                         <div class="stat-value" id="net-profit">$0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Margen</div>
+                        <div class="stat-label">Margen Bruto</div>
+                        <div class="stat-value" id="gross-margin">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Margen Neto</div>
                         <div class="stat-value" id="profit-margin">0%</div>
                     </div>
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-info-circle"></i> Detalles de Costos</h3>
+                    <h3><i class="fas fa-chart-line"></i> Resumen de Ventas</h3>
+                    <div id="sales-summary" style="padding: 15px; background: var(--light); border-radius: 8px;">
+                        <!-- Resumen de ventas se agregará aquí -->
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-calculator"></i> Desglose de Costos</h3>
+                    <div id="cost-breakdown" style="padding: 15px; background: var(--light); border-radius: 8px;">
+                        <!-- Desglose de costos se agregará aquí -->
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-info-circle"></i> Detalles Completos</h3>
                     <div id="cost-details">
                         <!-- Los detalles de costos se agregarán aquí -->
                     </div>

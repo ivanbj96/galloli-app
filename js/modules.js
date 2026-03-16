@@ -1525,45 +1525,44 @@ const SalesModule = {
         const confirmBtn = modal.querySelector('#confirm-delete-btn');
         confirmBtn.addEventListener('click', async () => {
             try {
-                // CRÍTICO: Notificar al sistema de sincronización ANTES de eliminar
-                if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                    await SyncEngine.notifyChange('sales', saleId, 'delete');
-                }
-
-                // Actualizar estadísticas del cliente
+                // 1. Actualizar estadísticas del cliente PRIMERO
                 if (client) {
                     client.totalSales -= 1;
                     client.totalAmount -= sale.total;
                     client.totalWeight -= sale.weight;
                     client.totalQuantity -= sale.quantity;
-                    await ClientsModule.saveClients();
                 }
 
-                // Eliminar venta del array
+                // 2. Eliminar venta del array
                 this.sales = this.sales.filter(s => s.id !== saleId);
                 
-                // Eliminar de IndexedDB
-                if (DB.db) {
-                    await DB.delete('sales', saleId);
-                }
-                
-                // Guardar cambios
+                // 3. Guardar cambios localmente
                 await this.saveSales();
+                await ClientsModule.saveClients();
 
-                // Actualizar contabilidad
+                // 4. DESPUÉS notificar al sistema de sincronización
+                if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+                    await SyncEngine.notifyChange('sales', saleId, 'delete');
+                    // Notificar también el cliente afectado
+                    if (client) {
+                        await SyncEngine.notifyChange('clients', client.id, 'update');
+                    }
+                }
+
+                // 5. Actualizar contabilidad
                 if (typeof AccountingModule !== 'undefined') {
                     AccountingModule.updateAccounting(sale.date);
                 }
 
-                // Actualizar badges de créditos si era una venta a crédito
+                // 6. Actualizar badges de créditos si era una venta a crédito
                 if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
                     CreditosModule.updateCreditBadges();
                 }
 
-                // Actualizar lista
+                // 7. Actualizar lista
                 this.updateSalesList(sale.date);
                 
-                // Cerrar modal
+                // 8. Cerrar modal
                 modal.remove();
 
                 Utils.showNotification('✅ Venta eliminada y sincronizada', 'success', 3000);

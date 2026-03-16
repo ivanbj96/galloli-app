@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.5.0'; // Removed: Eliminada completamente funcionalidad de eliminar ventas + smartSync restaurado
+const APP_VERSION = '7.6.0'; // Added: Funcionalidad para eliminar ventas con sincronización entre dispositivos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

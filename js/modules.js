@@ -1295,6 +1295,10 @@ const SalesModule = {
                             onclick="SalesModule.showEditModal(${sale.id})">
                         <i class="fas fa-edit"></i> Editar
                     </button>
+                    <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" 
+                            onclick="SalesModule.showDeleteModal(${sale.id})">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
                 </div>
             `;
             salesList.appendChild(li);
@@ -1460,6 +1464,112 @@ const SalesModule = {
 
     getSaleById(id) {
         return this.sales.find(sale => sale.id === id);
+    },
+
+    showDeleteModal(saleId) {
+        const sale = this.getSaleById(saleId);
+        if (!sale) return;
+
+        const client = ClientsModule.getClientById(sale.clientId);
+        const clientName = client ? client.name : 'Cliente no encontrado';
+
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Confirmar Eliminación</h3>
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <p><strong>¿Estás seguro de que deseas eliminar esta venta?</strong></p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                            <p><strong>Cliente:</strong> ${clientName}</p>
+                            <p><strong>Peso:</strong> ${sale.weight.toFixed(2)} lb</p>
+                            <p><strong>Cantidad:</strong> ${sale.quantity} pollos</p>
+                            <p><strong>Total:</strong> ${Utils.formatCurrency(sale.total)}</p>
+                            <p><strong>Fecha:</strong> ${sale.date}</p>
+                            <p><strong>Estado:</strong> ${sale.isPaid ? 'Pagado' : 'Crédito'}</p>
+                        </div>
+                        <p style="color: #ff6b6b; font-size: 0.9rem;">
+                            <i class="fas fa-warning"></i> Esta acción no se puede deshacer y se sincronizará en todos los dispositivos.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn btn-outline" onclick="this.closest('.modal').remove()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button class="btn btn-danger" onclick="SalesModule.deleteSale(${saleId}); this.closest('.modal').remove();">
+                            <i class="fas fa-trash"></i> Eliminar Venta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    },
+
+    async deleteSale(saleId) {
+        const sale = this.getSaleById(saleId);
+        if (!sale) {
+            Utils.showNotification('Venta no encontrada', 'error', 3000);
+            return false;
+        }
+
+        try {
+            // Actualizar estadísticas del cliente
+            const client = ClientsModule.getClientById(sale.clientId);
+            if (client) {
+                client.totalSales -= 1;
+                client.totalAmount -= sale.total;
+                client.totalWeight -= sale.weight;
+                client.totalQuantity -= sale.quantity;
+                await ClientsModule.saveClients();
+            }
+
+            // Eliminar la venta del array
+            const saleIndex = this.sales.findIndex(s => s.id === saleId);
+            if (saleIndex !== -1) {
+                this.sales.splice(saleIndex, 1);
+            }
+
+            // Guardar cambios
+            await this.saveSales();
+
+            // CRÍTICO: Notificar al sistema de sincronización sobre la eliminación
+            if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+                await SyncEngine.notifyChange('sales', saleId, 'delete');
+                // También notificar cambio en el cliente
+                if (client) {
+                    await SyncEngine.notifyChange('clients', sale.clientId, 'update');
+                }
+            }
+
+            // Actualizar contabilidad de la fecha
+            if (typeof AccountingModule !== 'undefined') {
+                AccountingModule.updateAccounting(sale.date);
+            }
+
+            // Actualizar badges de créditos si era una venta a crédito
+            if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
+                CreditosModule.updateCreditBadges();
+            }
+
+            // Actualizar la lista de ventas
+            this.updateSalesList(sale.date);
+            
+            Utils.showNotification('Venta eliminada correctamente', 'success', 3000);
+            return true;
+
+        } catch (error) {
+            console.error('Error al eliminar venta:', error);
+            Utils.showNotification('Error al eliminar la venta', 'error', 3000);
+            return false;
+        }
     },
 
     markAsCredit(saleId) {

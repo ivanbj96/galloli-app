@@ -149,16 +149,80 @@ class SyncEngine {
             case 'change':
                 // Otro usuario hizo un cambio
                 const dataType = message.data?.data_type;
+                const dataId = message.data?.data_id;
+                const action = message.data?.action;
+                
                 if (dataType) {
-                    console.log('🔔 Cambio remoto detectado:', dataType);
-                    // Sincronizar solo ese tipo de dato
-                    this.syncDataType(dataType);
+                    console.log('🔔 Cambio remoto detectado:', dataType, action || 'update');
+                    
+                    // CASO ESPECIAL: Eliminación remota
+                    if (action === 'delete' && dataId) {
+                        console.log(`🗑️ Procesando eliminación remota: ${dataType}/${dataId}`);
+                        await this.handleRemoteDeletion(dataType, dataId);
+                    } else {
+                        // Sincronizar normalmente
+                        this.syncDataType(dataType);
+                    }
                 }
                 break;
                 
             case 'presence':
                 console.log(`👥 ${message.users?.length || 0} usuarios online`);
                 break;
+        }
+    }
+
+    async handleRemoteDeletion(dataType, dataId) {
+        try {
+            console.log(`🗑️ Eliminando localmente: ${dataType}/${dataId}`);
+            
+            // Eliminar de IndexedDB
+            await this.deleteLocal(dataType, dataId);
+            
+            // Eliminar del array en memoria del módulo correspondiente
+            switch(dataType) {
+                case 'sales':
+                    if (window.SalesModule && window.SalesModule.sales) {
+                        const index = window.SalesModule.sales.findIndex(s => s.id == dataId);
+                        if (index !== -1) {
+                            const deletedSale = window.SalesModule.sales[index];
+                            window.SalesModule.sales.splice(index, 1);
+                            
+                            // Actualizar estadísticas del cliente
+                            if (window.ClientsModule) {
+                                const client = window.ClientsModule.getClientById(deletedSale.clientId);
+                                if (client) {
+                                    client.totalSales -= 1;
+                                    client.totalAmount -= deletedSale.total;
+                                    client.totalWeight -= deletedSale.weight;
+                                    client.totalQuantity -= deletedSale.quantity;
+                                    await window.ClientsModule.saveClients();
+                                }
+                            }
+                            
+                            console.log(`✅ Venta ${dataId} eliminada localmente`);
+                        }
+                    }
+                    break;
+                    
+                case 'clients':
+                    if (window.ClientsModule && window.ClientsModule.clients) {
+                        const index = window.ClientsModule.clients.findIndex(c => c.id == dataId);
+                        if (index !== -1) {
+                            window.ClientsModule.clients.splice(index, 1);
+                            console.log(`✅ Cliente ${dataId} eliminado localmente`);
+                        }
+                    }
+                    break;
+                    
+                // Agregar más casos según sea necesario
+            }
+            
+            // Actualizar la interfaz
+            await this.reloadUI(dataType);
+            
+        } catch (error) {
+            console.error(`❌ Error procesando eliminación remota ${dataType}/${dataId}:`, error);
         }
     }
 

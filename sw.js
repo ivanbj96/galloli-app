@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.6'; // Fix: Corregir error de sintaxis en sync-engine.js (llave extra)
+const APP_VERSION = '7.6.7'; // Fix: Manejo directo de eliminaciones remotas via WebSocket para actualización inmediata
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

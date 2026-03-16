@@ -1581,24 +1581,10 @@ const SalesModule = {
                 this.sales.splice(saleIndex, 1);
             }
 
-            // Guardar ventas SIN triggerar interceptores automáticos
+            // CRÍTICO: Eliminar INMEDIATAMENTE de IndexedDB
             if (DB.db) {
-                // CRÍTICO: Primero obtener todas las ventas existentes en DB
-                const existingSales = await DB.getAll('sales') || [];
-                const currentIds = new Set(this.sales.map(s => s.id));
-                
-                // Eliminar ventas que ya no están en el array
-                for (const existingSale of existingSales) {
-                    if (!currentIds.has(existingSale.id)) {
-                        await DB.delete('sales', existingSale.id);
-                        console.log('🗑️ Venta eliminada de IndexedDB:', existingSale.id);
-                    }
-                }
-                
-                // Guardar/actualizar ventas actuales
-                for (const sale of this.sales) {
-                    await DB.set('sales', sale);
-                }
+                await DB.delete('sales', saleId);
+                console.log('🗑️ Venta eliminada directamente de IndexedDB:', saleId);
             } else {
                 localStorage.setItem('polloSales', JSON.stringify(this.sales));
             }
@@ -1615,6 +1601,21 @@ const SalesModule = {
 
             // Actualizar la lista de ventas
             this.updateSalesList(sale.date);
+            
+            // CRÍTICO: Forzar sincronización completa después de la eliminación
+            if (typeof window.SyncEngine !== 'undefined' && 
+                window.SyncEngine && 
+                typeof window.SyncEngine.forceFullSync === 'function') {
+                try {
+                    console.log('🔄 Forzando sincronización completa después de eliminación...');
+                    setTimeout(async () => {
+                        await window.SyncEngine.forceFullSync();
+                        console.log('✅ Sincronización post-eliminación completada');
+                    }, 1000); // Esperar 1 segundo para que el servidor procese
+                } catch (syncError) {
+                    console.warn('⚠️ Error en sincronización post-eliminación:', syncError);
+                }
+            }
             
             console.log('✅ Venta eliminada completamente (servidor + local)');
             Utils.showNotification('Venta eliminada correctamente', 'success', 3000);

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.8'; // Fix: Agregar async a handleWebSocketMessage para usar await
+const APP_VERSION = '7.6.9'; // Fix: Eliminación directa de IndexedDB y sincronización forzada post-eliminación
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

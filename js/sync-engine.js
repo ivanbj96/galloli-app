@@ -226,6 +226,16 @@ class SyncEngine {
         }
     }
 
+    async forceFullSync() {
+        console.log('🔄 Iniciando sincronización completa forzada...');
+        try {
+            await this.smartSync();
+            console.log('✅ Sincronización completa forzada exitosa');
+        } catch (error) {
+            console.error('❌ Error en sincronización completa forzada:', error);
+        }
+    }
+
     async syncDataType(dataType) {
         console.log('🔄 Sincronizando:', dataType);
         

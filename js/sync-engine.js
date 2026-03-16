@@ -301,7 +301,6 @@ class SyncEngine {
                     // CRÍTICO: Actualizar la lista visual de ventas
                     SalesModule.updateSalesList();
                 }
-                }
                 break;
                 
             case 'orders':

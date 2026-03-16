@@ -1522,25 +1522,34 @@ const SalesModule = {
 
         try {
             // CRÍTICO: PRIMERO registrar eliminación en el servidor
+            console.log('🗑️ Registrando eliminación en servidor primero...');
+            
             if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                console.log('🗑️ Registrando eliminación en servidor primero...');
                 await SyncEngine.notifyChange('sales', saleId, 'delete');
                 console.log('✅ Eliminación registrada en servidor');
+            } else {
+                console.warn('⚠️ SyncEngine no disponible - eliminación solo local');
             }
 
             // LUEGO proceder con eliminación local
             console.log('🗑️ Procediendo con eliminación local...');
 
-            // Actualizar estadísticas del cliente
+            // Actualizar estadísticas del cliente (SIN triggerar sync automático)
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
                 client.totalSales -= 1;
                 client.totalAmount -= sale.total;
                 client.totalWeight -= sale.weight;
                 client.totalQuantity -= sale.quantity;
-                await ClientsModule.saveClients();
                 
-                // Notificar cambio en el cliente después de la eliminación
+                // Guardar cliente SIN triggerar interceptores automáticos
+                if (DB.db) {
+                    await DB.set('clients', client);
+                } else {
+                    localStorage.setItem('polloClients', JSON.stringify(ClientsModule.clients));
+                }
+                
+                // Notificar cambio en el cliente manualmente
                 if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
                     await SyncEngine.notifyChange('clients', sale.clientId, 'update');
                 }
@@ -1552,8 +1561,27 @@ const SalesModule = {
                 this.sales.splice(saleIndex, 1);
             }
 
-            // Guardar cambios locales
-            await this.saveSales();
+            // Guardar ventas SIN triggerar interceptores automáticos
+            if (DB.db) {
+                // CRÍTICO: Primero obtener todas las ventas existentes en DB
+                const existingSales = await DB.getAll('sales') || [];
+                const currentIds = new Set(this.sales.map(s => s.id));
+                
+                // Eliminar ventas que ya no están en el array
+                for (const existingSale of existingSales) {
+                    if (!currentIds.has(existingSale.id)) {
+                        await DB.delete('sales', existingSale.id);
+                        console.log('🗑️ Venta eliminada de IndexedDB:', existingSale.id);
+                    }
+                }
+                
+                // Guardar/actualizar ventas actuales
+                for (const sale of this.sales) {
+                    await DB.set('sales', sale);
+                }
+            } else {
+                localStorage.setItem('polloSales', JSON.stringify(this.sales));
+            }
 
             // Actualizar contabilidad de la fecha
             if (typeof AccountingModule !== 'undefined') {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.1'; // Fix: Eliminación de ventas se registra primero en servidor para evitar sobrescritura
+const APP_VERSION = '7.6.2'; // Fix: Eliminación evita interceptores automáticos para prevenir conflictos de sincronización
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

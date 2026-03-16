@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.6.3'; // Fix: Sistema robusto de eliminaciones con cola de pendientes y sincronización automática
+const APP_VERSION = '7.6.4'; // Fix: Usar endpoint correcto /api/sync/push para eliminaciones
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

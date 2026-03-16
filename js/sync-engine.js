@@ -1008,17 +1008,19 @@ class SyncEngine {
             if (action === 'delete' && specificDataId) {
                 console.log(`🗑️ Enviando eliminación al servidor: ${dataType}/${specificDataId}`);
                 
-                const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/upload`, {
+                const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/push`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         ...window.AuthManager.getAuthHeaders()
                     },
                     body: JSON.stringify({
-                        data_type: dataType,
-                        data_id: specificDataId,
-                        action: 'delete',
-                        data: null // No necesitamos datos para eliminación
+                        changes: [{
+                            data_type: dataType,
+                            data_id: specificDataId,
+                            action: 'delete',
+                            data: null // No necesitamos datos para eliminación
+                        }]
                     })
                 });
                 

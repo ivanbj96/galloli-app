@@ -1525,22 +1525,24 @@ const SalesModule = {
         const confirmBtn = modal.querySelector('#confirm-delete-btn');
         confirmBtn.addEventListener('click', async () => {
             try {
-                // 1. Actualizar estadísticas del cliente PRIMERO
+                // 1. Actualizar estadísticas del cliente
                 if (client) {
                     client.totalSales -= 1;
                     client.totalAmount -= sale.total;
                     client.totalWeight -= sale.weight;
                     client.totalQuantity -= sale.quantity;
+                    await ClientsModule.saveClients();
                 }
 
                 // 2. Eliminar venta del array
                 this.sales = this.sales.filter(s => s.id !== saleId);
                 
-                // 3. Guardar cambios localmente
-                await this.saveSales();
-                await ClientsModule.saveClients();
+                // 3. Eliminar de IndexedDB directamente
+                if (DB.db) {
+                    await DB.delete('sales', saleId);
+                }
 
-                // 4. DESPUÉS notificar al sistema de sincronización
+                // 4. Notificar al sistema de sincronización
                 if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
                     await SyncEngine.notifyChange('sales', saleId, 'delete');
                     // Notificar también el cliente afectado
@@ -1565,7 +1567,7 @@ const SalesModule = {
                 // 8. Cerrar modal
                 modal.remove();
 
-                Utils.showNotification('✅ Venta eliminada y sincronizada', 'success', 3000);
+                Utils.showNotification('✅ Venta eliminada correctamente', 'success', 3000);
             } catch (error) {
                 console.error('❌ Error al eliminar venta:', error);
                 Utils.showNotification('❌ Error al eliminar venta', 'error', 3000);

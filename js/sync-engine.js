@@ -995,7 +995,34 @@ class SyncEngine {
     
     async uploadChanges(dataType, specificDataId = null, action = 'update') {
         try {
-            // Obtener datos locales
+            // CASO ESPECIAL: Para eliminaciones, enviar directamente al servidor
+            if (action === 'delete' && specificDataId) {
+                console.log(`🗑️ Enviando eliminación al servidor: ${dataType}/${specificDataId}`);
+                
+                const response = await fetch(`${SYNC_CONFIG.API_URL}/api/sync/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...window.AuthManager.getAuthHeaders()
+                    },
+                    body: JSON.stringify({
+                        data_type: dataType,
+                        data_id: specificDataId,
+                        action: 'delete',
+                        data: null // No necesitamos datos para eliminación
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Eliminación registrada en servidor:', result);
+                return;
+            }
+            
+            // CASO NORMAL: Para updates y creaciones
             const storeName = this.getStoreName(dataType);
             let localData = await DB.getAll(storeName) || [];
             

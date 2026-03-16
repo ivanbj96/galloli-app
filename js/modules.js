@@ -1521,6 +1521,16 @@ const SalesModule = {
         }
 
         try {
+            // CRÍTICO: PRIMERO registrar eliminación en el servidor
+            if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+                console.log('🗑️ Registrando eliminación en servidor primero...');
+                await SyncEngine.notifyChange('sales', saleId, 'delete');
+                console.log('✅ Eliminación registrada en servidor');
+            }
+
+            // LUEGO proceder con eliminación local
+            console.log('🗑️ Procediendo con eliminación local...');
+
             // Actualizar estadísticas del cliente
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
@@ -1529,25 +1539,21 @@ const SalesModule = {
                 client.totalWeight -= sale.weight;
                 client.totalQuantity -= sale.quantity;
                 await ClientsModule.saveClients();
+                
+                // Notificar cambio en el cliente después de la eliminación
+                if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+                    await SyncEngine.notifyChange('clients', sale.clientId, 'update');
+                }
             }
 
-            // Eliminar la venta del array
+            // Eliminar la venta del array local
             const saleIndex = this.sales.findIndex(s => s.id === saleId);
             if (saleIndex !== -1) {
                 this.sales.splice(saleIndex, 1);
             }
 
-            // Guardar cambios
+            // Guardar cambios locales
             await this.saveSales();
-
-            // CRÍTICO: Notificar al sistema de sincronización sobre la eliminación
-            if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
-                await SyncEngine.notifyChange('sales', saleId, 'delete');
-                // También notificar cambio en el cliente
-                if (client) {
-                    await SyncEngine.notifyChange('clients', sale.clientId, 'update');
-                }
-            }
 
             // Actualizar contabilidad de la fecha
             if (typeof AccountingModule !== 'undefined') {
@@ -1562,11 +1568,12 @@ const SalesModule = {
             // Actualizar la lista de ventas
             this.updateSalesList(sale.date);
             
+            console.log('✅ Venta eliminada completamente (servidor + local)');
             Utils.showNotification('Venta eliminada correctamente', 'success', 3000);
             return true;
 
         } catch (error) {
-            console.error('Error al eliminar venta:', error);
+            console.error('❌ Error al eliminar venta:', error);
             Utils.showNotification('Error al eliminar la venta', 'error', 3000);
             return false;
         }

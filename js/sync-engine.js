@@ -46,8 +46,8 @@ class SyncEngine {
         // 2. Conectar WebSocket
         this.connectWebSocket();
 
-        // 3. Sincronización inicial inteligente con merge
-        await this.smartSync();
+        // 3. DESHABILITADO: Sincronización inicial para permitir eliminaciones
+        // await this.smartSync();
 
         // 4. Esperar a que los módulos estén listos antes de interceptar
         setTimeout(() => {
@@ -1180,10 +1180,10 @@ class SyncEngine {
             window.OfflineQueueManager.processBatch();
         }
         
-        // Hacer sincronización completa
-        setTimeout(() => {
-            this.smartSync();
-        }, 1000);
+        // DESHABILITADO: Sincronización completa para permitir eliminaciones
+        // setTimeout(() => {
+        //     this.smartSync();
+        // }, 1000);
     }
 
     handleOffline() {

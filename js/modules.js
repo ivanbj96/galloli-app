@@ -2306,264 +2306,143 @@ const AccountingModule = {
         const totalIncome = sales.reduce((sum, sale) => sum + sale.total, 0);
         const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
         
-        // Separar ventas por tipo de costo usando hasCustomCost
-        const salesWithMermaCost = sales.filter(sale => !sale.hasCustomCost);
-        const salesWithCustomCost = sales.filter(sale => sale.hasCustomCost === true);
-        
-        // Calcular ganancia bruta usando hasCustomCost para determinar el costo real
-        let grossProfit = 0;
-        let totalCostOfGoods = 0;
-        let mermaCostTotal = 0;
-        let customCostTotal = 0;
-        
-        // Obtener merma del dia para ventas sin costo directo
+        // Separar ventas por tipo usando hasCustomCost
+        const salesPluma = sales.filter(sale => !sale.hasCustomCost);
+        const salesPelado = sales.filter(sale => sale.hasCustomCost === true);
+
+        // Obtener merma del dia
         const mermaRecord = MermaModule.getMermaRecordByDate(targetDate);
-        
+
+        // Calcular grossProfit para netProfit
+        let grossProfit = 0;
         sales.forEach(sale => {
-            let costPerLb;
-            if (sale.hasCustomCost) {
-                // Pollos pelados: usar su costo directo guardado
-                costPerLb = sale.costPerLb || 0;
-            } else {
-                // Pollos en pluma: usar el costo de merma del dia (en tiempo real)
-                costPerLb = mermaRecord ? mermaRecord.realCostPerLb : (sale.costPerLb || 0);
-            }
-            
-            const profitPerLb = sale.price - costPerLb;
-            const saleCost = costPerLb * sale.weight;
-            
-            grossProfit += profitPerLb * sale.weight;
-            totalCostOfGoods += saleCost;
-            
-            if (sale.hasCustomCost) {
-                customCostTotal += saleCost;
-            } else {
-                mermaCostTotal += saleCost;
-            }
+            const costPerLb = sale.hasCustomCost
+                ? (sale.costPerLb || 0)
+                : (mermaRecord ? mermaRecord.realCostPerLb : (sale.costPerLb || 0));
+            grossProfit += (sale.price - costPerLb) * sale.weight;
         });
-        
+
         // Ganancia neta = Ganancia bruta - Gastos
         const netProfit = grossProfit - totalExpenses;
-        const grossMargin = totalIncome > 0 ? (grossProfit / totalIncome) * 100 : 0;
         const netMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
 
-        // Actualizar UI - Tarjetas principales
-        const totalIncomeElement = document.getElementById('total-income');
-        const totalCostsElement = document.getElementById('total-costs');
-        const grossProfitElement = document.getElementById('gross-profit');
-        const netProfitElement = document.getElementById('net-profit');
-        const grossMarginElement = document.getElementById('gross-margin');
-        const profitMarginElement = document.getElementById('profit-margin');
-        
-        if (totalIncomeElement) {
-            totalIncomeElement.textContent = Utils.formatCurrency(totalIncome);
+        // === NUEVO UI: llenar #accounting-summary ===
+        const summaryEl = document.getElementById('accounting-summary');
+        if (!summaryEl) return;
+
+        if (sales.length === 0) {
+            summaryEl.innerHTML = `
+                <div class="card" style="text-align:center; color:var(--gray); padding:30px;">
+                    <i class="fas fa-chart-line" style="font-size:2.5rem; margin-bottom:10px; display:block;"></i>
+                    No hay ventas registradas para esta fecha
+                </div>`;
+            return;
         }
-        
-        if (totalCostsElement) {
-            totalCostsElement.textContent = Utils.formatCurrency(totalCostOfGoods + totalExpenses);
-        }
-        
-        if (grossProfitElement) {
-            grossProfitElement.textContent = Utils.formatCurrency(grossProfit);
-            grossProfitElement.style.color = grossProfit >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
-        
-        if (netProfitElement) {
-            netProfitElement.textContent = Utils.formatCurrency(netProfit);
-            netProfitElement.style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
-        
-        if (grossMarginElement) {
-            grossMarginElement.textContent = grossMargin.toFixed(2) + '%';
-            grossMarginElement.style.color = grossMargin >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
-        
-        if (profitMarginElement) {
-            profitMarginElement.textContent = netMargin.toFixed(2) + '%';
-            profitMarginElement.style.color = netMargin >= 0 ? 'var(--success)' : 'var(--danger)';
-        }
-        
-        // Resumen de ventas
-        const salesSummaryElement = document.getElementById('sales-summary');
-        if (salesSummaryElement) {
-            const totalWeight = sales.reduce((sum, sale) => sum + sale.weight, 0);
-            const totalQuantity = sales.reduce((sum, sale) => sum + sale.quantity, 0);
-            const avgPVP = totalWeight > 0 ? totalIncome / totalWeight : 0;
-            const avgCost = totalWeight > 0 ? totalCostOfGoods / totalWeight : 0;
-            const avgProfit = totalWeight > 0 ? grossProfit / totalWeight : 0;
-            
-            // Calcular totales por tipo usando merma en tiempo real
-            const mermaWeight = salesWithMermaCost.reduce((sum, sale) => sum + sale.weight, 0);
-            const mermaQuantity = salesWithMermaCost.reduce((sum, sale) => sum + sale.quantity, 0);
-            const mermaIncome = salesWithMermaCost.reduce((sum, sale) => sum + sale.total, 0);
-            const mermaProfit = salesWithMermaCost.reduce((sum, sale) => {
-                const cost = mermaRecord ? mermaRecord.realCostPerLb : (sale.costPerLb || 0);
-                return sum + ((sale.price - cost) * sale.weight);
-            }, 0);
-            
-            const customWeight = salesWithCustomCost.reduce((sum, sale) => sum + sale.weight, 0);
-            const customQuantity = salesWithCustomCost.reduce((sum, sale) => sum + sale.quantity, 0);
-            const customIncome = salesWithCustomCost.reduce((sum, sale) => sum + sale.total, 0);
-            const customProfit = salesWithCustomCost.reduce((sum, sale) => {
-                return sum + ((sale.price - (sale.costPerLb || 0)) * sale.weight);
-            }, 0);
-            
-            let summaryHTML = '';
-            if (sales.length > 0) {
-                summaryHTML = `
-                    <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                        <h4 style="margin: 0 0 15px; font-size: 1.3rem; text-align: center;"><i class="fas fa-chart-bar"></i> TOTALES GENERALES</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
-                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Ventas Totales</div>
-                                <div style="font-size: 1.8rem; font-weight: bold;">${sales.length}</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Pollos Totales</div>
-                                <div style="font-size: 1.8rem; font-weight: bold;">${totalQuantity}</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Libras Totales</div>
-                                <div style="font-size: 1.8rem; font-weight: bold;">${totalWeight.toFixed(2)} lb</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Ingresos Totales</div>
-                                <div style="font-size: 1.8rem; font-weight: bold;">${Utils.formatCurrency(totalIncome)}</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Ganancia Total</div>
-                                <div style="font-size: 1.8rem; font-weight: bold;">${Utils.formatCurrency(grossProfit)}</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-                        <div style="padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <h4 style="margin: 0 0 10px; font-size: 1.1rem;"><i class="fas fa-feather"></i> Pollos en Pluma (Con Merma)</h4>
-                            <div style="background: rgba(255,255,255,0.25); padding: 12px; border-radius: 8px;">
-                                <p style="margin: 5px 0; font-size: 1rem;">Ventas: <strong>${salesWithMermaCost.length}</strong></p>
-                                <p style="margin: 5px 0; font-size: 1rem;">Pollos: <strong>${mermaQuantity}</strong></p>
-                                <p style="margin: 5px 0; font-size: 1.1rem;">Libras: <strong>${mermaWeight.toFixed(2)} lb</strong></p>
-                                <p style="margin: 5px 0; font-size: 1rem;">Ingresos: <strong>${Utils.formatCurrency(mermaIncome)}</strong></p>
-                                <p style="margin: 5px 0; font-size: 1rem;">Ganancia: <strong>${Utils.formatCurrency(mermaProfit)}</strong></p>
-                            </div>
-                        </div>
-                        
-                        <div style="padding: 15px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <h4 style="margin: 0 0 10px; font-size: 1.1rem;"><i class="fas fa-drumstick-bite"></i> Pollos Pelados (Costo Directo)</h4>
-                            <div style="background: rgba(255,255,255,0.25); padding: 12px; border-radius: 8px;">
-                                <p style="margin: 5px 0; font-size: 1rem;">Ventas: <strong>${salesWithCustomCost.length}</strong></p>
-                                <p style="margin: 5px 0; font-size: 1rem;">Pollos: <strong>${customQuantity}</strong></p>
-                                <p style="margin: 5px 0; font-size: 1.1rem;">Libras: <strong>${customWeight.toFixed(2)} lb</strong></p>
-                                <p style="margin: 5px 0; font-size: 1rem;">Ingresos: <strong>${Utils.formatCurrency(customIncome)}</strong></p>
-                                <p style="margin: 5px 0; font-size: 1rem;">Ganancia: <strong>${Utils.formatCurrency(customProfit)}</strong></p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            } else {
-                summaryHTML = '<p style="color: var(--gray); text-align: center;"><i class="fas fa-info-circle"></i> No hay ventas registradas en esta fecha</p>';
-            }
-            salesSummaryElement.innerHTML = summaryHTML;
-        }
-        
-        // Desglose de costos
-        const costBreakdownElement = document.getElementById('cost-breakdown');
-        if (costBreakdownElement) {
-            let breakdownHTML = '';
-            
-            if (sales.length > 0) {
-                const mermaWeight = salesWithMermaCost.reduce((sum, sale) => sum + sale.weight, 0);
-                const customWeight = salesWithCustomCost.reduce((sum, sale) => sum + sale.weight, 0);
-                
-                breakdownHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--warning);">
-                            <strong style="color: var(--warning);">🐔 Pollos en Pluma (Merma)</strong>
-                            <p style="margin: 10px 0 5px;">Ventas: ${salesWithMermaCost.length}</p>
-                            <p style="margin: 5px 0;">Libras: ${mermaWeight.toFixed(2)} lb</p>
-                            <p style="margin: 5px 0;">Costo total: ${Utils.formatCurrency(mermaCostTotal)}</p>
-                            <p style="margin: 5px 0;">Costo/lb: ${mermaWeight > 0 ? Utils.formatCurrency(mermaCostTotal / mermaWeight) : '$0.00'}/lb</p>
-                        </div>
-                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--info);">
-                            <strong style="color: var(--info);">��� Pollos Pelados (Directo)</strong>
-                            <p style="margin: 10px 0 5px;">Ventas: ${salesWithCustomCost.length}</p>
-                            <p style="margin: 5px 0;">Libras: ${customWeight.toFixed(2)} lb</p>
-                            <p style="margin: 5px 0;">Costo total: ${Utils.formatCurrency(customCostTotal)}</p>
-                            <p style="margin: 5px 0;">Costo/lb: ${customWeight > 0 ? Utils.formatCurrency(customCostTotal / customWeight) : '$0.00'}/lb</p>
-                        </div>
-                        <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--danger);">
-                            <strong style="color: var(--danger);">💸 Gastos Operativos</strong>
-                            <p style="margin: 10px 0 5px;">Gastos: ${expenses.length}</p>
-                            <p style="margin: 5px 0;">Total: ${Utils.formatCurrency(totalExpenses)}</p>
-                            ${expenses.length > 0 ? `
-                                <details style="margin-top: 10px;">
-                                    <summary style="cursor: pointer; color: var(--primary);">Ver detalles</summary>
-                                    <div style="margin-top: 10px; font-size: 0.9rem;">
-                                        ${expenses.map(exp => `
-                                            <p style="margin: 5px 0; padding: 5px; background: var(--light); border-radius: 4px;">
-                                                ${exp.description}: ${Utils.formatCurrency(exp.amount)}
-                                            </p>
-                                        `).join('')}
-                                    </div>
-                                </details>
-                            ` : '<p style="margin: 5px 0; color: var(--gray); font-size: 0.9rem;">Sin gastos</p>'}
-                        </div>
-                    </div>
-                `;
-            } else {
-                breakdownHTML = '<p style="color: var(--gray); text-align: center;"><i class="fas fa-info-circle"></i> No hay datos para mostrar</p>';
-            }
-            
-            costBreakdownElement.innerHTML = breakdownHTML;
-        }
-        
-        // Detalles completos (mantener compatibilidad)
-        const costDetailsElement = document.getElementById('cost-details');
-        if (costDetailsElement) {
-            const totalWeight = sales.reduce((sum, sale) => sum + sale.weight, 0);
-            
-            let detailsHTML = `
-                <div style="padding: 15px; background: var(--light); border-radius: 8px;">
-                    <h4 style="margin: 0 0 15px; color: var(--primary);"><i class="fas fa-calculator"></i> Cálculo Detallado</h4>
-                    
-                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
-                        <strong>1. Ingresos por Ventas</strong>
-                        <p style="margin: 5px 0 5px 20px;">Total vendido: ${Utils.formatCurrency(totalIncome)}</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
-                        <strong>2. Costo de Mercancía Vendida</strong>
-                        <p style="margin: 5px 0 5px 20px;">Pollos en pluma: ${Utils.formatCurrency(mermaCostTotal)}</p>
-                        <p style="margin: 5px 0 5px 20px;">Pollos pelados: ${Utils.formatCurrency(customCostTotal)}</p>
-                        <p style="margin: 5px 0 5px 20px; font-weight: bold; color: var(--warning);">Subtotal: ${Utils.formatCurrency(totalCostOfGoods)}</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
-                        <strong>3. Ganancia Bruta</strong>
-                        <p style="margin: 5px 0 5px 20px;">Ingresos - Costo mercancía</p>
-                        <p style="margin: 5px 0 5px 20px; font-weight: bold; color: var(--success);">${Utils.formatCurrency(totalIncome)} - ${Utils.formatCurrency(totalCostOfGoods)} = ${Utils.formatCurrency(grossProfit)}</p>
-                        <p style="margin: 5px 0 5px 20px;">Margen bruto: ${grossMargin.toFixed(2)}%</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px;">
-                        <strong>4. Gastos Operativos</strong>
-                        <p style="margin: 5px 0 5px 20px;">Total gastos: ${Utils.formatCurrency(totalExpenses)}</p>
-                    </div>
-                    
-                    <div style="padding: 15px; background: ${netProfit >= 0 ? '#d4edda' : '#f8d7da'}; border-radius: 6px; border: 2px solid ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                        <strong style="font-size: 1.2rem;">5. Ganancia Neta Final</strong>
-                        <p style="margin: 10px 0 5px 20px;">Ganancia bruta - Gastos</p>
-                        <p style="margin: 5px 0 5px 20px; font-size: 1.3rem; font-weight: bold; color: ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">
-                            ${Utils.formatCurrency(grossProfit)} - ${Utils.formatCurrency(totalExpenses)} = ${Utils.formatCurrency(netProfit)}
-                        </p>
-                        <p style="margin: 5px 0 5px 20px;">Margen neto: ${netMargin.toFixed(2)}%</p>
-                    </div>
+
+        const plumaWeight  = salesPluma.reduce((sum, s) => sum + s.weight, 0);
+        const plumaQty     = salesPluma.reduce((sum, s) => sum + s.quantity, 0);
+        const plumaIncome  = salesPluma.reduce((sum, s) => sum + s.total, 0);
+        const plumaCostPerLb = mermaRecord ? mermaRecord.realCostPerLb : 0;
+        const plumaProfit  = salesPluma.reduce((sum, s) => sum + ((s.price - plumaCostPerLb) * s.weight), 0);
+        const plumaCost    = plumaWeight * plumaCostPerLb;
+
+        const peladoWeight = salesPelado.reduce((sum, s) => sum + s.weight, 0);
+        const peladoQty    = salesPelado.reduce((sum, s) => sum + s.quantity, 0);
+        const peladoIncome = salesPelado.reduce((sum, s) => sum + s.total, 0);
+        const peladoProfit = salesPelado.reduce((sum, s) => sum + ((s.price - (s.costPerLb || 0)) * s.weight), 0);
+        const peladoCost   = salesPelado.reduce((sum, s) => sum + ((s.costPerLb || 0) * s.weight), 0);
+
+        const totalWeight = plumaWeight + peladoWeight;
+        const totalQty    = plumaQty + peladoQty;
+
+        const profitColor  = netProfit >= 0 ? '#155724' : '#721c24';
+        const profitBg     = netProfit >= 0 ? '#d4edda' : '#f8d7da';
+        const profitBorder = netProfit >= 0 ? '#28a745' : '#dc3545';
+
+        let html = `
+        <div class="card" style="margin-bottom:15px; border-left:5px solid ${profitBorder}; background:${profitBg};">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <div style="font-size:0.85rem; color:${profitColor}; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Ganancia del dia</div>
+                    <div style="font-size:2.2rem; font-weight:bold; color:${profitColor};">${Utils.formatCurrency(netProfit)}</div>
+                    ${totalExpenses > 0 ? `<div style="font-size:0.85rem; color:${profitColor}; margin-top:4px;">Antes de gastos: ${Utils.formatCurrency(grossProfit)} &nbsp;|&nbsp; Gastos: -${Utils.formatCurrency(totalExpenses)}</div>` : ''}
                 </div>
-            `;
-            
-            costDetailsElement.innerHTML = detailsHTML;
+                <div style="text-align:right;">
+                    <div style="font-size:0.85rem; color:${profitColor};">Ingresos totales</div>
+                    <div style="font-size:1.4rem; font-weight:bold; color:${profitColor};">${Utils.formatCurrency(totalIncome)}</div>
+                    <div style="font-size:0.8rem; color:${profitColor};">${totalQty} pollos &nbsp;|&nbsp; ${totalWeight.toFixed(2)} lb</div>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:0.85rem; color:${profitColor};">Margen: <strong>${netMargin.toFixed(1)}%</strong></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:15px; margin-bottom:15px;">`;
+
+        if (salesPluma.length > 0) {
+            const plumaMargin = plumaIncome > 0 ? (plumaProfit / plumaIncome * 100) : 0;
+            html += `
+            <div class="card" style="border-left:4px solid #28a745; margin:0;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                    <span style="background:#28a745; color:white; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600;">PLUMA</span>
+                    <span style="font-size:0.85rem; color:var(--gray);">Con merma</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.9rem;">
+                    <div><span style="color:var(--gray);">Ventas</span><br><strong>${salesPluma.length}</strong></div>
+                    <div><span style="color:var(--gray);">Pollos</span><br><strong>${plumaQty}</strong></div>
+                    <div><span style="color:var(--gray);">Libras</span><br><strong>${plumaWeight.toFixed(2)} lb</strong></div>
+                    <div><span style="color:var(--gray);">Costo/lb</span><br><strong>${mermaRecord ? Utils.formatCurrency(plumaCostPerLb) : '<span style="color:#dc3545">Sin merma</span>'}</strong></div>
+                    <div><span style="color:var(--gray);">Ingresos</span><br><strong>${Utils.formatCurrency(plumaIncome)}</strong></div>
+                    <div><span style="color:var(--gray);">Costo total</span><br><strong>${Utils.formatCurrency(plumaCost)}</strong></div>
+                </div>
+                <div style="margin-top:12px; padding:8px; background:#d4edda; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.85rem; color:#155724;">Ganancia</span>
+                    <strong style="color:#155724; font-size:1.1rem;">${Utils.formatCurrency(plumaProfit)} <span style="font-size:0.8rem;">(${plumaMargin.toFixed(1)}%)</span></strong>
+                </div>
+            </div>`;
         }
+
+        if (salesPelado.length > 0) {
+            const peladoMargin = peladoIncome > 0 ? (peladoProfit / peladoIncome * 100) : 0;
+            const avgCostPelado = peladoWeight > 0 ? peladoCost / peladoWeight : 0;
+            html += `
+            <div class="card" style="border-left:4px solid #007bff; margin:0;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+                    <span style="background:#007bff; color:white; padding:3px 10px; border-radius:12px; font-size:0.8rem; font-weight:600;">PELADO</span>
+                    <span style="font-size:0.85rem; color:var(--gray);">Costo directo</span>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.9rem;">
+                    <div><span style="color:var(--gray);">Ventas</span><br><strong>${salesPelado.length}</strong></div>
+                    <div><span style="color:var(--gray);">Pollos</span><br><strong>${peladoQty}</strong></div>
+                    <div><span style="color:var(--gray);">Libras</span><br><strong>${peladoWeight.toFixed(2)} lb</strong></div>
+                    <div><span style="color:var(--gray);">Costo/lb prom.</span><br><strong>${Utils.formatCurrency(avgCostPelado)}</strong></div>
+                    <div><span style="color:var(--gray);">Ingresos</span><br><strong>${Utils.formatCurrency(peladoIncome)}</strong></div>
+                    <div><span style="color:var(--gray);">Costo total</span><br><strong>${Utils.formatCurrency(peladoCost)}</strong></div>
+                </div>
+                <div style="margin-top:12px; padding:8px; background:#cce5ff; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.85rem; color:#004085;">Ganancia</span>
+                    <strong style="color:#004085; font-size:1.1rem;">${Utils.formatCurrency(peladoProfit)} <span style="font-size:0.8rem;">(${peladoMargin.toFixed(1)}%)</span></strong>
+                </div>
+            </div>`;
+        }
+
+        html += `</div>`;
+
+        if (expenses.length > 0) {
+            html += `
+            <div class="card" style="border-left:4px solid #dc3545; margin-bottom:15px;">
+                <h4 style="margin:0 0 12px; color:#dc3545;"><i class="fas fa-receipt"></i> Gastos Operativos &mdash; ${Utils.formatCurrency(totalExpenses)}</h4>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    ${expenses.map(exp => `
+                        <div style="display:flex; justify-content:space-between; padding:8px 10px; background:var(--light); border-radius:6px; font-size:0.9rem;">
+                            <span>${exp.description} <span style="color:var(--gray); font-size:0.8rem;">(${exp.category || 'otros'})</span></span>
+                            <strong style="color:#dc3545;">-${Utils.formatCurrency(exp.amount)}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+
+        summaryEl.innerHTML = html;
     },
 
     getExpensesByDate(date) {

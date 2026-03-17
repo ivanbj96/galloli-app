@@ -942,7 +942,7 @@ const App = {
         // Esperar a que se guarden todos los cambios
         await SalesModule.saveSales();
 
-        // CR�TICO: Notificar al sistema de sincronización sobre los pagos procesados
+        // CR�TICO: Notificar al sistema de sincronización sobre los pagos procesados
         if (paymentsProcessed > 0 && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             // Notificar cada venta modificada
             for (const saleId of processedSaleIds) {
@@ -2892,7 +2892,7 @@ async cleanDuplicatePayments() {
         const html = `
             <div class="page active" id="accounting-page">
                 <h2><i class="fas fa-book"></i> Contabilidad</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Resumen financiero y balance</p>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Resumen financiero del dia</p>
                 
                 <div class="date-filter">
                     <input type="date" class="date-input" id="accounting-date-filter" value="${this.currentDate}">
@@ -2900,72 +2900,30 @@ async cleanDuplicatePayments() {
                         <i class="fas fa-filter"></i> Filtrar
                     </button>
                 </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Ingresos Totales</div>
-                        <div class="stat-value" id="total-income">$0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Costos Totales</div>
-                        <div class="stat-value" id="total-costs">$0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Ganancia Bruta</div>
-                        <div class="stat-value" id="gross-profit">$0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Ganancia Neta</div>
-                        <div class="stat-value" id="net-profit">$0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Margen Bruto</div>
-                        <div class="stat-value" id="gross-margin">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Margen Neto</div>
-                        <div class="stat-value" id="profit-margin">0%</div>
-                    </div>
+
+                <!-- Resumen principal -->
+                <div id="accounting-summary">
+                    <!-- Se llena dinamicamente -->
                 </div>
-                
-                <div class="card">
-                    <h3><i class="fas fa-chart-line"></i> Resumen de Ventas</h3>
-                    <div id="sales-summary" style="padding: 15px; background: var(--light); border-radius: 8px;">
-                        <!-- Resumen de ventas se agregará aquí -->
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3><i class="fas fa-calculator"></i> Desglose de Costos</h3>
-                    <div id="cost-breakdown" style="padding: 15px; background: var(--light); border-radius: 8px;">
-                        <!-- Desglose de costos se agregará aquí -->
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3><i class="fas fa-info-circle"></i> Detalles Completos</h3>
-                    <div id="cost-details">
-                        <!-- Los detalles de costos se agregarán aquí -->
-                    </div>
-                </div>
-                
+
+                <!-- Registrar Gasto -->
                 <div class="card">
                     <h3><i class="fas fa-plus-circle"></i> Registrar Gasto</h3>
                     <form id="expense-form">
                         <div class="form-group">
-                            <label class="form-label" for="expense-date">Fecha del Gasto</label>
+                            <label class="form-label" for="expense-date">Fecha</label>
                             <input type="date" class="form-input" id="expense-date" value="${this.currentDate}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="expense-description">Descripción</label>
+                            <label class="form-label" for="expense-description">Descripcion</label>
                             <input type="text" class="form-input" id="expense-description" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="expense-amount">Monto</label>
+                            <label class="form-label" for="expense-amount">Monto ($)</label>
                             <input type="number" step="0.01" min="0.01" class="form-input" id="expense-amount" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="expense-category">Categoría</label>
+                            <label class="form-label" for="expense-category">Categoria</label>
                             <select class="form-input" id="expense-category" required>
                                 <option value="insumos">Insumos</option>
                                 <option value="mano_obra">Mano de Obra</option>

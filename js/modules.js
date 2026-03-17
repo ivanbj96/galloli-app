@@ -1326,7 +1326,6 @@ const SalesModule = {
                 salesList.appendChild(li);
             });
         },
-,
 
     showEditModal(saleId) {
         const sale = this.getSaleById(saleId);

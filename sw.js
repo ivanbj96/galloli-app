@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.10.1'; // Fix: Error de sintaxis en updateSalesList
+const APP_VERSION = '7.11.0'; // Mejora: Badges con mejor contraste y contabilidad con totales generales + desglose por tipo
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

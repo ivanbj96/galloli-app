@@ -1281,12 +1281,11 @@ const SalesModule = {
                 const client = ClientsModule.getClientById(sale.clientId);
                 const clientName = client ? client.name : 'Cliente no encontrado';
 
-                // Determinar si tiene costo directo (pelado)
-                const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
-                const hasCustomCost = !mermaRecord || sale.costPerLb !== mermaRecord.realCostPerLb;
+                // Determinar si tiene costo directo basándose en hasCustomCost
+                const hasCustomCost = sale.hasCustomCost === true;
                 const costBadge = hasCustomCost ? 
-                    '<span style="background: #17a2b8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 5px;"><i class="fas fa-drumstick-bite"></i> Pelado</span>' : 
-                    '<span style="background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 5px;"><i class="fas fa-feather"></i> Pluma</span>';
+                    '<span style="background: #007bff; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; margin-left: 8px; font-weight: 600;"><i class="fas fa-drumstick-bite"></i> Pelado (Costo Directo)</span>' : 
+                    '<span style="background: #28a745; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; margin-left: 8px; font-weight: 600;"><i class="fas fa-feather"></i> Pluma (Con Merma)</span>';
 
                 const li = document.createElement('li');
                 li.className = 'sale-item';
@@ -2079,15 +2078,15 @@ const StatsModule = {
             
             let breakdownHTML = `
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
-                    <div style="padding: 20px; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="padding: 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="display: flex; align-items: center; margin-bottom: 15px;">
                             <i class="fas fa-feather" style="font-size: 2rem; margin-right: 15px;"></i>
                             <div>
                                 <h4 style="margin: 0; font-size: 1.2rem;">Pollos en Pluma</h4>
-                                <p style="margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem;">Con cálculo de merma</p>
+                                <p style="margin: 5px 0 0; opacity: 0.95; font-size: 0.9rem;">Con cálculo de merma</p>
                             </div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                        <div style="background: rgba(255,255,255,0.25); padding: 15px; border-radius: 8px;">
                             <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Ventas:</strong> ${salesWithMerma.length}</p>
                             <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Pollos:</strong> ${mermaQuantity}</p>
                             <p style="margin: 8px 0; font-size: 1.3rem;"><strong>Libras:</strong> ${mermaWeight.toFixed(2)} lb</p>
@@ -2095,15 +2094,15 @@ const StatsModule = {
                         </div>
                     </div>
                     
-                    <div style="padding: 20px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <div style="padding: 20px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                         <div style="display: flex; align-items: center; margin-bottom: 15px;">
                             <i class="fas fa-drumstick-bite" style="font-size: 2rem; margin-right: 15px;"></i>
                             <div>
                                 <h4 style="margin: 0; font-size: 1.2rem;">Pollos Pelados</h4>
-                                <p style="margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem;">Con costo directo</p>
+                                <p style="margin: 5px 0 0; opacity: 0.95; font-size: 0.9rem;">Con costo directo</p>
                             </div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                        <div style="background: rgba(255,255,255,0.25); padding: 15px; border-radius: 8px;">
                             <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Ventas:</strong> ${salesWithCustomCost.length}</p>
                             <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Pollos:</strong> ${customQuantity}</p>
                             <p style="margin: 8px 0; font-size: 1.3rem;"><strong>Libras:</strong> ${customWeight.toFixed(2)} lb</p>
@@ -2375,27 +2374,67 @@ const AccountingModule = {
             const avgCost = totalWeight > 0 ? totalCostOfGoods / totalWeight : 0;
             const avgProfit = totalWeight > 0 ? grossProfit / totalWeight : 0;
             
+            // Calcular totales por tipo
+            const mermaWeight = salesWithMermaCost.reduce((sum, sale) => sum + sale.weight, 0);
+            const mermaQuantity = salesWithMermaCost.reduce((sum, sale) => sum + sale.quantity, 0);
+            const mermaIncome = salesWithMermaCost.reduce((sum, sale) => sum + sale.total, 0);
+            const mermaProfit = salesWithMermaCost.reduce((sum, sale) => sum + (sale.profitPerLb * sale.weight), 0);
+            
+            const customWeight = salesWithCustomCost.reduce((sum, sale) => sum + sale.weight, 0);
+            const customQuantity = salesWithCustomCost.reduce((sum, sale) => sum + sale.quantity, 0);
+            const customIncome = salesWithCustomCost.reduce((sum, sale) => sum + sale.total, 0);
+            const customProfit = salesWithCustomCost.reduce((sum, sale) => sum + (sale.profitPerLb * sale.weight), 0);
+            
             let summaryHTML = '';
             if (sales.length > 0) {
                 summaryHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div>
-                            <strong style="color: var(--primary);">📊 Ventas</strong>
-                            <p style="margin: 5px 0;">Total: ${sales.length}</p>
-                            <p style="margin: 5px 0;">Pollos: ${totalQuantity}</p>
-                            <p style="margin: 5px 0;">Libras: ${totalWeight.toFixed(2)} lb</p>
+                    <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <h4 style="margin: 0 0 15px; font-size: 1.3rem; text-align: center;"><i class="fas fa-chart-bar"></i> TOTALES GENERALES</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Ventas Totales</div>
+                                <div style="font-size: 1.8rem; font-weight: bold;">${sales.length}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Pollos Totales</div>
+                                <div style="font-size: 1.8rem; font-weight: bold;">${totalQuantity}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Libras Totales</div>
+                                <div style="font-size: 1.8rem; font-weight: bold;">${totalWeight.toFixed(2)} lb</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Ingresos Totales</div>
+                                <div style="font-size: 1.8rem; font-weight: bold;">${Utils.formatCurrency(totalIncome)}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 0.9rem; opacity: 0.95; margin-bottom: 5px;">Ganancia Total</div>
+                                <div style="font-size: 1.8rem; font-weight: bold;">${Utils.formatCurrency(grossProfit)}</div>
+                            </div>
                         </div>
-                        <div>
-                            <strong style="color: var(--secondary);">💰 Precios</strong>
-                            <p style="margin: 5px 0;">PVP prom: ${Utils.formatCurrency(avgPVP)}/lb</p>
-                            <p style="margin: 5px 0;">Costo prom: ${Utils.formatCurrency(avgCost)}/lb</p>
-                            <p style="margin: 5px 0;">Ganancia prom: ${Utils.formatCurrency(avgProfit)}/lb</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                        <div style="padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h4 style="margin: 0 0 10px; font-size: 1.1rem;"><i class="fas fa-feather"></i> Pollos en Pluma (Con Merma)</h4>
+                            <div style="background: rgba(255,255,255,0.25); padding: 12px; border-radius: 8px;">
+                                <p style="margin: 5px 0; font-size: 1rem;">Ventas: <strong>${salesWithMermaCost.length}</strong></p>
+                                <p style="margin: 5px 0; font-size: 1rem;">Pollos: <strong>${mermaQuantity}</strong></p>
+                                <p style="margin: 5px 0; font-size: 1.1rem;">Libras: <strong>${mermaWeight.toFixed(2)} lb</strong></p>
+                                <p style="margin: 5px 0; font-size: 1rem;">Ingresos: <strong>${Utils.formatCurrency(mermaIncome)}</strong></p>
+                                <p style="margin: 5px 0; font-size: 1rem;">Ganancia: <strong>${Utils.formatCurrency(mermaProfit)}</strong></p>
+                            </div>
                         </div>
-                        <div>
-                            <strong style="color: var(--success);">📈 Totales</strong>
-                            <p style="margin: 5px 0;">Ingresos: ${Utils.formatCurrency(totalIncome)}</p>
-                            <p style="margin: 5px 0;">Costos: ${Utils.formatCurrency(totalCostOfGoods)}</p>
-                            <p style="margin: 5px 0;">Ganancia: ${Utils.formatCurrency(grossProfit)}</p>
+                        
+                        <div style="padding: 15px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <h4 style="margin: 0 0 10px; font-size: 1.1rem;"><i class="fas fa-drumstick-bite"></i> Pollos Pelados (Costo Directo)</h4>
+                            <div style="background: rgba(255,255,255,0.25); padding: 12px; border-radius: 8px;">
+                                <p style="margin: 5px 0; font-size: 1rem;">Ventas: <strong>${salesWithCustomCost.length}</strong></p>
+                                <p style="margin: 5px 0; font-size: 1rem;">Pollos: <strong>${customQuantity}</strong></p>
+                                <p style="margin: 5px 0; font-size: 1.1rem;">Libras: <strong>${customWeight.toFixed(2)} lb</strong></p>
+                                <p style="margin: 5px 0; font-size: 1rem;">Ingresos: <strong>${Utils.formatCurrency(customIncome)}</strong></p>
+                                <p style="margin: 5px 0; font-size: 1rem;">Ganancia: <strong>${Utils.formatCurrency(customProfit)}</strong></p>
+                            </div>
                         </div>
                     </div>
                 `;

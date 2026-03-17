@@ -2828,33 +2828,36 @@ async cleanDuplicatePayments() {
                         <div class="stat-value" id="sales-today">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Ganancia Neta</div>
+                        <div class="stat-label">Ingresos</div>
                         <div class="stat-value" id="income-today">$0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Libras</div>
+                        <div class="stat-label">Libras Totales</div>
                         <div class="stat-value" id="weight-today">0 lb</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Pollos Totales</div>
+                        <div class="stat-value" id="total-quantity-today">0</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Peso Promedio</div>
                         <div class="stat-value" id="average-weight-today">0 lb</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Pollos</div>
-                        <div class="stat-value" id="total-quantity-today">0</div>
-                    </div>
-                    <div class="stat-card">
                         <div class="stat-label">Clientes</div>
                         <div class="stat-value" id="active-clients">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Pedidos Pend.</div>
-                        <div class="stat-value" id="pending-orders-today">0</div>
                     </div>
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-money-bill-wave"></i> Precio de Merma</h3>
+                    <h3><i class="fas fa-layer-group"></i> Desglose por Tipo de Pollo</h3>
+                    <div id="chicken-type-breakdown" style="padding: 15px; background: var(--light); border-radius: 8px;">
+                        <!-- Desglose se agregará aquí -->
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3><i class="fas fa-money-bill-wave"></i> Precio de Merma del Día</h3>
                     <div class="stat-value" id="merma-price-today" style="text-align: center; margin: 10px 0;">
                         No definido
                     </div>

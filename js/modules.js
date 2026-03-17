@@ -1,4 +1,4 @@
-﻿// Módulo de Clientes
+﻿﻿// Módulo de Clientes
 const ClientsModule = {
     clients: [],
 
@@ -1147,6 +1147,7 @@ const SalesModule = {
         
         // Determinar costo: usar customCostPerLb si se proporciona, sino usar merma
         const costPerLb = customCostPerLb !== null ? parseFloat(customCostPerLb) : (mermaRecord ? mermaRecord.realCostPerLb : 0);
+        const hasCustomCost = customCostPerLb !== null; // Marcar si tiene costo personalizado
         
         const sale = {
             id: Date.now(),
@@ -1157,6 +1158,7 @@ const SalesModule = {
             price: salePrice,
             costPerLb: costPerLb,
             profitPerLb: salePrice - costPerLb,
+            hasCustomCost: hasCustomCost, // NUEVO: Indicador de costo personalizado
             total,
             isPaid,
             paidAmount,
@@ -1257,62 +1259,74 @@ const SalesModule = {
     },
 
     updateSalesList(date = null) {
-        const salesList = document.getElementById('sales-list');
-        if (!salesList) return;
+            const salesList = document.getElementById('sales-list');
+            if (!salesList) return;
 
-        salesList.innerHTML = '';
+            salesList.innerHTML = '';
 
-        const targetDate = date || Utils.getTodayDate();
-        const targetSales = this.getSalesByDate(targetDate).reverse();
+            const targetDate = date || Utils.getTodayDate();
+            const targetSales = this.getSalesByDate(targetDate).reverse();
 
-        if (targetSales.length === 0) {
-            salesList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-receipt empty-state-icon"></i>
-                    <p>No hay ventas registradas para ${targetDate}</p>
-                </div>
-            `;
-            return;
-        }
+            if (targetSales.length === 0) {
+                salesList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-receipt empty-state-icon"></i>
+                        <p>No hay ventas registradas para ${targetDate}</p>
+                    </div>
+                `;
+                return;
+            }
 
-        targetSales.forEach(sale => {
-            const client = ClientsModule.getClientById(sale.clientId);
-            const clientName = client ? client.name : 'Cliente no encontrado';
-            
-            const li = document.createElement('li');
-            li.className = 'sale-item';
-            li.innerHTML = `
-                <div class="sale-info">
-                    <h3><i class="fas fa-user"></i> ${clientName}</h3>
-                    <p class="sale-details">
-                        <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb × 
-                        <i class="fas fa-egg"></i> ${sale.quantity} pollos
-                    </p>
-                    <p class="sale-details">
-                        <i class="fas fa-balance-scale"></i> ${sale.averageWeight} lb/pollo × 
-                        $${sale.price.toFixed(2)}/lb
-                    </p>
-                    <p class="sale-details"><i class="fas fa-clock"></i> ${sale.time}</p>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-end;">
-                    <div class="sale-amount">${Utils.formatCurrency(sale.total)}</div>
-                    <button class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem;" 
-                            onclick="App.showReceipt(${sale.id})">
-                        <i class="fas fa-receipt"></i> Recibo
-                    </button>
-                    <button class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem;" 
-                            onclick="SalesModule.showEditModal(${sale.id})">
-                        <i class="fas fa-edit"></i> Editar
-                    </button>
-                    <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" 
-                            onclick="SalesModule.showDeleteModal(${sale.id})">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
-                </div>
-            `;
-            salesList.appendChild(li);
-        });
-    },
+            targetSales.forEach(sale => {
+                const client = ClientsModule.getClientById(sale.clientId);
+                const clientName = client ? client.name : 'Cliente no encontrado';
+
+                // Determinar si tiene costo directo (pelado)
+                const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
+                const hasCustomCost = !mermaRecord || sale.costPerLb !== mermaRecord.realCostPerLb;
+                const costBadge = hasCustomCost ? 
+                    '<span style="background: #17a2b8; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 5px;"><i class="fas fa-drumstick-bite"></i> Pelado</span>' : 
+                    '<span style="background: #ffc107; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 5px;"><i class="fas fa-feather"></i> Pluma</span>';
+
+                const li = document.createElement('li');
+                li.className = 'sale-item';
+                li.innerHTML = `
+                    <div class="sale-info">
+                        <h3><i class="fas fa-user"></i> ${clientName} ${costBadge}</h3>
+                        <p class="sale-details">
+                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb × 
+                            <i class="fas fa-egg"></i> ${sale.quantity} pollos
+                        </p>
+                        <p class="sale-details">
+                            <i class="fas fa-balance-scale"></i> ${sale.averageWeight} lb/pollo × 
+                            ${sale.price.toFixed(2)}/lb
+                        </p>
+                        <p class="sale-details">
+                            <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(sale.costPerLb)}/lb × 
+                            <i class="fas fa-chart-line"></i> Ganancia: ${Utils.formatCurrency(sale.profitPerLb)}/lb
+                        </p>
+                        <p class="sale-details"><i class="fas fa-clock"></i> ${sale.time}</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-end;">
+                        <div class="sale-amount">${Utils.formatCurrency(sale.total)}</div>
+                        <button class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem;" 
+                                onclick="App.showReceipt(${sale.id})">
+                            <i class="fas fa-receipt"></i> Recibo
+                        </button>
+                        <button class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem;" 
+                                onclick="SalesModule.showEditModal(${sale.id})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" 
+                                onclick="SalesModule.showDeleteModal(${sale.id})">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                `;
+                salesList.appendChild(li);
+            });
+        },
+,
 
     showEditModal(saleId) {
         const sale = this.getSaleById(saleId);
@@ -1437,12 +1451,15 @@ const SalesModule = {
         if (updates.customCostPerLb !== null && updates.customCostPerLb !== undefined) {
             sale.costPerLb = updates.customCostPerLb;
             sale.profitPerLb = sale.price - updates.customCostPerLb;
+            sale.hasCustomCost = true; // Marcar como costo personalizado
         } else if (mermaRecord) {
             sale.costPerLb = mermaRecord.realCostPerLb;
             sale.profitPerLb = sale.price - mermaRecord.realCostPerLb;
+            sale.hasCustomCost = false; // Marcar como costo de merma
         } else {
             sale.costPerLb = 0;
             sale.profitPerLb = sale.price;
+            sale.hasCustomCost = false;
         }
 
         if (oldClientId !== sale.clientId) {
@@ -1880,10 +1897,14 @@ const MermaModule = {
         let ventasActualizadas = 0;
         
         for (const venta of ventasDelDia) {
-            // Actualizar costo y ganancia por libra
-            venta.costPerLb = mermaRecord.realCostPerLb;
-            venta.profitPerLb = venta.price - mermaRecord.realCostPerLb;
-            ventasActualizadas++;
+            // SOLO actualizar ventas que NO tienen costo directo personalizado
+            // Las ventas con costo directo (pollos pelados) NO se deben recalcular
+            if (!venta.hasCustomCost) {
+                // Actualizar costo y ganancia por libra
+                venta.costPerLb = mermaRecord.realCostPerLb;
+                venta.profitPerLb = venta.price - mermaRecord.realCostPerLb;
+                ventasActualizadas++;
+            }
         }
 
         if (ventasActualizadas > 0) {
@@ -1994,6 +2015,10 @@ const StatsModule = {
         const orders = OrdersModule.getTodayOrders();
         const mermaPrice = MermaModule.getMermaPriceByDate(targetDate);
         
+        // Separar ventas por tipo
+        const salesWithMerma = sales.filter(sale => !sale.hasCustomCost);
+        const salesWithCustomCost = sales.filter(sale => sale.hasCustomCost);
+        
         // Actualizar estadísticas del día - SOLO si los elementos existen
         const salesTodayElement = document.getElementById('sales-today');
         const incomeTodayElement = document.getElementById('income-today');
@@ -2001,7 +2026,6 @@ const StatsModule = {
         const averageWeightElement = document.getElementById('average-weight-today');
         const activeClientsElement = document.getElementById('active-clients');
         const totalQuantityElement = document.getElementById('total-quantity-today');
-        const pendingOrdersElement = document.getElementById('pending-orders-today');
         const mermaPriceElement = document.getElementById('merma-price-today');
         
         // Solo actualizar si el elemento existe
@@ -2037,16 +2061,64 @@ const StatsModule = {
             totalQuantityElement.textContent = totalQuantity;
         }
         
-        // Pedidos pendientes
-        const pendingOrders = OrdersModule.getPendingOrders().length;
-        if (pendingOrdersElement) {
-            pendingOrdersElement.textContent = pendingOrders;
-        }
-        
         // Precio de merma del día
         if (mermaPriceElement) {
             mermaPriceElement.textContent = mermaPrice ? 
                 Utils.formatCurrency(mermaPrice.price) + '/lb' : 'No definido';
+        }
+        
+        // Desglose por tipo de pollo
+        const chickenTypeBreakdownElement = document.getElementById('chicken-type-breakdown');
+        if (chickenTypeBreakdownElement) {
+            const mermaWeight = salesWithMerma.reduce((sum, sale) => sum + sale.weight, 0);
+            const mermaQuantity = salesWithMerma.reduce((sum, sale) => sum + sale.quantity, 0);
+            const mermaIncome = salesWithMerma.reduce((sum, sale) => sum + sale.total, 0);
+            
+            const customWeight = salesWithCustomCost.reduce((sum, sale) => sum + sale.weight, 0);
+            const customQuantity = salesWithCustomCost.reduce((sum, sale) => sum + sale.quantity, 0);
+            const customIncome = salesWithCustomCost.reduce((sum, sale) => sum + sale.total, 0);
+            
+            let breakdownHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                    <div style="padding: 20px; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <i class="fas fa-feather" style="font-size: 2rem; margin-right: 15px;"></i>
+                            <div>
+                                <h4 style="margin: 0; font-size: 1.2rem;">Pollos en Pluma</h4>
+                                <p style="margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem;">Con cálculo de merma</p>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                            <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Ventas:</strong> ${salesWithMerma.length}</p>
+                            <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Pollos:</strong> ${mermaQuantity}</p>
+                            <p style="margin: 8px 0; font-size: 1.3rem;"><strong>Libras:</strong> ${mermaWeight.toFixed(2)} lb</p>
+                            <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Ingresos:</strong> ${Utils.formatCurrency(mermaIncome)}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 20px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 12px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                            <i class="fas fa-drumstick-bite" style="font-size: 2rem; margin-right: 15px;"></i>
+                            <div>
+                                <h4 style="margin: 0; font-size: 1.2rem;">Pollos Pelados</h4>
+                                <p style="margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem;">Con costo directo</p>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                            <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Ventas:</strong> ${salesWithCustomCost.length}</p>
+                            <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Pollos:</strong> ${customQuantity}</p>
+                            <p style="margin: 8px 0; font-size: 1.3rem;"><strong>Libras:</strong> ${customWeight.toFixed(2)} lb</p>
+                            <p style="margin: 8px 0; font-size: 1.1rem;"><strong>Ingresos:</strong> ${Utils.formatCurrency(customIncome)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (sales.length === 0) {
+                breakdownHTML = '<p style="text-align: center; color: var(--gray); padding: 20px;"><i class="fas fa-info-circle"></i> No hay ventas registradas en esta fecha</p>';
+            }
+            
+            chickenTypeBreakdownElement.innerHTML = breakdownHTML;
         }
         
         // Actualizar estadísticas por cliente

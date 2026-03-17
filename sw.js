@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.11.1'; // Fix: Bucle de eliminación de ventas en sincronización
+const APP_VERSION = '7.12.0'; // Fix: Merma sincroniza al servidor + contabilidad usa hasCustomCost
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

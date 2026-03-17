@@ -1867,7 +1867,12 @@ const MermaModule = {
         // Guardar también el precio
         await this.saveDailyPrice(mermaData.realCostPerLb, date);
         
-        // CRÁTICO: Recalcular todas las ventas de ese día
+        // CRITICO: Notificar al sistema de sincronizacion
+        if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+            await SyncEngine.notifyChange('mermaRecords', record.id, 'update');
+        }
+        
+        // Recalcular todas las ventas de ese dia
         await this.recalcularVentasPorFecha(date);
         
         return record;
@@ -1920,21 +1925,29 @@ const MermaModule = {
         return this.mermaRecords.find(r => r.date === date);
     },
 
-    saveDailyPrice(price, date = Utils.getTodayDate()) {
+    async saveDailyPrice(price, date = Utils.getTodayDate()) {
         const existingIndex = this.dailyPrices.findIndex(p => p.date === date);
         
+        const priceRecord = {
+            id: existingIndex > -1 ? this.dailyPrices[existingIndex].id : Date.now(),
+            date,
+            price,
+            timestamp: new Date().getTime()
+        };
+        
         if (existingIndex > -1) {
-            this.dailyPrices[existingIndex].price = price;
+            this.dailyPrices[existingIndex] = priceRecord;
         } else {
-            this.dailyPrices.push({
-                id: Date.now(),
-                date,
-                price,
-                timestamp: new Date().getTime()
-            });
+            this.dailyPrices.push(priceRecord);
         }
         
-        this.saveDailyPrices();
+        await this.saveDailyPrices();
+        
+        // CRÍTICO: Notificar al sistema de sincronización
+        if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
+            await SyncEngine.notifyChange('prices', priceRecord.id, 'update');
+        }
+        
         return price;
     },
 
@@ -2279,15 +2292,9 @@ const AccountingModule = {
         const totalIncome = sales.reduce((sum, sale) => sum + sale.total, 0);
         const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
         
-        // Separar ventas por tipo de costo
-        const salesWithMermaCost = sales.filter(sale => {
-            const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
-            return mermaRecord && sale.costPerLb === mermaRecord.realCostPerLb;
-        });
-        const salesWithCustomCost = sales.filter(sale => {
-            const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
-            return !mermaRecord || sale.costPerLb !== mermaRecord.realCostPerLb;
-        });
+        // Separar ventas por tipo de costo usando hasCustomCost
+        const salesWithMermaCost = sales.filter(sale => !sale.hasCustomCost);
+        const salesWithCustomCost = sales.filter(sale => sale.hasCustomCost === true);
         
         // Calcular ganancia bruta: (PVP - Costo) × Libras
         let grossProfit = 0;
@@ -2303,12 +2310,10 @@ const AccountingModule = {
             grossProfit += profitPerLb * sale.weight;
             totalCostOfGoods += saleCost;
             
-            // Clasificar el costo
-            const mermaRecord = MermaModule.getMermaRecordByDate(sale.date);
-            if (mermaRecord && sale.costPerLb === mermaRecord.realCostPerLb) {
-                mermaCostTotal += saleCost;
-            } else {
+            if (sale.hasCustomCost) {
                 customCostTotal += saleCost;
+            } else {
+                mermaCostTotal += saleCost;
             }
         });
         

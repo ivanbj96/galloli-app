@@ -1,4 +1,4 @@
-﻿﻿// Módulo de Clientes
+﻿// Módulo de Clientes
 const ClientsModule = {
     clients: [],
 
@@ -1481,7 +1481,7 @@ const SalesModule = {
         await this.saveSales();
         await ClientsModule.saveClients();
         
-        // CRÍTICO: Notificar al sistema de sincronización sobre la actualización
+        // CR�TICO: Notificar al sistema de sincronización sobre la actualización
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', saleId, 'update');
             // Si cambió de cliente, notificar también los clientes
@@ -1576,7 +1576,7 @@ const SalesModule = {
             sale.deletedAt = Date.now();
             sale.lastModified = Date.now();
             
-            // 2. ACTUALIZAR ESTADÍSTICAS DEL CLIENTE
+            // 2. ACTUALIZAR ESTAD�STICAS DEL CLIENTE
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
                 client.totalSales -= 1;
@@ -1644,7 +1644,7 @@ const SalesModule = {
         sale.paidAmount += paymentAmount;
         sale.remainingDebt -= paymentAmount;
         
-        // CRÍTICO: Actualizar timestamp de última modificación para sincronización
+        // CR�TICO: Actualizar timestamp de última modificación para sincronización
         sale.lastModified = Date.now();
         
         if (!sale.paymentHistory) sale.paymentHistory = [];
@@ -1677,7 +1677,7 @@ const SalesModule = {
 
         await this.saveSales();
         
-        // CRÍTICO: Notificar al sistema de sincronización si no es silencioso
+        // CR�TICO: Notificar al sistema de sincronización si no es silencioso
         if (!silent && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', sale.id, 'update');
         }
@@ -1943,7 +1943,7 @@ const MermaModule = {
         
         await this.saveDailyPrices();
         
-        // CRÍTICO: Notificar al sistema de sincronización
+        // CR�TICO: Notificar al sistema de sincronización
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('prices', priceRecord.id, 'update');
         }
@@ -1985,7 +1985,10 @@ const MermaModule = {
     // NUEVO: Guardar/cargar registros de merma
     async saveMermaRecords() {
         if (DB.db) {
-            await DB.set('config', { key: 'merma-records', value: this.mermaRecords });
+            // Guardar cada registro individualmente en el store mermaRecords (keyPath: 'date')
+            for (const record of this.mermaRecords) {
+                await DB.set('mermaRecords', record);
+            }
         } else {
             localStorage.setItem('polloMermaRecords', JSON.stringify(this.mermaRecords));
         }
@@ -1993,9 +1996,20 @@ const MermaModule = {
 
     async loadMermaRecords() {
         if (DB.db) {
-            const saved = await DB.get('config', 'merma-records');
-            if (saved && saved.value) {
-                this.mermaRecords = saved.value;
+            const records = await DB.getAll('mermaRecords');
+            if (records && records.length > 0) {
+                this.mermaRecords = records;
+            } else {
+                // Migrar desde config si existe
+                const saved = await DB.get('config', 'merma-records');
+                if (saved && saved.value && saved.value.length > 0) {
+                    this.mermaRecords = saved.value;
+                    // Migrar al store correcto
+                    for (const record of this.mermaRecords) {
+                        await DB.set('mermaRecords', record);
+                    }
+                    console.log('Merma migrada de config a mermaRecords store');
+                }
             }
         } else {
             const saved = localStorage.getItem('polloMermaRecords');
@@ -2456,7 +2470,7 @@ const AccountingModule = {
                             <p style="margin: 5px 0;">Costo/lb: ${mermaWeight > 0 ? Utils.formatCurrency(mermaCostTotal / mermaWeight) : '$0.00'}/lb</p>
                         </div>
                         <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--info);">
-                            <strong style="color: var(--info);">🍗 Pollos Pelados (Directo)</strong>
+                            <strong style="color: var(--info);">� Pollos Pelados (Directo)</strong>
                             <p style="margin: 10px 0 5px;">Ventas: ${salesWithCustomCost.length}</p>
                             <p style="margin: 5px 0;">Libras: ${customWeight.toFixed(2)} lb</p>
                             <p style="margin: 5px 0;">Costo total: ${Utils.formatCurrency(customCostTotal)}</p>
@@ -2926,7 +2940,7 @@ const ConfigModule = {
         purple: { name: 'Morado Moderno', colors: { primary: '#9C27B0', secondary: '#FFC107', light: '#F3E5F5' } },
         red: { name: 'Rojo Intenso', colors: { primary: '#F44336', secondary: '#4CAF50', light: '#FFEBEE' } }
     },
-    emojis: ['🐔', '🍗', '🐓', '🥚', '🍖', '🦃', '🐥', '🍴'],
+    emojis: ['🐔', '�', '🐓', '🥚', '�', '🦃', '🐥', '�'],
 
     async init() {
         await this.loadConfig();

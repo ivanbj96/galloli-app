@@ -372,7 +372,7 @@ class SyncEngine {
             case 'sales':
                 if (window.SalesModule) {
                     await SalesModule.loadSales();
-                    // CR√çTICO: Actualizar la lista visual de ventas
+                    // CR√TICO: Actualizar la lista visual de ventas
                     SalesModule.updateSalesList();
                 }
                 break;

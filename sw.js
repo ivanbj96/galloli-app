@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.12.0'; // Fix: Merma sincroniza al servidor + contabilidad usa hasCustomCost
+const APP_VERSION = '7.13.0'; // Fix: mermaRecords usa store correcto + limpieza BOM y chars corruptos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

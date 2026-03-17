@@ -44,7 +44,7 @@
             <div style="text-align: left; font-family: monospace; font-size: 0.85rem;">
                 <p><strong>🕐 Hora:</strong> ${errorInfo.timestamp}</p>
                 <p><strong>📱 Dispositivo:</strong> ${errorInfo.userAgent.includes('Mobile') ? 'Móvil' : 'Desktop'}</p>
-                <p><strong>📍 Ubicación:</strong> ${errorInfo.filename}:${errorInfo.lineno}:${errorInfo.colno}</p>
+                <p><strong>� Ubicación:</strong> ${errorInfo.filename}:${errorInfo.lineno}:${errorInfo.colno}</p>
                 <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
                 <p><strong>💬 Mensaje:</strong></p>
                 <p style="background: #f5f5f5; padding: 8px; border-radius: 4px; word-break: break-word;">

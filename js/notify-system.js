@@ -52,13 +52,13 @@ const PushNotifications = {
             // Verificar tareas pendientes inmediatamente (después de 3 segundos)
             console.log('⏰ Programando verificación de tareas pendientes...');
             setTimeout(() => {
-                console.log('🔍 Ejecutando primera verificación de tareas...');
+                console.log('� Ejecutando primera verificación de tareas...');
                 this.checkAllPendingTasks();
             }, 3000);
             
             // Verificar cada 5 minutos
             this.checkInterval = setInterval(() => {
-                console.log('🔍 Verificación periódica de tareas...');
+                console.log('� Verificación periódica de tareas...');
                 this.checkAllPendingTasks();
             }, 5 * 60 * 1000);
             
@@ -155,10 +155,10 @@ const PushNotifications = {
             return;
         }
         
-        console.log('🔍 ========================================');
-        console.log('🔍 VERIFICANDO TAREAS PENDIENTES');
-        console.log('🔍 Fecha:', new Date().toLocaleString('es-GT'));
-        console.log('🔍 ========================================');
+        console.log('� ========================================');
+        console.log('� VERIFICANDO TAREAS PENDIENTES');
+        console.log('� Fecha:', new Date().toLocaleString('es-GT'));
+        console.log('� ========================================');
         
         let notificationsSent = 0;
         
@@ -182,10 +182,10 @@ const PushNotifications = {
             console.log('   ℹ️ No hay créditos pendientes');
         }
         
-        console.log('🔍 ========================================');
-        console.log('🔍 VERIFICACIÓN COMPLETADA');
-        console.log('🔍 Notificaciones enviadas:', notificationsSent);
-        console.log('🔍 ========================================');
+        console.log('� ========================================');
+        console.log('� VERIFICACIÓN COMPLETADA');
+        console.log('� Notificaciones enviadas:', notificationsSent);
+        console.log('� ========================================');
         
         // NO verificar backup - se hace automáticamente a las 10 PM desde el servidor
     },

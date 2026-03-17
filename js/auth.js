@@ -137,7 +137,7 @@ class AuthManager {
 
     async verifyTelegramCode(telegramId, code, telegramUsername, telegramFirstName) {
         try {
-            console.log('🔍 Verificando código...');
+            console.log('� Verificando código...');
             
             const response = await fetch(`${AUTH_CONFIG.API_URL}/api/auth/telegram/verify`, {
                 method: 'POST',

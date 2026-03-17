@@ -1,4 +1,4 @@
-﻿﻿// app.js - COMPLETO Y FUNCIONAL
+﻿// app.js - COMPLETO Y FUNCIONAL
 const App = {
     currentPage: 'dashboard',
     currentDate: Utils.getTodayDate(),
@@ -942,7 +942,7 @@ const App = {
         // Esperar a que se guarden todos los cambios
         await SalesModule.saveSales();
 
-        // CRÍTICO: Notificar al sistema de sincronización sobre los pagos procesados
+        // CR�TICO: Notificar al sistema de sincronización sobre los pagos procesados
         if (paymentsProcessed > 0 && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             // Notificar cada venta modificada
             for (const saleId of processedSaleIds) {

@@ -1481,7 +1481,7 @@ const SalesModule = {
         await this.saveSales();
         await ClientsModule.saveClients();
         
-        // CR�TICO: Notificar al sistema de sincronización sobre la actualización
+        // CR�TICO: Notificar al sistema de sincronización sobre la actualización
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', saleId, 'update');
             // Si cambió de cliente, notificar también los clientes
@@ -1576,7 +1576,7 @@ const SalesModule = {
             sale.deletedAt = Date.now();
             sale.lastModified = Date.now();
             
-            // 2. ACTUALIZAR ESTAD�STICAS DEL CLIENTE
+            // 2. ACTUALIZAR ESTAD�STICAS DEL CLIENTE
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
                 client.totalSales -= 1;
@@ -1644,7 +1644,7 @@ const SalesModule = {
         sale.paidAmount += paymentAmount;
         sale.remainingDebt -= paymentAmount;
         
-        // CR�TICO: Actualizar timestamp de última modificación para sincronización
+        // CR�TICO: Actualizar timestamp de última modificación para sincronización
         sale.lastModified = Date.now();
         
         if (!sale.paymentHistory) sale.paymentHistory = [];
@@ -1677,7 +1677,7 @@ const SalesModule = {
 
         await this.saveSales();
         
-        // CR�TICO: Notificar al sistema de sincronización si no es silencioso
+        // CR�TICO: Notificar al sistema de sincronización si no es silencioso
         if (!silent && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', sale.id, 'update');
         }
@@ -1943,7 +1943,7 @@ const MermaModule = {
         
         await this.saveDailyPrices();
         
-        // CR�TICO: Notificar al sistema de sincronización
+        // CR�TICO: Notificar al sistema de sincronización
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('prices', priceRecord.id, 'update');
         }
@@ -2310,14 +2310,25 @@ const AccountingModule = {
         const salesWithMermaCost = sales.filter(sale => !sale.hasCustomCost);
         const salesWithCustomCost = sales.filter(sale => sale.hasCustomCost === true);
         
-        // Calcular ganancia bruta: (PVP - Costo) × Libras
+        // Calcular ganancia bruta usando hasCustomCost para determinar el costo real
         let grossProfit = 0;
         let totalCostOfGoods = 0;
         let mermaCostTotal = 0;
         let customCostTotal = 0;
         
+        // Obtener merma del dia para ventas sin costo directo
+        const mermaRecord = MermaModule.getMermaRecordByDate(targetDate);
+        
         sales.forEach(sale => {
-            const costPerLb = sale.costPerLb || 0;
+            let costPerLb;
+            if (sale.hasCustomCost) {
+                // Pollos pelados: usar su costo directo guardado
+                costPerLb = sale.costPerLb || 0;
+            } else {
+                // Pollos en pluma: usar el costo de merma del dia (en tiempo real)
+                costPerLb = mermaRecord ? mermaRecord.realCostPerLb : (sale.costPerLb || 0);
+            }
+            
             const profitPerLb = sale.price - costPerLb;
             const saleCost = costPerLb * sale.weight;
             
@@ -2381,16 +2392,21 @@ const AccountingModule = {
             const avgCost = totalWeight > 0 ? totalCostOfGoods / totalWeight : 0;
             const avgProfit = totalWeight > 0 ? grossProfit / totalWeight : 0;
             
-            // Calcular totales por tipo
+            // Calcular totales por tipo usando merma en tiempo real
             const mermaWeight = salesWithMermaCost.reduce((sum, sale) => sum + sale.weight, 0);
             const mermaQuantity = salesWithMermaCost.reduce((sum, sale) => sum + sale.quantity, 0);
             const mermaIncome = salesWithMermaCost.reduce((sum, sale) => sum + sale.total, 0);
-            const mermaProfit = salesWithMermaCost.reduce((sum, sale) => sum + (sale.profitPerLb * sale.weight), 0);
+            const mermaProfit = salesWithMermaCost.reduce((sum, sale) => {
+                const cost = mermaRecord ? mermaRecord.realCostPerLb : (sale.costPerLb || 0);
+                return sum + ((sale.price - cost) * sale.weight);
+            }, 0);
             
             const customWeight = salesWithCustomCost.reduce((sum, sale) => sum + sale.weight, 0);
             const customQuantity = salesWithCustomCost.reduce((sum, sale) => sum + sale.quantity, 0);
             const customIncome = salesWithCustomCost.reduce((sum, sale) => sum + sale.total, 0);
-            const customProfit = salesWithCustomCost.reduce((sum, sale) => sum + (sale.profitPerLb * sale.weight), 0);
+            const customProfit = salesWithCustomCost.reduce((sum, sale) => {
+                return sum + ((sale.price - (sale.costPerLb || 0)) * sale.weight);
+            }, 0);
             
             let summaryHTML = '';
             if (sales.length > 0) {
@@ -2470,7 +2486,7 @@ const AccountingModule = {
                             <p style="margin: 5px 0;">Costo/lb: ${mermaWeight > 0 ? Utils.formatCurrency(mermaCostTotal / mermaWeight) : '$0.00'}/lb</p>
                         </div>
                         <div style="padding: 15px; background: white; border-radius: 8px; border-left: 4px solid var(--info);">
-                            <strong style="color: var(--info);">� Pollos Pelados (Directo)</strong>
+                            <strong style="color: var(--info);">��� Pollos Pelados (Directo)</strong>
                             <p style="margin: 10px 0 5px;">Ventas: ${salesWithCustomCost.length}</p>
                             <p style="margin: 5px 0;">Libras: ${customWeight.toFixed(2)} lb</p>
                             <p style="margin: 5px 0;">Costo total: ${Utils.formatCurrency(customCostTotal)}</p>
@@ -2940,7 +2956,7 @@ const ConfigModule = {
         purple: { name: 'Morado Moderno', colors: { primary: '#9C27B0', secondary: '#FFC107', light: '#F3E5F5' } },
         red: { name: 'Rojo Intenso', colors: { primary: '#F44336', secondary: '#4CAF50', light: '#FFEBEE' } }
     },
-    emojis: ['🐔', '�', '🐓', '🥚', '�', '🦃', '🐥', '�'],
+    emojis: ['🐔', '���', '🐓', '🥚', '���', '🦃', '🐥', '���'],
 
     async init() {
         await this.loadConfig();

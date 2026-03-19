@@ -84,6 +84,12 @@ const App = {
         
         // Procesar acción de notificación desde URL
         this.checkNotificationActionFromURL();
+
+        // Manejar file_handlers (archivos abiertos desde el explorador)
+        this.handleFileHandlers();
+
+        // Manejar share_target (archivos recibidos por compartir)
+        this.handleShareTarget();
         
         // NUEVO: Detectar cuando la app se vuelve visible y recargar datos
         this.setupVisibilityChangeHandler();
@@ -244,6 +250,69 @@ const App = {
                     totalDebt: totalDebt ? parseFloat(totalDebt) : 0
                 });
             }, 1500);
+        }
+    },
+
+    // Manejar archivos abiertos desde el explorador (file_handlers)
+    async handleFileHandlers() {
+        if (!('launchQueue' in window)) return;
+
+        window.launchQueue.setConsumer(async (launchParams) => {
+            if (!launchParams.files || launchParams.files.length === 0) return;
+
+            console.log('📂 Archivo recibido via file_handler:', launchParams.files.length);
+
+            for (const fileHandle of launchParams.files) {
+                try {
+                    const file = await fileHandle.getFile();
+                    if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                        const text = await file.text();
+                        const data = JSON.parse(text);
+                        // Reutilizar la lógica de importación existente
+                        await BackupModule.importFromData(data);
+                        Utils.showNotification(`Backup "${file.name}" importado correctamente`, 'success');
+                        this.loadPage('dashboard');
+                    }
+                } catch (err) {
+                    console.error('Error procesando archivo:', err);
+                    Utils.showNotification('Error al importar el archivo', 'error');
+                }
+            }
+        });
+    },
+
+    // Manejar archivos recibidos por share_target
+    async handleShareTarget() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        if (action !== 'import-backup') return;
+
+        // Limpiar URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+
+        try {
+            // Verificar si hay datos en el cache del service worker (share_target POST)
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                const messageChannel = new MessageChannel();
+                navigator.serviceWorker.controller.postMessage(
+                    { type: 'GET_SHARED_FILE' },
+                    [messageChannel.port2]
+                );
+                messageChannel.port1.onmessage = async (event) => {
+                    if (event.data && event.data.file) {
+                        try {
+                            const data = JSON.parse(event.data.file);
+                            await BackupModule.importFromData(data);
+                            Utils.showNotification('Backup compartido importado correctamente', 'success');
+                            this.loadPage('dashboard');
+                        } catch (err) {
+                            Utils.showNotification('Error al importar el backup compartido', 'error');
+                        }
+                    }
+                };
+            }
+        } catch (err) {
+            console.error('Error procesando share_target:', err);
         }
     },
 

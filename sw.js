@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.2'; // PWABuilder: manifest lang/dir/screenshots, rutas absolutas, headers correctos
+const APP_VERSION = '7.14.3'; // manifest avanzado: file_handlers, share_target, launch_handler, protocol_handlers + fix importFromData
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

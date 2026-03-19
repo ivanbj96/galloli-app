@@ -3169,79 +3169,12 @@ const BackupModule = {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
-                    Utils.showLoading(true);
                     const data = JSON.parse(e.target.result);
-                    
-                    // Cargar datos en memoria Y guardar en IndexedDB
-                    if (data.clients) {
-                        ClientsModule.clients = data.clients;
-                        await ClientsModule.saveClients();
-                    }
-                    
-                    if (data.sales) {
-                        SalesModule.sales = data.sales;
-                        await SalesModule.saveSales();
-                    }
-                    
-                    if (data.orders) {
-                        OrdersModule.orders = data.orders;
-                        await OrdersModule.saveOrders();
-                    }
-                    
-                    if (data.expenses) {
-                        AccountingModule.expenses = data.expenses;
-                        await AccountingModule.saveExpenses();
-                    }
-                    
-                    if (data.mermaPrices) {
-                        MermaModule.dailyPrices = data.mermaPrices;
-                        await MermaModule.saveDailyPrices();
-                    }
-                    
-                    if (data.mermaRecords) {
-                        MermaModule.mermaRecords = data.mermaRecords;
-                        await MermaModule.saveMermaRecords();
-                    }
-                    
-                    if (data.diezmosRecords) {
-                        DiezmosModule.records = data.diezmosRecords;
-                        await DiezmosModule.saveRecords();
-                    }
-                    
-                    if (data.diezmosConfig) {
-                        DiezmosModule.config = data.diezmosConfig;
-                        await DiezmosModule.saveConfig();
-                    }
-                    
-                    // Restaurar historial de pagos
-                    if (data.paymentHistory) {
-                        PaymentHistoryModule.payments = data.paymentHistory;
-                        await PaymentHistoryModule.savePayments();
-                    }
-                    
-                    if (data.config) {
-                        ConfigModule.currentConfig = data.config;
-                        ConfigModule.saveConfig();
-                    }
-                    
-                    // Restaurar configuración de Telegram
-                    if (data.telegramConfig) {
-                        if (data.telegramConfig.botToken) {
-                            BackupModule.telegramBotToken = data.telegramConfig.botToken;
-                            localStorage.setItem('telegramBotToken', data.telegramConfig.botToken);
-                        }
-                        if (data.telegramConfig.chatId) {
-                            BackupModule.telegramChatId = data.telegramConfig.chatId;
-                            localStorage.setItem('telegramChatId', data.telegramConfig.chatId);
-                        }
-                    }
-                    
-                    Utils.showLoading(false);
-                    Utils.showNotification('✅ Backup restaurado correctamente. Todos los datos han sido recuperados.', 'success', 5000);
+                    await this.importFromData(data);
                     resolve(true);
                 } catch (error) {
                     Utils.showLoading(false);
-                    Utils.showNotification('❌ Error al restaurar backup: ' + error.message, 'error', 5000);
+                    Utils.showNotification('Error al restaurar backup: ' + error.message, 'error', 5000);
                     reject(error);
                 }
             };
@@ -3251,6 +3184,68 @@ const BackupModule = {
             };
             reader.readAsText(file);
         });
+    },
+
+    async importFromData(data) {
+        Utils.showLoading(true);
+        try {
+            if (data.clients) {
+                ClientsModule.clients = data.clients;
+                await ClientsModule.saveClients();
+            }
+            if (data.sales) {
+                SalesModule.sales = data.sales;
+                await SalesModule.saveSales();
+            }
+            if (data.orders) {
+                OrdersModule.orders = data.orders;
+                await OrdersModule.saveOrders();
+            }
+            if (data.expenses) {
+                AccountingModule.expenses = data.expenses;
+                await AccountingModule.saveExpenses();
+            }
+            if (data.mermaPrices) {
+                MermaModule.dailyPrices = data.mermaPrices;
+                await MermaModule.saveDailyPrices();
+            }
+            if (data.mermaRecords) {
+                MermaModule.mermaRecords = data.mermaRecords;
+                await MermaModule.saveMermaRecords();
+            }
+            if (data.diezmosRecords) {
+                DiezmosModule.records = data.diezmosRecords;
+                await DiezmosModule.saveRecords();
+            }
+            if (data.diezmosConfig) {
+                DiezmosModule.config = data.diezmosConfig;
+                await DiezmosModule.saveConfig();
+            }
+            if (data.paymentHistory) {
+                PaymentHistoryModule.payments = data.paymentHistory;
+                await PaymentHistoryModule.savePayments();
+            }
+            if (data.config) {
+                ConfigModule.currentConfig = data.config;
+                ConfigModule.saveConfig();
+            }
+            if (data.telegramConfig) {
+                if (data.telegramConfig.botToken) {
+                    BackupModule.telegramBotToken = data.telegramConfig.botToken;
+                    localStorage.setItem('telegramBotToken', data.telegramConfig.botToken);
+                }
+                if (data.telegramConfig.chatId) {
+                    BackupModule.telegramChatId = data.telegramConfig.chatId;
+                    localStorage.setItem('telegramChatId', data.telegramConfig.chatId);
+                }
+            }
+            Utils.showLoading(false);
+            Utils.showNotification('Backup restaurado correctamente', 'success', 5000);
+        } catch (error) {
+            Utils.showLoading(false);
+            Utils.showNotification('Error al restaurar backup: ' + error.message, 'error', 5000);
+            throw error;
+        }
     },
 
     getBackupStats() {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.1'; // Fix: calculo de merma con campos vacios pasaba 0 en lugar de null
+const APP_VERSION = '7.14.2'; // PWABuilder: manifest lang/dir/screenshots, rutas absolutas, headers correctos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -17,15 +17,27 @@ async function getStaticResources() {
             '/js/logo.js',
             '/js/pdf-generator.js',
             '/js/utils.js',
+            '/js/error-handler.js',
+            '/js/sw-update.js',
             '/js/db.js',
             '/js/modules.js',
             '/js/app.js',
+            '/js/auth.js',
             '/js/offline-maps.js',
+            '/js/offline-queue.js',
+            '/js/sync-engine.js',
             '/js/creditos.js',
             '/js/notify-system.js',
             '/js/payment-processor.js',
             '/js/auto-backup.js',
-            '/manifest.json'
+            '/js/custom-select.js',
+            '/js/facturacion-electronica.js',
+            '/js/facturacion-ui.js',
+            '/manifest.json',
+            '/icons/favicon.pub/android-chrome-192x192.png',
+            '/icons/favicon.pub/android-chrome-512x512.png',
+            '/icons/favicon.pub/apple-touch-icon-180x180.png',
+            '/icons/favicon.pub/favicon.ico'
         ];
 
         // Agregar recursos de CDN

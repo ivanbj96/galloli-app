@@ -1785,12 +1785,12 @@ const MermaModule = {
     },
 
     calculateMerma(liveWeight, liveCost, processedWeight, processingCost, realCostPerLb = null) {
-        // Contar cuántos valores faltan
-        const hasLiveWeight = liveWeight && liveWeight > 0;
-        const hasLiveCost = liveCost && liveCost > 0;
-        const hasProcessedWeight = processedWeight && processedWeight > 0;
-        const hasProcessingCost = processingCost >= 0; // Puede ser 0
-        const hasRealCost = realCostPerLb && realCostPerLb > 0;
+        // null = campo vacío (a deducir), 0 = ingresado explícitamente como cero
+        const hasLiveWeight = liveWeight != null && liveWeight > 0;
+        const hasLiveCost = liveCost != null && liveCost > 0;
+        const hasProcessedWeight = processedWeight != null && processedWeight > 0;
+        const hasProcessingCost = processingCost != null; // null = vacío, 0 = válido
+        const hasRealCost = realCostPerLb != null && realCostPerLb > 0;
         
         const missingCount = [hasLiveWeight, hasLiveCost, hasProcessedWeight, hasProcessingCost, hasRealCost].filter(v => !v).length;
         

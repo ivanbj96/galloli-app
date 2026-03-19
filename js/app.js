@@ -2722,15 +2722,15 @@ async cleanDuplicatePayments() {
                 return;
             }
             
-            const liveWeight = liveWeightEl.value.trim() ? parseFloat(liveWeightEl.value) : 0;
-            const liveCost = liveCostEl.value.trim() ? parseFloat(liveCostEl.value) : 0;
-            const processedWeight = processedWeightEl.value.trim() ? parseFloat(processedWeightEl.value) : 0;
+            const liveWeight = liveWeightEl.value.trim() ? parseFloat(liveWeightEl.value) : null;
+            const liveCost = liveCostEl.value.trim() ? parseFloat(liveCostEl.value) : null;
+            const processedWeight = processedWeightEl.value.trim() ? parseFloat(processedWeightEl.value) : null;
             const chickenCount = chickenCountEl.value.trim() ? parseInt(chickenCountEl.value) : 0;
-            const processingCostPerChicken = processingCostEl.value.trim() ? parseFloat(processingCostEl.value) : 0;
-            const realCostPerLb = realCostEl && realCostEl.value.trim() ? parseFloat(realCostEl.value) : 0;
+            const processingCostPerChicken = processingCostEl.value.trim() ? parseFloat(processingCostEl.value) : null;
+            const realCostPerLb = realCostEl && realCostEl.value.trim() ? parseFloat(realCostEl.value) : null;
         
             // Mostrar vista previa solo si hay datos suficientes
-            const filledValues = [liveWeight, liveCost, processedWeight, processingCostPerChicken, realCostPerLb].filter(v => v > 0).length;
+            const filledValues = [liveWeight, liveCost, processedWeight, processingCostPerChicken, realCostPerLb].filter(v => v != null && v > 0).length;
             
             if (filledValues < 4 || chickenCount === 0) {
                 preview.style.display = 'none';
@@ -2740,7 +2740,9 @@ async cleanDuplicatePayments() {
             
             preview.style.display = 'block';
             
-            const totalProcessingCost = chickenCount * processingCostPerChicken;
+            const totalProcessingCost = processingCostPerChicken != null
+                ? chickenCount * processingCostPerChicken
+                : null;
             const result = MermaModule.calculateMerma(liveWeight, liveCost, processedWeight, totalProcessingCost, realCostPerLb);
                 
             // Mostrar indicador si se dedujo un valor
@@ -2793,6 +2795,12 @@ async cleanDuplicatePayments() {
                 <div style="margin-top: 15px; padding: 12px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; text-align: center;">
                     <div style="color: var(--gray); font-size: 0.85rem; margin-bottom: 5px;">Libras Perdidas</div>
                     <div style="color: var(--primary); font-size: 1.3rem; font-weight: bold;">${(result.liveWeight - result.processedWeight).toFixed(2)} lb</div>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; font-size: 0.85rem; color: #856404;">
+                    <strong><i class="fas fa-info-circle"></i> Fórmula aplicada:</strong><br>
+                    Costo real/lb = (${result.liveWeight.toFixed(2)} lb × $${result.liveCost.toFixed(2)} + $${result.processingCost.toFixed(2)}) ÷ ${result.processedWeight.toFixed(2)} lb pelado<br>
+                    = ($${(result.liveWeight * result.liveCost).toFixed(2)} + $${result.processingCost.toFixed(2)}) ÷ ${result.processedWeight.toFixed(2)}<br>
+                    = <strong>$${result.realCostPerLb.toFixed(4)}/lb</strong>
                 </div>
             `;
         } catch (error) {
@@ -4164,12 +4172,12 @@ async cleanDuplicatePayments() {
         const processingCostInput = document.getElementById('processing-cost-per-chicken').value.trim();
         const realCostInput = document.getElementById('real-cost-per-lb')?.value.trim();
         
-        const liveWeight = liveWeightInput ? parseFloat(liveWeightInput) : 0;
-        const liveCost = liveCostInput ? parseFloat(liveCostInput) : 0;
-        const processedWeight = processedWeightInput ? parseFloat(processedWeightInput) : 0;
+        const liveWeight = liveWeightInput ? parseFloat(liveWeightInput) : null;
+        const liveCost = liveCostInput ? parseFloat(liveCostInput) : null;
+        const processedWeight = processedWeightInput ? parseFloat(processedWeightInput) : null;
         const chickenCount = chickenCountInput ? parseInt(chickenCountInput) : 0;
-        const processingCostPerChicken = processingCostInput ? parseFloat(processingCostInput) : 0;
-        const realCostPerLb = realCostInput ? parseFloat(realCostInput) : 0;
+        const processingCostPerChicken = processingCostInput ? parseFloat(processingCostInput) : null;
+        const realCostPerLb = realCostInput ? parseFloat(realCostInput) : null;
 
         if (!mermaDate || !chickenCount || chickenCount <= 0) {
             Utils.showNotification('Fecha y cantidad de pollos son obligatorios', 'error', 5000);
@@ -4179,11 +4187,17 @@ async cleanDuplicatePayments() {
         Utils.showLoading(true);
 
         try {
-            const totalProcessingCost = chickenCount * processingCostPerChicken;
+            // null si el campo estaba vacío, para que calculateMerma pueda deducirlo
+            const totalProcessingCost = processingCostPerChicken != null
+                ? chickenCount * processingCostPerChicken
+                : null;
             const result = MermaModule.calculateMerma(liveWeight, liveCost, processedWeight, totalProcessingCost, realCostPerLb);
             
             result.chickenCount = chickenCount;
-            result.processingCostPerChicken = processingCostPerChicken;
+            // Si el costo por pollo era null (vacío), calcular desde el costo total deducido
+            result.processingCostPerChicken = processingCostPerChicken != null
+                ? processingCostPerChicken
+                : (chickenCount > 0 ? result.processingCost / chickenCount : 0);
             
             const record = await MermaModule.saveMermaRecord(result, mermaDate);
             const ventasRecalculadas = await MermaModule.recalcularVentasPorFecha(mermaDate);

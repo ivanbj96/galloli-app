@@ -19,7 +19,7 @@
     "@capacitor/splash-screen": "^8.1.0",
     "@capacitor/status-bar": "^8.1.0",
     "@capacitor/push-notifications": "^8.1.0",
-    "@capacitor/local-notifications": "^8.1.0"
+    "@capacitor/local-notifications": "^6.0.0"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"

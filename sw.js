@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.12'; // Fix: sidebar desktop, sync real, notificaciones, steering consolidado
+const APP_VERSION = '7.14.13'; // Fix: icono real del app en header, sidebar y feedback
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -78,6 +78,11 @@ export default {
         return handleBackup(request, env, path, corsHeaders, currentUser);
       }
       
+      // Feedback endpoint (público, sin auth)
+      if (path === '/api/feedback' && request.method === 'POST') {
+        return handleFeedback(request, env, corsHeaders);
+      }
+
       // Test cron endpoint (público para pruebas - REMOVER EN PRODUCCIÓN)
       if (path === '/api/test-cron' && request.method === 'GET') {
         console.log('🧪 Ejecutando prueba manual del cron...');
@@ -1591,6 +1596,51 @@ async function handleBackup(request, env, path, corsHeaders, currentUser) {
   }
   
   return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
+}
+
+// Feedback handler - envía comentarios al Telegram del desarrollador
+async function handleFeedback(request, env, corsHeaders) {
+  try {
+    const { rating, message, appVersion, platform } = await getRequestBody(request);
+
+    if (!message || message.trim().length === 0) {
+      return jsonResponse({ error: 'El mensaje no puede estar vacío' }, corsHeaders, 400);
+    }
+
+    const stars = '⭐'.repeat(Math.min(Math.max(parseInt(rating) || 0, 1), 5));
+    const text =
+      `📬 *Nuevo Feedback - GallOli*\n\n` +
+      `${stars}\n` +
+      `💬 ${message.trim()}\n\n` +
+      `📱 Versión: ${appVersion || 'desconocida'}\n` +
+      `🖥️ Plataforma: ${platform || 'desconocida'}\n` +
+      `🕐 ${new Date().toLocaleString('es-ES', { timeZone: 'America/Guayaquil' })}`;
+
+    const telegramRes = await fetch(
+      `https://api.telegram.org/bot${env.FEEDBACK_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: '5115479408',
+          text,
+          parse_mode: 'Markdown'
+        })
+      }
+    );
+
+    const result = await telegramRes.json();
+
+    if (!result.ok) {
+      console.error('Telegram feedback error:', result.description);
+      return jsonResponse({ error: 'No se pudo enviar el mensaje' }, corsHeaders, 500);
+    }
+
+    return jsonResponse({ success: true }, corsHeaders);
+  } catch (error) {
+    console.error('handleFeedback error:', error);
+    return jsonResponse({ error: 'Error interno' }, corsHeaders, 500);
+  }
 }
 
 // WebSocket handler

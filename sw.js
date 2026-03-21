@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.3'; // manifest avanzado: file_handlers, share_target, launch_handler, protocol_handlers + fix importFromData
+const APP_VERSION = '7.14.10'; // Add: feedback.html + privacy.html + terms.html + Worker handleFeedback
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

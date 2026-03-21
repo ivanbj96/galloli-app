@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comentarios y Sugerencias - GallOli</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .card { background: #fff; border-radius: 16px; padding: 32px 24px; max-width: 480px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .logo { text-align: center; margin-bottom: 8px; font-size: 2.5rem; }
+    h1 { text-align: center; color: #4CAF50; font-size: 1.4rem; margin-bottom: 4px; }
+    .subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 28px; }
+    label { display: block; font-size: 0.9rem; color: #555; margin-bottom: 8px; font-weight: bold; }
+    .stars { display: flex; gap: 8px; margin-bottom: 24px; }
+    .stars input { display: none; }
+    .stars label { font-size: 2rem; cursor: pointer; color: #ddd; transition: color 0.15s; margin: 0; font-weight: normal; }
+    .stars input:checked ~ label,
+    .stars label:hover,
+    .stars label:hover ~ label { color: #FFC107; }
+    .stars { flex-direction: row-reverse; justify-content: flex-end; }
+    .stars input:checked ~ label { color: #FFC107; }
+    textarea { width: 100%; border: 1.5px solid #ddd; border-radius: 10px; padding: 12px; font-size: 0.95rem; resize: vertical; min-height: 120px; font-family: inherit; transition: border-color 0.2s; }
+    textarea:focus { outline: none; border-color: #4CAF50; }
+    .char-count { text-align: right; font-size: 0.8rem; color: #aaa; margin-top: 4px; margin-bottom: 20px; }
+    button { width: 100%; background: #4CAF50; color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #43a047; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    .msg { text-align: center; margin-top: 20px; padding: 12px; border-radius: 8px; font-size: 0.95rem; display: none; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; display: block; }
+    .msg.error { background: #ffebee; color: #c62828; display: block; }
+    .back { display: block; text-align: center; margin-top: 20px; color: #4CAF50; text-decoration: none; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🐔</div>
+    <h1>Comentarios y Sugerencias</h1>
+    <p class="subtitle">Tu opinión nos ayuda a mejorar GallOli</p>
+
+    <form id="feedbackForm">
+      <label>¿Cómo calificarías la app?</label>
+      <div class="stars">
+        <input type="radio" name="rating" id="s5" value="5"><label for="s5">★</label>
+        <input type="radio" name="rating" id="s4" value="4"><label for="s4">★</label>
+        <input type="radio" name="rating" id="s3" value="3"><label for="s3">★</label>
+        <input type="radio" name="rating" id="s2" value="2"><label for="s2">★</label>
+        <input type="radio" name="rating" id="s1" value="1"><label for="s1">★</label>
+      </div>
+
+      <label for="message">Tu mensaje</label>
+      <textarea id="message" placeholder="Escribe tus comentarios, sugerencias o reporta un problema..." maxlength="500"></textarea>
+      <div class="char-count"><span id="charCount">0</span>/500</div>
+
+      <button type="submit" id="submitBtn">Enviar comentario</button>
+    </form>
+
+    <div id="statusMsg" class="msg"></div>
+    <a href="/" class="back">← Volver a GallOli</a>
+  </div>
+
+  <script>
+    const textarea = document.getElementById('message');
+    const charCount = document.getElementById('charCount');
+    const form = document.getElementById('feedbackForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusMsg = document.getElementById('statusMsg');
+
+    textarea.addEventListener('input', () => {
+      charCount.textContent = textarea.value.length;
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusMsg.className = 'msg';
+      statusMsg.textContent = '';
+
+      const ratingInput = document.querySelector('input[name="rating"]:checked');
+      const message = textarea.value.trim();
+
+      if (!message) {
+        statusMsg.className = 'msg error';
+        statusMsg.textContent = 'Por favor escribe un mensaje.';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+
+      try {
+        const res = await fetch('https://galloli-sync.ivanbj-96.workers.dev/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rating: ratingInput ? ratingInput.value : null,
+            message,
+            appVersion: '7.14.10',
+            platform: /Android/i.test(navigator.userAgent) ? 'Android' : /iPhone|iPad/i.test(navigator.userAgent) ? 'iOS' : 'Web'
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          statusMsg.className = 'msg success';
+          statusMsg.textContent = '¡Gracias por tu comentario! Lo hemos recibido.';
+          form.reset();
+          charCount.textContent = '0';
+        } else {
+          throw new Error(data.error || 'Error desconocido');
+        }
+      } catch (err) {
+        statusMsg.className = 'msg error';
+        statusMsg.textContent = 'No se pudo enviar. Intenta de nuevo más tarde.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Enviar comentario';
+      }
+    });
+  </script>
+</body>
+</html>

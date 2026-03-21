@@ -3,27 +3,16 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Deploy to Cloudflare Pages
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
-        
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
         with:
@@ -32,11 +21,11 @@ jobs:
           project-name: galloli
           directory: .
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Deploy Worker
         run: |
           npm install -g wrangler
-          cd workers
-          wrangler deploy
+          cd workers && npm install --legacy-peer-deps && wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "dev.pages.galloli.twa",
-        "sha256_cert_fingerprints": ["07:88:1F:18:5E:81:89:46:34:31:F4:12:54:98:AB:CA:4A:80:D6:94:9E:7B:A3:2C:82:4F:96:DE:4C:92:CA:7C"]
+        "sha256_cert_fingerprints": ["1D:D5:BE:56:88:FE:93:06:66:9A:5F:B2:3A:6F:D1:0B:14:55:D8:D8:FE:C8:3E:60:45:E2:BC:E5:DE:89:06:50"]
       }
     }]

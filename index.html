@@ -84,6 +84,13 @@
             <span class="splash-dot"></span>
             <span class="splash-dot"></span>
         </div>
+        <script>
+            // Timeout de seguridad: si el app tarda más de 8s, ocultar splash de todas formas
+            setTimeout(function() {
+                var s = document.getElementById('splash-screen');
+                if (s) { s.style.opacity='0'; s.style.visibility='hidden'; setTimeout(function(){ s.remove(); }, 500); }
+            }, 8000);
+        </script>
     </div>
 
     <div class="app-container">

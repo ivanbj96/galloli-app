@@ -60,9 +60,12 @@ const App = {
         this.setupEventListeners();
         this.loadPage('dashboard');
         this.setupPWA();
-        
-        // INICIALIZAR NOTIFICACIONES PUSH
-        await this.initPushNotifications();
+
+        // App lista — ocultar splash inmediatamente
+        this.hideSplash();
+
+        // INICIALIZAR NOTIFICACIONES PUSH — sin await, no debe bloquear el arranque
+        this.initPushNotifications();
         
         // INICIALIZAR BACKUP AUTOMÁTICO
         await AutoBackup.init();
@@ -93,9 +96,6 @@ const App = {
         
         // NUEVO: Detectar cuando la app se vuelve visible y recargar datos
         this.setupVisibilityChangeHandler();
-
-        // Ocultar splash screen
-        this.hideSplash();
     },
 
     hideSplash() {

@@ -191,3 +191,6 @@ const DB = {
         }
     }
 };
+
+// Exponer globalmente para que auth.js pueda verificar window.DB.db
+window.DB = DB;

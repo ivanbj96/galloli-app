@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eliminar Cuenta - GallOli</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
+        .header { background: linear-gradient(135deg, #1565C0, #FF6F00); padding: 24px 20px; text-align: center; }
+        .header img { width: 56px; height: 56px; border-radius: 12px; margin-bottom: 10px; }
+        .header h1 { color: white; font-size: 1.4rem; }
+        .header p { color: rgba(255,255,255,0.85); font-size: 0.9rem; margin-top: 4px; }
+        .container { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
+        .card { background: white; border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        h2 { font-size: 1.1rem; margin-bottom: 12px; color: #1565C0; }
+        p { line-height: 1.6; color: #555; margin-bottom: 10px; font-size: 0.95rem; }
+        ul { margin: 8px 0 10px 20px; color: #555; font-size: 0.95rem; line-height: 1.8; }
+        .danger { border-left: 4px solid #d32f2f; }
+        .danger h2 { color: #d32f2f; }
+        .steps { counter-reset: step; }
+        .step { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+        .step-num { background: #1565C0; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+        .step-text { font-size: 0.95rem; color: #555; line-height: 1.6; }
+        .step-text strong { color: #333; }
+        .btn { display: inline-block; background: #d32f2f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1rem; margin-top: 8px; }
+        .note { background: #FFF8E1; border-left: 4px solid #FF6F00; padding: 14px 16px; border-radius: 0 8px 8px 0; font-size: 0.9rem; color: #555; }
+        footer { text-align: center; padding: 24px 16px; color: #999; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <img src="./icons/favicon.pub/android-chrome-192x192.png" alt="GallOli">
+    <h1>GallOli — Eliminar Cuenta</h1>
+    <p>Solicitud de eliminación de cuenta y datos</p>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <h2>¿Qué se elimina?</h2>
+        <p>Al eliminar tu cuenta en GallOli se borran permanentemente:</p>
+        <ul>
+            <li>Tu perfil de usuario (nombre, email, Telegram ID)</li>
+            <li>Todos tus clientes, ventas, pedidos y gastos</li>
+            <li>Historial de pagos y créditos</li>
+            <li>Registros de merma y diezmos</li>
+            <li>Configuración de la app y backups en la nube</li>
+            <li>Sesiones activas en todos los dispositivos</li>
+        </ul>
+        <p>Si eres el único usuario de tu negocio, también se elimina el negocio completo y todos sus datos asociados.</p>
+    </div>
+
+    <div class="card">
+        <h2>Cómo eliminar tu cuenta desde la app</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">Abre <strong>GallOli</strong> e inicia sesión con tu cuenta.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">Ve al menú lateral y selecciona <strong>Configuración</strong>.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">Desplázate hasta la sección <strong>Zona de Peligro</strong> al final de la página.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-text">Toca <strong>"Eliminar mi cuenta y datos"</strong>.</div>
+            </div>
+            <div class="step">
+                <div class="step-num">5</div>
+                <div class="step-text">Escribe <strong>ELIMINAR</strong> en el campo de confirmación y confirma. La eliminación es inmediata e irreversible.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card danger">
+        <h2>¿No tienes acceso a la app?</h2>
+        <p>Si no puedes acceder a tu cuenta, escríbenos directamente y procesaremos tu solicitud en un plazo máximo de 30 días:</p>
+        <p><strong>Email:</strong> <a href="mailto:ivqb96@gmail.com">ivqb96@gmail.com</a></p>
+        <p>Incluye en tu mensaje el email o Telegram ID asociado a tu cuenta para que podamos identificarla.</p>
+    </div>
+
+    <div class="note">
+        <strong>Nota:</strong> Los datos eliminados no pueden recuperarse. Te recomendamos hacer un backup desde la sección <em>Backup</em> de la app antes de eliminar tu cuenta.
+    </div>
+
+</div>
+
+<footer>
+    GallOli &copy; 2025 · <a href="./privacy.html">Política de Privacidad</a> · <a href="./terms.html">Términos</a>
+</footer>
+
+</body>
+</html>

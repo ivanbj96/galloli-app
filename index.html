@@ -36,6 +36,56 @@
     <link rel="apple-touch-icon" href="/icons/favicon.pub/apple-touch-icon-180x180.png">
 </head>
 <body>
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen" style="
+        position: fixed; inset: 0; z-index: 99999;
+        background: linear-gradient(135deg, #185a83 0%, #1a6fa0 50%, #f39329 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+    ">
+        <style>
+            @keyframes splashPulse {
+                0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(243,147,41,0.5)); }
+                50% { transform: scale(1.08); filter: drop-shadow(0 0 40px rgba(243,147,41,0.9)); }
+            }
+            @keyframes splashFadeUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes splashDots {
+                0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+                40% { transform: scale(1); opacity: 1; }
+            }
+            #splash-logo { animation: splashPulse 1.8s ease-in-out infinite; }
+            #splash-title { animation: splashFadeUp 0.6s ease 0.3s both; }
+            #splash-subtitle { animation: splashFadeUp 0.6s ease 0.5s both; }
+            #splash-dots { animation: splashFadeUp 0.6s ease 0.7s both; }
+            .splash-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.8); margin: 0 4px; }
+            .splash-dot:nth-child(1) { animation: splashDots 1.2s ease-in-out 0s infinite; }
+            .splash-dot:nth-child(2) { animation: splashDots 1.2s ease-in-out 0.2s infinite; }
+            .splash-dot:nth-child(3) { animation: splashDots 1.2s ease-in-out 0.4s infinite; }
+        </style>
+        <div id="splash-logo">
+            <img src="./icons/favicon.pub/android-chrome-512x512.png" alt="GallOli"
+                 style="width: 120px; height: 120px; border-radius: 24px;">
+        </div>
+        <div id="splash-title" style="
+            color: #fff; font-size: 2.2rem; font-weight: 700;
+            font-family: 'Segoe UI', sans-serif; margin-top: 24px;
+            letter-spacing: 1px;
+        ">GallOli</div>
+        <div id="splash-subtitle" style="
+            color: rgba(255,255,255,0.8); font-size: 0.95rem;
+            font-family: 'Segoe UI', sans-serif; margin-top: 6px;
+        ">Gestión Integral</div>
+        <div id="splash-dots" style="margin-top: 40px;">
+            <span class="splash-dot"></span>
+            <span class="splash-dot"></span>
+            <span class="splash-dot"></span>
+        </div>
+    </div>
+
     <div class="app-container">
         <div class="sidebar-overlay" id="sidebar-overlay" onclick="App.toggleSidebar()"></div>
         <div class="sidebar" id="sidebar">

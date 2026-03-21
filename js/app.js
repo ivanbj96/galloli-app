@@ -93,6 +93,17 @@ const App = {
         
         // NUEVO: Detectar cuando la app se vuelve visible y recargar datos
         this.setupVisibilityChangeHandler();
+
+        // Ocultar splash screen
+        this.hideSplash();
+    },
+
+    hideSplash() {
+        const splash = document.getElementById('splash-screen');
+        if (!splash) return;
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+        setTimeout(() => splash.remove(), 500);
     },
     
     // NUEVO: Detectar cuando la app se vuelve visible y recargar datos

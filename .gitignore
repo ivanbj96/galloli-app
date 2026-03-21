@@ -70,6 +70,8 @@ jspm_packages/
 # Google Play - datos sensibles (keystore, signing key, APK/AAB)
 GallOli - Google Play package/
 GallOli - Google Play package.zip
+GallOli - Google Play package2/
+GallOli - Google Play package2.zip
 *.keystore
 *.jks
 signing-key-info.txt

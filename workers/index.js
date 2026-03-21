@@ -873,6 +873,52 @@ async function handleAuth(request, env, path, corsHeaders) {
     
     return jsonResponse({ success: true }, corsHeaders);
   }
+
+  // DELETE /api/auth/account - Eliminar cuenta y datos
+  if (path === '/api/auth/account' && method === 'DELETE') {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return jsonResponse({ error: 'Token requerido' }, corsHeaders, 401);
+    }
+
+    const token = authHeader.substring(7);
+    const currentUser = await verifyToken(token, env);
+
+    if (!currentUser) {
+      return jsonResponse({ error: 'Token inválido o expirado' }, corsHeaders, 401);
+    }
+
+    try {
+      // Contar cuántos usuarios activos tiene el negocio
+      const usersCount = await env.DB.prepare(`
+        SELECT COUNT(*) as count FROM users WHERE business_id = ? AND is_active = 1
+      `).bind(currentUser.business_id).first();
+
+      const isOnlyUser = (usersCount?.count || 0) <= 1;
+      const isOwner = currentUser.role === 'super_admin';
+
+      if (isOwner && isOnlyUser) {
+        // Eliminar todo el negocio y sus datos
+        await env.DB.prepare(`DELETE FROM sync_data WHERE business_id = ?`).bind(currentUser.business_id).run();
+        await env.DB.prepare(`DELETE FROM changes WHERE business_id = ?`).bind(currentUser.business_id).run();
+        await env.DB.prepare(`DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE business_id = ?)`).bind(currentUser.business_id).run();
+        await env.DB.prepare(`DELETE FROM invitation_codes WHERE business_id = ?`).bind(currentUser.business_id).run();
+        await env.DB.prepare(`DELETE FROM users WHERE business_id = ?`).bind(currentUser.business_id).run();
+        await env.DB.prepare(`DELETE FROM businesses WHERE id = ?`).bind(currentUser.business_id).run();
+
+        return jsonResponse({ success: true, deleted: 'full' }, corsHeaders);
+      } else {
+        // Solo eliminar al usuario actual y sus sesiones
+        await env.DB.prepare(`DELETE FROM sessions WHERE user_id = ?`).bind(currentUser.id).run();
+        await env.DB.prepare(`UPDATE users SET is_active = 0 WHERE id = ?`).bind(currentUser.id).run();
+
+        return jsonResponse({ success: true, deleted: 'user_only' }, corsHeaders);
+      }
+    } catch (error) {
+      console.error('Error eliminando cuenta:', error);
+      return jsonResponse({ error: 'Error al eliminar la cuenta' }, corsHeaders, 500);
+    }
+  }
   
   return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
   

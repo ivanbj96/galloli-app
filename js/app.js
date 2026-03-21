@@ -1480,6 +1480,23 @@ loadConfigPage() {
                 </div>
             </div>
             
+            <!-- Zona de Peligro -->
+            <div class="config-group" style="border: 2px solid var(--danger); border-radius: 12px; padding: 20px;">
+                <h4 style="color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> Zona de Peligro</h4>
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">
+                    Estas acciones son irreversibles. Todos tus datos serán eliminados permanentemente.
+                </p>
+                ${window.AuthManager && window.AuthManager.isAuthenticated() ? `
+                <button class="btn btn-danger" onclick="App.confirmDeleteAccount()" style="width: 100%;">
+                    <i class="fas fa-user-times"></i> Eliminar mi cuenta y datos
+                </button>
+                ` : `
+                <p style="color: var(--gray); font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Debes iniciar sesión en la nube para eliminar tu cuenta.
+                </p>
+                `}
+            </div>
+            
             <!-- Vista Previa (solo escritorio) -->
             <div class="config-preview" id="config-preview">
                 <h5><i class="fas fa-eye"></i> Vista Previa</h5>
@@ -1558,6 +1575,63 @@ updateConfigUI() {
         preview.querySelectorAll('.preview-color')[0].style.background = ConfigModule.currentConfig.colors.primary;
         preview.querySelectorAll('.preview-color')[1].style.background = ConfigModule.currentConfig.colors.secondary;
         preview.querySelectorAll('.preview-color')[2].style.background = ConfigModule.currentConfig.colors.light;
+    }
+},
+
+async confirmDeleteAccount() {
+    // Modal de confirmación con texto que el usuario debe escribir
+    const html = `
+        <div class="modal active" id="delete-account-modal">
+            <div class="modal-content" style="max-width: 420px;">
+                <div class="modal-header" style="background: var(--danger); color: white;">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Eliminar cuenta</h3>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 15px;">Esta acción es <strong>irreversible</strong>. Se eliminarán:</p>
+                    <ul style="margin: 0 0 20px 20px; color: var(--gray); font-size: 0.9rem;">
+                        <li>Tu cuenta de usuario</li>
+                        <li>Todos tus clientes, ventas, pedidos y gastos</li>
+                        <li>Historial de pagos y créditos</li>
+                        <li>Datos de merma y diezmos</li>
+                        <li>Configuración y backups en la nube</li>
+                    </ul>
+                    <p style="margin-bottom: 10px; font-weight: 600;">Escribe <span style="color: var(--danger);">ELIMINAR</span> para confirmar:</p>
+                    <input type="text" id="delete-confirm-input" class="form-input" placeholder="ELIMINAR" autocomplete="off">
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button class="btn btn-outline" onclick="document.getElementById('delete-account-modal').remove()" style="flex: 1;">
+                            Cancelar
+                        </button>
+                        <button class="btn btn-danger" id="delete-confirm-btn" onclick="App.executeDeleteAccount()" style="flex: 1;" disabled>
+                            <i class="fas fa-trash"></i> Eliminar todo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const input = document.getElementById('delete-confirm-input');
+    const btn = document.getElementById('delete-confirm-btn');
+    input.addEventListener('input', () => {
+        btn.disabled = input.value.trim() !== 'ELIMINAR';
+    });
+    input.focus();
+},
+
+async executeDeleteAccount() {
+    const modal = document.getElementById('delete-account-modal');
+    if (modal) modal.remove();
+
+    Utils.showLoading(true);
+    try {
+        await window.AuthManager.deleteAccount();
+        Utils.showLoading(false);
+        Utils.showNotification('Cuenta eliminada correctamente', 'success', 3000);
+        setTimeout(() => window.location.reload(), 2000);
+    } catch (error) {
+        Utils.showLoading(false);
+        Utils.showNotification('Error al eliminar la cuenta: ' + error.message, 'error', 5000);
     }
 },
 

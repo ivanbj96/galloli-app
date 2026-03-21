@@ -217,7 +217,7 @@ header {
     color: var(--primary);
     cursor: pointer;
     padding: 5px 10px;
-    display: none;
+    display: block; /* Siempre visible */
 }
 
 .logo {
@@ -1155,10 +1155,6 @@ select.form-input {
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .menu-toggle {
-        display: block;
-    }
-    
     .sidebar {
         transform: translateX(-100%);
     }
@@ -1173,6 +1169,30 @@ select.form-input {
     
     .header-actions .btn {
         padding: 8px 12px;
+    }
+}
+
+/* Desktop: sidebar siempre visible por defecto */
+@media (min-width: 1025px) {
+    .sidebar {
+        transform: translateX(0);
+    }
+    
+    .sidebar-overlay {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: var(--sidebar-width);
+    }
+    
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.collapsed + .main-content,
+    .sidebar.collapsed ~ .main-content {
+        margin-left: 0;
     }
 }
 

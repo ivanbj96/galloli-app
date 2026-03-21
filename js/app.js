@@ -1469,7 +1469,6 @@ loadConfigPage() {
                 </div>
             </div>
             
-            
             <!-- Vista Previa (solo escritorio) -->
             <div class="config-preview" id="config-preview">
                 <h5><i class="fas fa-eye"></i> Vista Previa</h5>
@@ -4506,21 +4505,31 @@ async cleanDuplicatePayments() {
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebar-overlay');
-        if (sidebar) {
-            sidebar.classList.toggle('active');
-        }
-        if (overlay) {
-            overlay.classList.toggle('active');
+        const isDesktop = window.innerWidth > 1024;
+
+        if (isDesktop) {
+            // En desktop: colapsar/expandir sin overlay
+            if (sidebar) sidebar.classList.toggle('collapsed');
+        } else {
+            // En móvil: comportamiento original con overlay
+            if (sidebar) sidebar.classList.toggle('active');
+            if (overlay) overlay.classList.toggle('active');
         }
     },
 
     // Sincronización y exportación
-    syncData() {
-        Utils.showNotification('Sincronizando datos...', 'info', 3000);
-        // Aquí iría la lógica de sincronización con servidor
-        setTimeout(() => {
-            Utils.showNotification('Datos sincronizados correctamente', 'success', 3000);
-        }, 2000);
+    async syncData() {
+        if (window.SyncEngine && window.AuthManager?.isAuthenticated()) {
+            Utils.showNotification('Sincronizando con la nube...', 'info', 2000);
+            try {
+                await window.SyncEngine.forceFullSync();
+                Utils.showNotification('✅ Sincronización completada', 'success', 3000);
+            } catch (e) {
+                Utils.showNotification('Error al sincronizar', 'error', 3000);
+            }
+        } else {
+            Utils.showNotification('Inicia sesión para sincronizar', 'warning', 3000);
+        }
     },
 
     exportData() {

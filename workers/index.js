@@ -78,6 +78,19 @@ export default {
         return handleBackup(request, env, path, corsHeaders, currentUser);
       }
       
+      // Push notifications endpoints
+      if (path.startsWith('/api/push')) {
+        // GET /api/push/vapid-key es público
+        if (path === '/api/push/vapid-key' && request.method === 'GET') {
+          return jsonResponse({ publicKey: env.VAPID_PUBLIC_KEY }, corsHeaders);
+        }
+        // El resto requiere auth
+        if (!currentUser) {
+          return jsonResponse({ error: 'Authentication required' }, corsHeaders, 401);
+        }
+        return handlePush(request, env, path, corsHeaders, currentUser);
+      }
+
       // Feedback endpoint (público, sin auth)
       if (path === '/api/feedback' && request.method === 'POST') {
         return handleFeedback(request, env, corsHeaders);
@@ -1642,6 +1655,287 @@ async function handleBackup(request, env, path, corsHeaders, currentUser) {
   }
   
   return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
+}
+
+// Push notification handlers (Web Push VAPID)
+async function handlePush(request, env, path, corsHeaders, currentUser) {
+  const method = request.method;
+
+  // POST /api/push/subscribe - Guardar suscripción del dispositivo
+  if (path === '/api/push/subscribe' && method === 'POST') {
+    const { subscription } = await getRequestBody(request);
+
+    if (!subscription || !subscription.endpoint || !subscription.keys) {
+      return jsonResponse({ error: 'subscription con endpoint y keys requeridos' }, corsHeaders, 400);
+    }
+
+    const { endpoint, keys: { p256dh, auth } } = subscription;
+
+    // Upsert: si ya existe el endpoint, actualizar; si no, insertar
+    const existing = await env.DB.prepare(
+      `SELECT id FROM push_subscriptions WHERE endpoint = ?`
+    ).bind(endpoint).first();
+
+    if (existing) {
+      await env.DB.prepare(`
+        UPDATE push_subscriptions
+        SET user_id = ?, business_id = ?, p256dh = ?, auth = ?, updated_at = ?, is_active = 1
+        WHERE endpoint = ?
+      `).bind(currentUser.id, currentUser.business_id, p256dh, auth, Date.now(), endpoint).run();
+    } else {
+      await env.DB.prepare(`
+        INSERT INTO push_subscriptions (id, user_id, business_id, endpoint, p256dh, auth, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(generateId(), currentUser.id, currentUser.business_id, endpoint, p256dh, auth, Date.now(), Date.now()).run();
+    }
+
+    return jsonResponse({ success: true }, corsHeaders);
+  }
+
+  // DELETE /api/push/subscribe - Eliminar suscripción
+  if (path === '/api/push/subscribe' && method === 'DELETE') {
+    const { endpoint } = await getRequestBody(request);
+    if (endpoint) {
+      await env.DB.prepare(
+        `UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ? AND user_id = ?`
+      ).bind(endpoint, currentUser.id).run();
+    }
+    return jsonResponse({ success: true }, corsHeaders);
+  }
+
+  // POST /api/push/send - Enviar notificación push a todos los dispositivos del negocio
+  if (path === '/api/push/send' && method === 'POST') {
+    const { title, body, data = {}, tag } = await getRequestBody(request);
+
+    if (!title || !body) {
+      return jsonResponse({ error: 'title y body requeridos' }, corsHeaders, 400);
+    }
+
+    const subs = await env.DB.prepare(`
+      SELECT endpoint, p256dh, auth FROM push_subscriptions
+      WHERE business_id = ? AND is_active = 1
+    `).bind(currentUser.business_id).all();
+
+    const payload = JSON.stringify({ title, body, tag: tag || 'galloli', data });
+    const results = [];
+
+    for (const sub of (subs.results || [])) {
+      try {
+        const result = await sendWebPush(sub.endpoint, sub.p256dh, sub.auth, payload, env);
+        results.push({ endpoint: sub.endpoint.substring(0, 40) + '...', success: result });
+        // Si el endpoint ya no es válido (410 Gone), desactivarlo
+        if (!result) {
+          await env.DB.prepare(
+            `UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?`
+          ).bind(sub.endpoint).run();
+        }
+      } catch (e) {
+        results.push({ endpoint: sub.endpoint.substring(0, 40) + '...', error: e.message });
+      }
+    }
+
+    return jsonResponse({ success: true, sent: results.length, results }, corsHeaders);
+  }
+
+  return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
+}
+
+// Enviar Web Push usando VAPID (implementación manual sin librerías)
+async function sendWebPush(endpoint, p256dh, auth, payload, env) {
+  try {
+    const vapidPublicKey = env.VAPID_PUBLIC_KEY;
+    const vapidPrivateKey = env.VAPID_PRIVATE_KEY;
+    const vapidSubject = 'mailto:ivqb96@gmail.com';
+
+    // Crear JWT VAPID
+    const endpointUrl = new URL(endpoint);
+    const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
+    const expiration = Math.floor(Date.now() / 1000) + 12 * 60 * 60; // 12 horas
+
+    const vapidHeader = { typ: 'JWT', alg: 'ES256' };
+    const vapidPayload = { aud: audience, exp: expiration, sub: vapidSubject };
+
+    const encodedHeader = btoa(JSON.stringify(vapidHeader)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const encodedPayload = btoa(JSON.stringify(vapidPayload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+    // Importar clave privada VAPID (formato raw base64url → pkcs8)
+    const privKeyBytes = base64urlToBytes(vapidPrivateKey);
+    const pubKeyBytes = base64urlToBytes(vapidPublicKey);
+
+    // Construir clave privada en formato pkcs8 para ES256
+    const pkcs8Key = buildPkcs8(privKeyBytes, pubKeyBytes);
+
+    const privateKey = await crypto.subtle.importKey(
+      'pkcs8',
+      pkcs8Key,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign']
+    );
+
+    const encoder = new TextEncoder();
+    const signature = await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      privateKey,
+      encoder.encode(signingInput)
+    );
+
+    const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    const vapidToken = `${signingInput}.${encodedSignature}`;
+    const vapidAuthHeader = `vapid t=${vapidToken},k=${vapidPublicKey}`;
+
+    // Cifrar el payload con ECDH + AES-GCM (Web Push Encryption RFC 8291)
+    const encryptedPayload = await encryptWebPush(p256dh, auth, payload);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': vapidAuthHeader,
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'TTL': '86400',
+      },
+      body: encryptedPayload
+    });
+
+    return response.status === 201 || response.status === 200;
+  } catch (error) {
+    console.error('sendWebPush error:', error);
+    return false;
+  }
+}
+
+// Cifrado Web Push (RFC 8291 - aes128gcm)
+async function encryptWebPush(p256dhBase64, authBase64, plaintext) {
+  const encoder = new TextEncoder();
+
+  // Decodificar claves del cliente
+  const clientPublicKey = base64urlToBytes(p256dhBase64);
+  const authSecret = base64urlToBytes(authBase64);
+
+  // Generar par de claves efímeras del servidor
+  const serverKeyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveKey', 'deriveBits']
+  );
+
+  // Exportar clave pública del servidor (65 bytes uncompressed)
+  const serverPublicKeyRaw = await crypto.subtle.exportKey('raw', serverKeyPair.publicKey);
+
+  // Importar clave pública del cliente
+  const clientKey = await crypto.subtle.importKey(
+    'raw',
+    clientPublicKey,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+
+  // Derivar secreto compartido ECDH
+  const sharedSecret = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: clientKey },
+    serverKeyPair.privateKey,
+    256
+  );
+
+  // Generar salt aleatorio (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // HKDF para derivar IKM
+  const prk = await hkdf(
+    new Uint8Array(sharedSecret),
+    authSecret,
+    concat(encoder.encode('WebPush: info\x00'), clientPublicKey, new Uint8Array(serverPublicKeyRaw)),
+    32
+  );
+
+  // Derivar clave de contenido y nonce
+  const contentKey = await hkdf(prk, salt, encoder.encode('Content-Encoding: aes128gcm\x00'), 16);
+  const nonce = await hkdf(prk, salt, encoder.encode('Content-Encoding: nonce\x00'), 12);
+
+  // Importar clave AES-GCM
+  const aesKey = await crypto.subtle.importKey('raw', contentKey, { name: 'AES-GCM' }, false, ['encrypt']);
+
+  // Cifrar payload con padding
+  const plaintextBytes = encoder.encode(plaintext);
+  const paddedPlaintext = new Uint8Array(plaintextBytes.length + 1);
+  paddedPlaintext.set(plaintextBytes);
+  paddedPlaintext[plaintextBytes.length] = 0x02; // padding delimiter
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce },
+    aesKey,
+    paddedPlaintext
+  );
+
+  // Construir header RFC 8291: salt(16) + rs(4) + keyid_len(1) + keyid(65) + ciphertext
+  const serverPubKeyBytes = new Uint8Array(serverPublicKeyRaw);
+  const rs = 4096;
+  const header = new Uint8Array(16 + 4 + 1 + 65);
+  header.set(salt, 0);
+  // rs como big-endian uint32
+  header[16] = (rs >> 24) & 0xff;
+  header[17] = (rs >> 16) & 0xff;
+  header[18] = (rs >> 8) & 0xff;
+  header[19] = rs & 0xff;
+  header[20] = 65; // keyid length
+  header.set(serverPubKeyBytes, 21);
+
+  return concat(header, new Uint8Array(ciphertext));
+}
+
+// HKDF usando Web Crypto
+async function hkdf(ikm, salt, info, length) {
+  const saltKey = await crypto.subtle.importKey('raw', salt, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const prk = new Uint8Array(await crypto.subtle.sign('HMAC', saltKey, ikm));
+
+  const prkKey = await crypto.subtle.importKey('raw', prk, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const infoBytes = info instanceof Uint8Array ? info : new TextEncoder().encode(info);
+  const t = new Uint8Array(await crypto.subtle.sign('HMAC', prkKey, concat(infoBytes, new Uint8Array([1]))));
+  return t.slice(0, length);
+}
+
+// Construir PKCS8 desde raw private key (32 bytes) + public key (65 bytes)
+function buildPkcs8(privKeyBytes, pubKeyBytes) {
+  // PKCS8 wrapper para EC P-256 private key
+  const ecPrivateKey = concat(
+    new Uint8Array([0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20]),
+    privKeyBytes,
+    new Uint8Array([0xa1, 0x44, 0x03, 0x42, 0x00]),
+    pubKeyBytes
+  );
+  const pkcs8 = concat(
+    new Uint8Array([
+      0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13,
+      0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02,
+      0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,
+      0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b
+    ]),
+    ecPrivateKey
+  );
+  return pkcs8;
+}
+
+// Helpers
+function base64urlToBytes(base64url) {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
+function concat(...arrays) {
+  const total = arrays.reduce((sum, a) => sum + a.length, 0);
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
 }
 
 // Feedback handler - envía comentarios al Telegram del desarrollador

@@ -1,233 +1,153 @@
-// Sistema de Notificaciones Push - Versión 6.5 - Mejorado con diagnóstico
+// Sistema de Notificaciones Push - Web Push VAPID
+const WORKER_URL = 'https://galloli-sync.ivanbj-96.workers.dev';
+
 const PushNotifications = {
     swRegistration: null,
     permission: 'default',
     checkInterval: null,
     isInitialized: false,
+    vapidPublicKey: null,
+    pushSubscription: null,
 
     // Inicializar el sistema
     async init() {
-        console.log('🔔 ========================================');
-        console.log('🔔 INICIALIZANDO SISTEMA DE NOTIFICACIONES');
-        console.log('🔔 ========================================');
-        
-        // Verificar soporte de notificaciones
-        if (!('Notification' in window)) {
-            console.error('❌ Notificaciones NO soportadas en este navegador');
-            console.log('   Navegador:', navigator.userAgent);
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('🔔 Push notifications no soportadas en este navegador');
             return false;
         }
-        console.log('✅ Notificaciones soportadas');
 
-        // Verificar soporte de Service Worker
-        if (!('serviceWorker' in navigator)) {
-            console.error('❌ Service Worker NO soportado en este navegador');
-            return false;
-        }
-        console.log('✅ Service Worker soportado');
-
-        // Verificar estado actual de permisos
-        console.log('📋 Estado actual de permisos:', Notification.permission);
-
-        // Obtener Service Worker
         try {
-            console.log('⏳ Esperando Service Worker...');
             this.swRegistration = await navigator.serviceWorker.ready;
-            console.log('✅ Service Worker listo:', this.swRegistration);
-            console.log('   Scope:', this.swRegistration.scope);
-            console.log('   Active:', this.swRegistration.active ? 'Sí' : 'No');
-        } catch (error) {
-            console.error('❌ Error obteniendo Service Worker:', error);
-            console.error('   Mensaje:', error.message);
-            console.error('   Stack:', error.stack);
+        } catch (e) {
+            console.error('🔔 Service Worker no disponible:', e.message);
             return false;
         }
 
-        // Si los permisos ya están concedidos, inicializar completamente
+        // Si ya tiene permisos, inicializar completamente
         if (Notification.permission === 'granted') {
-            console.log('✅ Permisos ya concedidos - Inicializando sistema completo');
             this.permission = 'granted';
+            await this._setupSubscription();
+            this._startPeriodicChecks();
             this.isInitialized = true;
-            
-            // Verificar tareas pendientes inmediatamente (después de 3 segundos)
-            console.log('⏰ Programando verificación de tareas pendientes...');
-            setTimeout(() => {
-                console.log('� Ejecutando primera verificación de tareas...');
-                this.checkAllPendingTasks();
-            }, 3000);
-            
-            // Verificar cada 5 minutos
-            this.checkInterval = setInterval(() => {
-                console.log('� Verificación periódica de tareas...');
-                this.checkAllPendingTasks();
-            }, 5 * 60 * 1000);
-            
-            console.log('✅ Verificaciones periódicas programadas (cada 5 minutos)');
-            console.log('🔔 ========================================');
-            console.log('🔔 INICIALIZACIÓN COMPLETADA: ÉXITO');
-            console.log('🔔 ========================================');
             return true;
         }
-        
-        // Si los permisos están en default, NO solicitar automáticamente
-        // (el usuario debe hacer clic en el botón de prueba o configuración)
-        if (Notification.permission === 'default') {
-            console.log('⚠️ Permisos pendientes - esperando acción del usuario');
-            console.log('💡 El usuario debe:');
-            console.log('   1. Ir a Configuración');
-            console.log('   2. Hacer clic en "Probar Notificaciones Push"');
-            console.log('   3. Conceder permisos cuando se soliciten');
-            console.log('🔔 ========================================');
-            console.log('🔔 INICIALIZACIÓN COMPLETADA: PERMISOS PENDIENTES');
-            console.log('🔔 ========================================');
-            return false;
-        }
-        
-        // Si los permisos están denegados
-        if (Notification.permission === 'denied') {
-            console.error('❌ Permisos DENEGADOS por el usuario');
-            console.log('💡 Para habilitar notificaciones:');
-            console.log('   1. Haz clic en el ícono de candado en la barra de direcciones');
-            console.log('   2. Busca "Notificaciones" y cambia a "Permitir"');
-            console.log('   3. Recarga la página');
-            console.log('🔔 ========================================');
-            console.log('🔔 INICIALIZACIÓN COMPLETADA: PERMISOS DENEGADOS');
-            console.log('🔔 ========================================');
-            return false;
-        }
-        
+
         return false;
     },
 
-    // Solicitar permisos
+    // Solicitar permisos y suscribirse a Web Push
     async requestPermission() {
-        console.log('🔐 ========================================');
-        console.log('🔐 SOLICITANDO PERMISOS DE NOTIFICACIÓN');
-        console.log('🔐 Estado actual:', Notification.permission);
-        
-        if (Notification.permission === 'granted') {
-            this.permission = 'granted';
-            this.isInitialized = true;
-            console.log('✅ Permisos YA concedidos previamente');
-            console.log('🔐 ========================================');
-            return true;
+        if (!('Notification' in window) || !('PushManager' in window)) {
+            alert('Tu navegador no soporta notificaciones push.');
+            return false;
         }
 
         if (Notification.permission === 'denied') {
-            this.permission = 'denied';
-            console.error('❌ Permisos DENEGADOS por el usuario');
-            console.log('💡 Para habilitar notificaciones:');
-            console.log('   1. Haz clic en el ícono de candado en la barra de direcciones');
-            console.log('   2. Busca "Notificaciones" y cambia a "Permitir"');
-            console.log('   3. Recarga la página');
-            console.log('🔐 ========================================');
+            alert('Las notificaciones están bloqueadas. Habilítalas en la configuración del navegador/sistema.');
             return false;
         }
 
-        try {
-            console.log('⏳ Mostrando diálogo de permisos al usuario...');
-            const permission = await Notification.requestPermission();
-            this.permission = permission;
-            
-            console.log('📋 Respuesta del usuario:', permission);
-            
-            if (permission === 'granted') {
-                console.log('✅ Permisos CONCEDIDOS por el usuario');
-                // Activar el sistema completo ahora que tenemos permisos
+        if (Notification.permission === 'granted') {
+            this.permission = 'granted';
+            if (!this.isInitialized) {
+                await this._setupSubscription();
+                this._startPeriodicChecks();
                 this.isInitialized = true;
-                if (!this.swRegistration) {
-                    this.swRegistration = await navigator.serviceWorker.ready;
-                }
-                // Iniciar verificaciones periódicas
-                if (!this.checkInterval) {
-                    this.checkInterval = setInterval(() => {
-                        this.checkAllPendingTasks();
-                    }, 5 * 60 * 1000);
-                }
-                setTimeout(() => this.checkAllPendingTasks(), 2000);
-                console.log('🔐 ========================================');
-                return true;
             }
-            
-            console.warn('⚠️ Permisos DENEGADOS por el usuario');
-            console.log('🔐 ========================================');
-            return false;
-        } catch (error) {
-            console.error('❌ Error solicitando permisos:', error);
-            console.error('   Mensaje:', error.message);
-            console.error('   Stack:', error.stack);
-            console.log('🔐 ========================================');
+            return true;
+        }
+
+        // Solicitar permiso
+        const permission = await Notification.requestPermission();
+        this.permission = permission;
+
+        if (permission !== 'granted') {
             return false;
         }
+
+        if (!this.swRegistration) {
+            this.swRegistration = await navigator.serviceWorker.ready;
+        }
+
+        await this._setupSubscription();
+        this._startPeriodicChecks();
+        this.isInitialized = true;
+        setTimeout(() => this.checkAllPendingTasks(), 2000);
+        return true;
+    },
+
+    // Obtener VAPID public key del servidor y suscribirse
+    async _setupSubscription() {
+        try {
+            // Obtener VAPID public key
+            const res = await fetch(`${WORKER_URL}/api/push/vapid-key`);
+            if (!res.ok) throw new Error('No se pudo obtener VAPID key');
+            const { publicKey } = await res.json();
+            this.vapidPublicKey = publicKey;
+
+            // Verificar si ya hay suscripción activa
+            let sub = await this.swRegistration.pushManager.getSubscription();
+
+            if (!sub) {
+                // Crear nueva suscripción
+                sub = await this.swRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: this._urlBase64ToUint8Array(publicKey)
+                });
+            }
+
+            this.pushSubscription = sub;
+
+            // Guardar suscripción en el servidor (solo si hay sesión activa)
+            await this._saveSubscriptionToServer(sub);
+
+            console.log('✅ Suscripción push activa');
+        } catch (error) {
+            console.error('Error configurando suscripción push:', error.message);
+            // Fallback: notificaciones locales siguen funcionando si la app está abierta
+        }
+    },
+
+    // Guardar suscripción en el Worker
+    async _saveSubscriptionToServer(subscription) {
+        try {
+            const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : null;
+            if (!token) return; // Sin sesión, no guardar
+
+            await fetch(`${WORKER_URL}/api/push/subscribe`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ subscription: subscription.toJSON() })
+            });
+        } catch (e) {
+            console.warn('No se pudo guardar suscripción en servidor:', e.message);
+        }
+    },
+
+    // Iniciar verificaciones periódicas locales
+    _startPeriodicChecks() {
+        if (this.checkInterval) return;
+        setTimeout(() => this.checkAllPendingTasks(), 3000);
+        this.checkInterval = setInterval(() => this.checkAllPendingTasks(), 5 * 60 * 1000);
     },
 
     // Verificar todas las tareas pendientes
     async checkAllPendingTasks() {
-        if (!this.isInitialized) {
-            console.warn('⚠️ Sistema de notificaciones no inicializado - saltando verificación');
-            return;
-        }
-        
-        console.log('� ========================================');
-        console.log('� VERIFICANDO TAREAS PENDIENTES');
-        console.log('� Fecha:', new Date().toLocaleString('es-GT'));
-        console.log('� ========================================');
-        
-        let notificationsSent = 0;
-        
-        // Verificar merma
-        console.log('📊 Verificando merma pendiente...');
-        const mermaNotified = await this.checkMermaPending();
-        if (mermaNotified) {
-            console.log('   ✅ Notificación de merma enviada');
-            notificationsSent++;
-        } else {
-            console.log('   ℹ️ No hay merma pendiente');
-        }
-        
-        // Verificar créditos por cliente
-        console.log('💳 Verificando créditos pendientes...');
-        const creditsNotified = await this.checkCreditsByClient();
-        if (creditsNotified) {
-            console.log('   ✅ Notificaciones de créditos enviadas');
-            notificationsSent++;
-        } else {
-            console.log('   ℹ️ No hay créditos pendientes');
-        }
-        
-        console.log('� ========================================');
-        console.log('� VERIFICACIÓN COMPLETADA');
-        console.log('� Notificaciones enviadas:', notificationsSent);
-        console.log('� ========================================');
-        
-        // NO verificar backup - se hace automáticamente a las 10 PM desde el servidor
+        if (!this.isInitialized) return;
+        await this.checkMermaPending();
+        await this.checkCreditsByClient();
     },
 
-    // Mostrar notificación
+    // Mostrar notificación local (cuando la app está abierta)
     async show(title, body, options = {}) {
-        console.log('📤 ========================================');
-        console.log('📤 ENVIANDO NOTIFICACIÓN');
-        console.log('📤 Título:', title);
-        console.log('📤 Cuerpo:', body);
-        console.log('📤 ========================================');
-        
-        // Verificar permisos
-        if (this.permission !== 'granted') {
-            console.error('❌ No se puede mostrar notificación - Permisos:', this.permission);
-            console.log('💡 Ejecuta: PushNotifications.requestPermission()');
-            return false;
-        }
-        
-        // Verificar Service Worker
-        if (!this.swRegistration) {
-            console.error('❌ No se puede mostrar notificación - Service Worker no disponible');
-            console.log('💡 Ejecuta: PushNotifications.init()');
-            return false;
-        }
+        if (this.permission !== 'granted' || !this.swRegistration) return false;
 
         try {
-            const notificationOptions = {
-                body: body,
+            await this.swRegistration.showNotification(title, {
+                body,
                 icon: options.icon || './icons/favicon.pub/android-chrome-192x192.png',
                 badge: options.badge || './icons/favicon.pub/favicon-48x48.png',
                 tag: options.tag || 'galloli-notification',
@@ -236,21 +156,10 @@ const PushNotifications = {
                 vibrate: options.vibrate || [200, 100, 200],
                 data: options.data || {},
                 actions: options.actions || []
-            };
-
-            console.log('📤 Opciones:', notificationOptions);
-            console.log('⏳ Enviando a Service Worker...');
-            
-            await this.swRegistration.showNotification(title, notificationOptions);
-            
-            console.log('✅ Notificación enviada exitosamente');
-            console.log('📤 ========================================');
+            });
             return true;
-        } catch (error) {
-            console.error('❌ Error mostrando notificación:', error);
-            console.error('   Mensaje:', error.message);
-            console.error('   Stack:', error.stack);
-            console.log('📤 ========================================');
+        } catch (e) {
+            console.error('Error mostrando notificación:', e.message);
             return false;
         }
     },
@@ -258,50 +167,33 @@ const PushNotifications = {
     // Verificar merma pendiente
     async checkMermaPending() {
         const today = new Date().toISOString().split('T')[0];
-        
-        if (typeof MermaModule === 'undefined' || typeof SalesModule === 'undefined') {
-            return false;
-        }
+        if (typeof MermaModule === 'undefined' || typeof SalesModule === 'undefined') return false;
 
         const mermaRecord = MermaModule.getMermaRecordByDate(today);
         const sales = SalesModule.getSalesByDate(today);
-        
+
         if (!mermaRecord && sales.length > 0) {
             await this.show(
                 '⚠️ Merma Sin Calcular',
-                `Tienes ${sales.length} ventas registradas hoy. ¡Calcula la merma ahora!`,
-                {
-                    tag: 'merma-urgent',
-                    requireInteraction: true,
-                    vibrate: [500, 200, 500, 200, 500],
-                    data: { action: 'calculate-merma' },
-                    actions: [
-                        { action: 'calculate', title: '🧮 Calcular Ahora', icon: './icons/favicon.pub/favicon-48x48.png' },
-                        { action: 'dismiss', title: 'Más Tarde' }
-                    ]
-                }
+                `Tienes ${sales.length} ventas hoy. ¡Calcula la merma!`,
+                { tag: 'merma-urgent', requireInteraction: true, vibrate: [500, 200, 500], data: { action: 'calculate-merma' } }
             );
             return true;
         }
-        
         return false;
     },
 
-    // Verificar créditos por cliente individual
+    // Verificar créditos por cliente
     async checkCreditsByClient() {
-        if (typeof SalesModule === 'undefined' || typeof ClientsModule === 'undefined') {
-            return false;
-        }
+        if (typeof SalesModule === 'undefined' || typeof ClientsModule === 'undefined') return false;
 
         const creditSales = SalesModule.getCreditSales();
-        
-        // Agrupar por cliente
         const clientsWithDebt = {};
+
         creditSales.forEach(sale => {
             if (!clientsWithDebt[sale.clientId]) {
-                const client = ClientsModule.getClientById(sale.clientId);
                 clientsWithDebt[sale.clientId] = {
-                    client: client,
+                    client: ClientsModule.getClientById(sale.clientId),
                     totalDebt: 0,
                     sales: []
                 };
@@ -310,43 +202,16 @@ const PushNotifications = {
             clientsWithDebt[sale.clientId].sales.push(sale);
         });
 
-        // Crear notificación individual por cada cliente con ACCIONES INLINE
         for (const clientId in clientsWithDebt) {
-            const data = clientsWithDebt[clientId];
-            const client = data.client;
-            
+            const { client, totalDebt, sales } = clientsWithDebt[clientId];
             await this.show(
                 `💳 ${client.name} - Crédito Activo`,
-                `Deuda total: ${Utils.formatCurrency(data.totalDebt)} (${data.sales.length} venta${data.sales.length > 1 ? 's' : ''})`,
+                `Deuda: ${typeof Utils !== 'undefined' ? Utils.formatCurrency(totalDebt) : totalDebt} (${sales.length} venta${sales.length > 1 ? 's' : ''})`,
                 {
                     tag: `credit-${clientId}`,
                     requireInteraction: true,
                     vibrate: [300, 100, 300],
-                    data: { 
-                        type: 'credit',
-                        clientId: clientId,
-                        clientName: client.name,
-                        totalDebt: data.totalDebt,
-                        sales: data.sales.map(s => s.id)
-                    },
-                    actions: [
-                        { 
-                            action: 'pay-full', 
-                            title: `💵 Pagar ${Utils.formatCurrency(data.totalDebt)}`,
-                            icon: './icons/favicon.pub/favicon-48x48.png'
-                        },
-                        { 
-                            action: 'pay-partial', 
-                            title: '💰 Abono Parcial',
-                            icon: './icons/favicon.pub/favicon-48x48.png',
-                            type: 'text',
-                            placeholder: 'Monto del abono'
-                        },
-                        { 
-                            action: 'view', 
-                            title: '👁️ Ver Detalles' 
-                        }
-                    ]
+                    data: { type: 'credit', clientId, clientName: client.name, totalDebt, sales: sales.map(s => s.id) }
                 }
             );
         }
@@ -354,143 +219,46 @@ const PushNotifications = {
         return Object.keys(clientsWithDebt).length > 0;
     },
 
-    // Verificar backup pendiente
-    // Notificación de backup exitoso
+    // Notificaciones de eventos
     async notifyBackupSuccess(fileName) {
-        await this.show(
-            '✅ Backup Enviado a Telegram',
-            `Archivo: ${fileName}`,
-            {
-                tag: 'telegram-backup-success',
-                requireInteraction: false,
-                vibrate: [200, 100, 200]
-            }
-        );
+        await this.show('✅ Backup Enviado', `Archivo: ${fileName}`, { tag: 'backup-success' });
     },
-
-    // Notificación de error en backup
     async notifyBackupError(error) {
-        await this.show(
-            '❌ Error en Backup a Telegram',
-            `No se pudo enviar: ${error}`,
-            {
-                tag: 'telegram-backup-error',
-                requireInteraction: true,
-                vibrate: [500, 200, 500, 200, 500]
-            }
-        );
+        await this.show('❌ Error en Backup', `No se pudo enviar: ${error}`, { tag: 'backup-error', requireInteraction: true });
     },
-
-    // Notificación de cliente creado
     async notifyClientCreated(clientName) {
-        await this.show(
-            '👥 Cliente Agregado',
-            `"${clientName}" registrado exitosamente`,
-            { tag: 'client-created' }
-        );
+        await this.show('👥 Cliente Agregado', `"${clientName}" registrado`, { tag: 'client-created' });
     },
-
-    // Notificación de venta completada
     async notifySaleCompleted(amount, clientName) {
-        await this.show(
-            '💰 Venta Registrada',
-            `${Utils.formatCurrency(amount)} - ${clientName}`,
-            { tag: 'sale-completed' }
-        );
+        await this.show('💰 Venta Registrada', `${typeof Utils !== 'undefined' ? Utils.formatCurrency(amount) : amount} - ${clientName}`, { tag: 'sale-completed' });
     },
-
-    // Notificación de pedido entregado
     async notifyOrderDelivered(clientName) {
-        await this.show(
-            '📦 Pedido Entregado',
-            `Pedido de ${clientName} completado`,
-            { tag: 'order-delivered' }
-        );
+        await this.show('📦 Pedido Entregado', `Pedido de ${clientName} completado`, { tag: 'order-delivered' });
     },
-
-    // Notificación de pago recibido
     async notifyPaymentReceived(amount, clientName) {
-        await this.show(
-            '💵 Pago Recibido',
-            `${Utils.formatCurrency(amount)} de ${clientName}`,
-            { tag: 'payment-received' }
-        );
+        await this.show('💵 Pago Recibido', `${typeof Utils !== 'undefined' ? Utils.formatCurrency(amount) : amount} de ${clientName}`, { tag: 'payment-received' });
     },
 
     // Prueba del sistema
     async test() {
-        console.log('🧪 ========================================');
-        console.log('🧪 PROBANDO SISTEMA DE NOTIFICACIONES');
-        console.log('🧪 ========================================');
-        
-        // Verificar estado del sistema
-        console.log('📋 Estado del sistema:');
-        console.log('   - Inicializado:', this.isInitialized);
-        console.log('   - Permisos:', this.permission);
-        console.log('   - Service Worker:', this.swRegistration ? 'Disponible' : 'No disponible');
-        console.log('   - Notification API:', 'Notification' in window ? 'Disponible' : 'No disponible');
-        
-        if (!this.isInitialized) {
-            console.warn('⚠️ Sistema no inicializado - Inicializando ahora...');
-            const initialized = await this.init();
-            if (!initialized) {
-                console.error('❌ No se pudo inicializar el sistema');
-                alert('❌ No se pudo inicializar el sistema de notificaciones. Revisa la consola para más detalles.');
-                return false;
-            }
-        }
-        
         const granted = await this.requestPermission();
-        if (!granted) {
-            alert('❌ Necesitas conceder permisos de notificación para probar el sistema.\n\nPara habilitar:\n1. Haz clic en el ícono de candado en la barra de direcciones\n2. Busca "Notificaciones" y cambia a "Permitir"\n3. Recarga la página');
-            return false;
-        }
+        if (!granted) return false;
 
-        console.log('✅ Sistema listo - Enviando notificaciones de prueba...');
-
-        // Prueba 1
-        console.log('🧪 Enviando prueba 1/3...');
-        await this.show(
-            '🧪 Prueba 1/3',
-            'Notificación básica funcionando',
-            { tag: 'test-1' }
-        );
-
-        // Prueba 2
-        setTimeout(async () => {
-            console.log('🧪 Enviando prueba 2/3...');
-            await this.show(
-                '🧪 Prueba 2/3',
-                'Notificación con vibración',
-                { tag: 'test-2', vibrate: [300, 100, 300] }
-            );
-        }, 2000);
-
-        // Prueba 3
-        setTimeout(async () => {
-            console.log('🧪 Enviando prueba 3/3...');
-            await this.show(
-                '🧪 Prueba 3/3',
-                'Sistema funcionando correctamente ✅',
-                {
-                    tag: 'test-3',
-                    requireInteraction: true,
-                    vibrate: [200, 100, 200, 100, 200]
-                }
-            );
-            
-            console.log('🧪 ========================================');
-            console.log('🧪 PRUEBA COMPLETADA');
-            console.log('🧪 Si no viste las notificaciones, revisa:');
-            console.log('🧪 1. Permisos del navegador');
-            console.log('🧪 2. Configuración de "No molestar" del sistema');
-            console.log('🧪 3. Logs de errores arriba');
-            console.log('🧪 ========================================');
-        }, 4000);
+        await this.show('🧪 Prueba 1/3', 'Notificación básica funcionando', { tag: 'test-1' });
+        setTimeout(() => this.show('🧪 Prueba 2/3', 'Notificación con vibración', { tag: 'test-2', vibrate: [300, 100, 300] }), 2000);
+        setTimeout(() => this.show('🧪 Prueba 3/3', 'Sistema funcionando ✅', { tag: 'test-3', requireInteraction: true }), 4000);
 
         return true;
+    },
+
+    // Convertir VAPID public key de base64url a Uint8Array
+    _urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from(rawData, c => c.charCodeAt(0));
     }
 };
 
-// Alias para compatibilidad con código existente
+// Alias para compatibilidad
 const NotificationsModule = PushNotifications;

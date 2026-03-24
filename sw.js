@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.16'; // Eliminación de cuenta y datos
+const APP_VERSION = '7.14.17'; // Dias pendientes de merma por mes
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -2711,6 +2711,19 @@ async cleanDuplicatePayments() {
             <div class="page active" id="merma-page">
                 <h2><i class="fas fa-calculator"></i> Cálculo de Merma</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Calcula el costo real por lb de pollo pelado</p>
+
+                <!-- Días pendientes del mes -->
+                <div class="card">
+                    <h3><i class="fas fa-calendar-check"></i> Días del mes</h3>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+                        <input type="month" class="form-input" id="merma-month-filter"
+                               value="${this.currentDate.substring(0,7)}"
+                               style="max-width:180px;"
+                               onchange="App.renderMermaDaysList(this.value)">
+                        <span style="font-size:0.85rem; color:var(--gray);">Selecciona el mes a revisar</span>
+                    </div>
+                    <div id="merma-days-list"></div>
+                </div>
                 
                 <div class="card">
                     <h3><i class="fas fa-chart-line"></i> Datos de Producción</h3>
@@ -2848,10 +2861,95 @@ async cleanDuplicatePayments() {
             if (selectedMermaRecord) {
                 setTimeout(() => this.updateMermaPreview(), 100);
             }
+
+            // Renderizar lista de días del mes
+            this.renderMermaDaysList(this.currentDate.substring(0, 7));
         }
     },
 
-    // NUEVO: Actualizar vista previa de merma en tiempo real
+    // Lista de días del mes con estado de merma calculada
+    renderMermaDaysList(yearMonth) {
+        const container = document.getElementById('merma-days-list');
+        if (!container) return;
+
+        const today = Utils.getTodayDate();
+        const parts = yearMonth.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+
+        const lastDay = new Date(year, month, 0).getDate();
+        const days = [];
+
+        for (let d = 1; d <= lastDay; d++) {
+            const dateStr = yearMonth + '-' + String(d).padStart(2, '0');
+            if (dateStr > today) break;
+            const record = MermaModule.getMermaRecordByDate(dateStr);
+            const hasSales = SalesModule.getSalesByDate(dateStr).length > 0;
+            days.push({ date: dateStr, record, hasSales });
+        }
+
+        if (days.length === 0) {
+            container.innerHTML = '<p style="color:var(--gray); font-size:0.9rem; text-align:center; padding:10px;">No hay días registrados en este mes.</p>';
+            return;
+        }
+
+        const pending = days.filter(function(d) { return !d.record; }).length;
+        const done = days.filter(function(d) { return d.record; }).length;
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+        let html = '<div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">'
+            + '<span style="display:flex; align-items:center; gap:6px; font-size:0.85rem;"><span style="width:12px; height:12px; border-radius:50%; background:var(--success); display:inline-block;"></span>Calculada (' + done + ')</span>'
+            + '<span style="display:flex; align-items:center; gap:6px; font-size:0.85rem;"><span style="width:12px; height:12px; border-radius:50%; background:var(--danger); display:inline-block;"></span>Pendiente (' + pending + ')</span>'
+            + '<span style="display:flex; align-items:center; gap:6px; font-size:0.85rem;"><span style="width:12px; height:12px; border-radius:50%; background:var(--gray); display:inline-block; opacity:0.4;"></span>Sin ventas</span>'
+            + '</div>'
+            + '<ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px;">';
+
+        for (let i = 0; i < days.length; i++) {
+            const day = days[i];
+            const dayName = dayNames[new Date(day.date + 'T12:00:00').getDay()];
+            const dayNum = day.date.split('-')[2];
+            const isToday = day.date === today;
+            const todayBadge = isToday ? '<span style="font-size:0.75rem; background:var(--primary); color:white; padding:2px 8px; border-radius:10px;">Hoy</span>' : '';
+
+            if (day.record) {
+                const price = day.record.realCostPerLb ? Utils.formatCurrency(day.record.realCostPerLb) + '/lb' : '';
+                html += '<li style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#E8F5E9; border-left:4px solid var(--success);">'
+                    + '<span style="font-weight:700; min-width:42px; color:var(--success);">' + dayName + ' ' + dayNum + '</span>'
+                    + '<span style="flex:1; font-size:0.88rem; color:#2e7d32;"><i class="fas fa-check-circle"></i> Merma calculada' + (price ? ' — ' + price : '') + '</span>'
+                    + todayBadge
+                    + '</li>';
+            } else if (day.hasSales) {
+                html += '<li onclick="App.goToMermaDate(\'' + day.date + '\')" style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#FFEBEE; border-left:4px solid var(--danger); cursor:pointer;">'
+                    + '<span style="font-weight:700; min-width:42px; color:var(--danger);">' + dayName + ' ' + dayNum + '</span>'
+                    + '<span style="flex:1; font-size:0.88rem; color:#c62828;"><i class="fas fa-exclamation-circle"></i> Pendiente — toca para calcular</span>'
+                    + todayBadge
+                    + '<i class="fas fa-chevron-right" style="color:var(--danger); font-size:0.8rem;"></i>'
+                    + '</li>';
+            } else {
+                html += '<li style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#f5f5f5; border-left:4px solid #ccc; opacity:0.6;">'
+                    + '<span style="font-weight:700; min-width:42px; color:var(--gray);">' + dayName + ' ' + dayNum + '</span>'
+                    + '<span style="flex:1; font-size:0.88rem; color:var(--gray);"><i class="fas fa-minus-circle"></i> Sin ventas</span>'
+                    + todayBadge
+                    + '</li>';
+            }
+        }
+
+        html += '</ul>';
+        container.innerHTML = html;
+    },
+
+    // Navegar a merma con fecha preseleccionada
+    goToMermaDate(date) {
+        this.currentDate = date;
+        this.loadMermaPage();
+        // Scroll al formulario
+        setTimeout(() => {
+            const form = document.getElementById('merma-form');
+            if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    },
+
+    // Actualizar vista previa de merma en tiempo real
     updateMermaPreview() {
         if (this._updatingMerma) return;
         this._updatingMerma = true;

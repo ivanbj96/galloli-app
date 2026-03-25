@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.18'; // Web Push VAPID para Play Store
+const APP_VERSION = '7.14.19'; // Fix VAPID JWK + push automático desde cron
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

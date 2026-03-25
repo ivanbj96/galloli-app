@@ -311,10 +311,74 @@ async function runScheduledBackup(env) {
     
     console.log('✅ Backup automático completado');
     
+    // Enviar notificaciones push de recordatorio (merma + créditos)
+    await runScheduledPushNotifications(env);
+    
   } catch (error) {
     console.error('❌ Error en backup automático:', error);
     console.error('Stack:', error.stack);
     throw error;
+  }
+}
+
+// Notificaciones push programadas: merma sin calcular + créditos pendientes
+async function runScheduledPushNotifications(env) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const businesses = await env.DB.prepare(`
+      SELECT DISTINCT b.id, b.name FROM businesses b
+      INNER JOIN push_subscriptions ps ON ps.business_id = b.id
+      WHERE ps.is_active = 1
+    `).all();
+
+    for (const business of (businesses.results || [])) {
+      try {
+        // Verificar si hay ventas hoy pero no merma calculada
+        const salesToday = await env.DB.prepare(`
+          SELECT COUNT(*) as cnt FROM sync_data
+          WHERE business_id = ? AND data_type = 'sales' AND deleted = 0
+          AND json_extract(data, '$.date') = ?
+        `).bind(business.id, today).first();
+
+        const mermaToday = await env.DB.prepare(`
+          SELECT COUNT(*) as cnt FROM sync_data
+          WHERE business_id = ? AND data_type = 'mermaRecords' AND deleted = 0
+          AND json_extract(data, '$.date') = ?
+        `).bind(business.id, today).first();
+
+        if ((salesToday?.cnt || 0) > 0 && (mermaToday?.cnt || 0) === 0) {
+          await sendPushToAllSubs(
+            business.id,
+            '⚠️ Merma Sin Calcular',
+            `Tienes ${salesToday.cnt} ventas hoy. ¡Calcula la merma!`,
+            { tag: 'merma-urgent', action: 'calculate-merma' },
+            env
+          );
+        }
+
+        // Verificar créditos pendientes
+        const credits = await env.DB.prepare(`
+          SELECT COUNT(*) as cnt FROM sync_data
+          WHERE business_id = ? AND data_type = 'sales' AND deleted = 0
+          AND json_extract(data, '$.isPaid') = 0
+          AND json_extract(data, '$.paymentType') = 'credit'
+        `).bind(business.id).first();
+
+        if ((credits?.cnt || 0) > 0) {
+          await sendPushToAllSubs(
+            business.id,
+            '💳 Créditos Pendientes',
+            `Tienes ${credits.cnt} venta${credits.cnt > 1 ? 's' : ''} a crédito sin cobrar`,
+            { tag: 'credits-pending', action: 'view-credits' },
+            env
+          );
+        }
+      } catch (e) {
+        console.error(`Push notifications error for ${business.name}:`, e.message);
+      }
+    }
+  } catch (e) {
+    console.error('runScheduledPushNotifications error:', e.message);
   }
 }
 
@@ -1740,7 +1804,33 @@ async function handlePush(request, env, path, corsHeaders, currentUser) {
   return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
 }
 
-// Enviar Web Push usando VAPID (implementación manual sin librerías)
+// Enviar push a todas las suscripciones activas de un negocio
+async function sendPushToAllSubs(businessId, title, body, data = {}, env) {
+  try {
+    const subs = await env.DB.prepare(`
+      SELECT endpoint, p256dh, auth FROM push_subscriptions
+      WHERE business_id = ? AND is_active = 1
+    `).bind(businessId).all();
+
+    const payload = JSON.stringify({ title, body, data, tag: data.tag || 'galloli' });
+
+    for (const sub of (subs.results || [])) {
+      try {
+        const ok = await sendWebPush(sub.endpoint, sub.p256dh, sub.auth, payload, env);
+        if (!ok) {
+          await env.DB.prepare(`UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?`)
+            .bind(sub.endpoint).run();
+        }
+      } catch (e) {
+        console.error('Push error:', e.message);
+      }
+    }
+  } catch (e) {
+    console.error('sendPushToAllSubs error:', e.message);
+  }
+}
+
+// Enviar Web Push usando VAPID
 async function sendWebPush(endpoint, p256dh, auth, payload, env) {
   try {
     const vapidPublicKey = env.VAPID_PUBLIC_KEY;
@@ -1759,16 +1849,24 @@ async function sendWebPush(endpoint, p256dh, auth, payload, env) {
     const encodedPayload = btoa(JSON.stringify(vapidPayload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     const signingInput = `${encodedHeader}.${encodedPayload}`;
 
-    // Importar clave privada VAPID (formato raw base64url → pkcs8)
-    const privKeyBytes = base64urlToBytes(vapidPrivateKey);
-    const pubKeyBytes = base64urlToBytes(vapidPublicKey);
-
-    // Construir clave privada en formato pkcs8 para ES256
-    const pkcs8Key = buildPkcs8(privKeyBytes, pubKeyBytes);
+    // Importar clave privada VAPID usando JWK
+    // La VAPID_PUBLIC_KEY es la clave uncompressed (65 bytes: 0x04 + 32 x + 32 y)
+    // Hay que extraer x e y de los bytes, no del string
+    const pubKeyBytes = base64urlToBytes(vapidPublicKey); // 65 bytes: [0x04, x(32), y(32)]
+    const xBytes = pubKeyBytes.slice(1, 33);
+    const yBytes = pubKeyBytes.slice(33, 65);
+    const bytesToBase64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
     const privateKey = await crypto.subtle.importKey(
-      'pkcs8',
-      pkcs8Key,
+      'jwk',
+      {
+        kty: 'EC',
+        crv: 'P-256',
+        d: vapidPrivateKey,
+        x: bytesToBase64url(xBytes),
+        y: bytesToBase64url(yBytes),
+        key_ops: ['sign']
+      },
       { name: 'ECDSA', namedCurve: 'P-256' },
       false,
       ['sign']
@@ -1897,27 +1995,6 @@ async function hkdf(ikm, salt, info, length) {
   const infoBytes = info instanceof Uint8Array ? info : new TextEncoder().encode(info);
   const t = new Uint8Array(await crypto.subtle.sign('HMAC', prkKey, concat(infoBytes, new Uint8Array([1]))));
   return t.slice(0, length);
-}
-
-// Construir PKCS8 desde raw private key (32 bytes) + public key (65 bytes)
-function buildPkcs8(privKeyBytes, pubKeyBytes) {
-  // PKCS8 wrapper para EC P-256 private key
-  const ecPrivateKey = concat(
-    new Uint8Array([0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20]),
-    privKeyBytes,
-    new Uint8Array([0xa1, 0x44, 0x03, 0x42, 0x00]),
-    pubKeyBytes
-  );
-  const pkcs8 = concat(
-    new Uint8Array([
-      0x30, 0x81, 0x87, 0x02, 0x01, 0x00, 0x30, 0x13,
-      0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02,
-      0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d,
-      0x03, 0x01, 0x07, 0x04, 0x6d, 0x30, 0x6b
-    ]),
-    ecPrivateKey
-  );
-  return pkcs8;
 }
 
 // Helpers

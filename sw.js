@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.20'; // Toggle notificaciones en sidebar
+const APP_VERSION = '7.14.21'; // Crons push 8AM, 12PM, 6PM, 10PM Ecuador
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

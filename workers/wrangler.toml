@@ -21,7 +21,10 @@ class_name = "SessionManager"
 tag = "v1"
 new_sqlite_classes = ["SessionManager"]
 
-# Cron Triggers - Backup automático a las 10 PM hora de Ecuador (UTC-5)
-# 10 PM Ecuador = 3 AM UTC del día siguiente
+# Cron Triggers (hora Ecuador = UTC-5)
+# 10 PM Ecuador = 03:00 UTC → backup + push noche
+# 8 AM Ecuador  = 13:00 UTC → push créditos mañana
+# 12 PM Ecuador = 17:00 UTC → push merma mediodía
+# 6 PM Ecuador  = 23:00 UTC → push merma tarde
 [triggers]
-crons = ["0 3 * * *"]
+crons = ["0 3 * * *", "0 13 * * *", "0 17 * * *", "0 23 * * *"]

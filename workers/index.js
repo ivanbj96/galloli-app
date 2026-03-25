@@ -133,10 +133,24 @@ export default {
     }
   },
   
-  // Cron trigger para backup automático a las 10 PM hora de Ecuador (UTC-5)
+  // Cron triggers
   async scheduled(event, env, ctx) {
-    console.log('🕙 Ejecutando backup automático programado...');
-    await runScheduledBackup(env);
+    const cron = event.cron;
+    console.log(`⏰ Cron ejecutado: ${cron}`);
+
+    if (cron === '0 3 * * *') {
+      // 10 PM Ecuador — backup + push noche (merma + créditos)
+      await runScheduledBackup(env);
+    } else if (cron === '0 13 * * *') {
+      // 8 AM Ecuador — recordatorio créditos pendientes del día
+      await runScheduledPushNotifications(env, { merma: false, creditos: true });
+    } else if (cron === '0 17 * * *') {
+      // 12 PM Ecuador — recordatorio merma si no se calculó
+      await runScheduledPushNotifications(env, { merma: true, creditos: false });
+    } else if (cron === '0 23 * * *') {
+      // 6 PM Ecuador — último aviso merma + créditos
+      await runScheduledPushNotifications(env, { merma: true, creditos: true });
+    }
   }
 };
 
@@ -312,7 +326,7 @@ async function runScheduledBackup(env) {
     console.log('✅ Backup automático completado');
     
     // Enviar notificaciones push de recordatorio (merma + créditos)
-    await runScheduledPushNotifications(env);
+    await runScheduledPushNotifications(env, { merma: true, creditos: true });
     
   } catch (error) {
     console.error('❌ Error en backup automático:', error);
@@ -322,7 +336,7 @@ async function runScheduledBackup(env) {
 }
 
 // Notificaciones push programadas: merma sin calcular + créditos pendientes
-async function runScheduledPushNotifications(env) {
+async function runScheduledPushNotifications(env, { merma = true, creditos = true } = {}) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const businesses = await env.DB.prepare(`

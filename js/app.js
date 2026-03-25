@@ -48,6 +48,9 @@ const App = {
         // INICIALIZAR TOGGLE DE MODO DESARROLLO INMEDIATAMENTE
         this.initDevModeToggle();
         
+        // Inicializar toggle de notificaciones
+        setTimeout(() => App.initNotifToggle(), 500);
+        
         // SINCRONIZAR CON SERVICE WORKER
         this.syncDevModeWithServiceWorker();
         
@@ -5567,26 +5570,92 @@ window.addEventListener('pagehide', () => {
 
 
 
-// Métodos para notificaciones push
-App.enableNotifications = async function() {
-    const enabled = await NotificationsModule.enable();
-    if (enabled) {
-        Utils.showNotification('✅ Notificaciones activadas correctamente', 'success', 3000);
+// Métodos para el toggle de notificaciones en el sidebar
+App.initNotifToggle = async function() {
+    const sw = document.getElementById('notif-switch');
+    const status = document.getElementById('notif-status-sidebar');
+    if (!sw || !status) return;
+
+    if (!('Notification' in window) || !('PushManager' in window)) {
+        status.textContent = 'No soportado';
+        sw.disabled = true;
+        return;
+    }
+
+    if (Notification.permission === 'denied') {
+        status.textContent = 'Bloqueado en ajustes del sistema';
+        sw.checked = false;
+        sw.disabled = true;
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        // Verificar si hay suscripción activa
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        sw.checked = !!sub;
+        sw.disabled = false;
+        status.textContent = sub ? 'Activas' : 'Toca para activar';
+        status.style.color = sub ? 'rgba(76, 175, 80, 0.9)' : '';
     } else {
-        Utils.showNotification('❌ No se pudieron activar las notificaciones', 'error', 3000);
+        sw.checked = false;
+        sw.disabled = false;
+        status.textContent = 'Toca para activar';
     }
 };
 
-App.disableNotifications = function() {
-    NotificationsModule.disable();
-    Utils.showNotification('🔕 Notificaciones desactivadas', 'warning', 3000);
+App.onNotifSwitchChange = async function(checked) {
+    const sw = document.getElementById('notif-switch');
+    const status = document.getElementById('notif-status-sidebar');
+
+    if (checked) {
+        sw.disabled = true;
+        status.textContent = 'Activando...';
+        const ok = await PushNotifications.requestPermission();
+        if (ok) {
+            status.textContent = 'Activas';
+            status.style.color = 'rgba(76, 175, 80, 0.9)';
+            sw.checked = true;
+            Utils.showNotification('🔔 Notificaciones activadas', 'success', 3000);
+        } else {
+            sw.checked = false;
+            if (Notification.permission === 'denied') {
+                status.textContent = 'Bloqueado en ajustes del sistema';
+                sw.disabled = true;
+            } else {
+                status.textContent = 'Toca para activar';
+                status.style.color = '';
+            }
+        }
+        sw.disabled = Notification.permission === 'denied';
+    } else {
+        // Desuscribir
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+                // Notificar al servidor
+                const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : null;
+                if (token) {
+                    fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/subscribe', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ endpoint: sub.endpoint })
+                    }).catch(() => {});
+                }
+                await sub.unsubscribe();
+            }
+        } catch (e) { /* silencioso */ }
+        status.textContent = 'Toca para activar';
+        status.style.color = '';
+        Utils.showNotification('🔕 Notificaciones desactivadas', 'info', 2000);
+    }
 };
 
-App.testNotification = function() {
-    NotificationsModule.showNotification(
-        '🐔 Notificación de Prueba',
-        'Las notificaciones están funcionando correctamente',
-        '✅',
-        'test-notification'
-    );
+App.toggleNotificationsFromSidebar = function() {
+    const sw = document.getElementById('notif-switch');
+    if (sw && !sw.disabled) {
+        sw.checked = !sw.checked;
+        App.onNotifSwitchChange(sw.checked);
+    }
 };

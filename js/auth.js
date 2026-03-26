@@ -29,7 +29,7 @@ class AuthManager {
         await this.loadSession();
         
         this.initialized = true;
-        console.log('✅ Sistema de autenticación inicializado');
+        console.log('✅ Sistema de autenticacion inicializado');
     }
 
     async waitForIndexedDB() {
@@ -71,6 +71,23 @@ class AuthManager {
                 this.user = user;
                 this.business = business;
                 console.log('✅ Sesión cargada:', user.name);
+
+                // Re-registrar suscripción push si ya tiene permiso
+                setTimeout(async () => {
+                    try {
+                        const perm = typeof Notification !== 'undefined' ? Notification.permission : 'N/A';
+                        console.log('🔔 Estado permiso push al cargar sesion:', perm);
+                        if (typeof PushNotifications !== 'undefined' && perm === 'granted') {
+                            const reg = await navigator.serviceWorker.ready;
+                            const sub = await reg.pushManager.getSubscription();
+                            if (sub) {
+                                console.log('🔔 Re-registrando suscripción push al cargar sesión...');
+                                await PushNotifications._saveSubscriptionToServer(sub, 1);
+                            }
+                        }
+                    } catch(e) { /* silencioso */ }
+                }, 2000);
+
                 return true;
             } else {
                 console.log('ℹ️ No hay sesión guardada');
@@ -82,14 +99,28 @@ class AuthManager {
     }
 
     async saveSession(token, user, business) {
-        this.token = token;
-        this.user = user;
-        this.business = business;
-        
-        await this.saveToDB(AUTH_CONFIG.TOKEN_KEY, token);
-        await this.saveToDB(AUTH_CONFIG.USER_KEY, user);
-        await this.saveToDB(AUTH_CONFIG.BUSINESS_KEY, business);
-    }
+            this.token = token;
+            this.user = user;
+            this.business = business;
+            await this.saveToDB(AUTH_CONFIG.TOKEN_KEY, token);
+            await this.saveToDB(AUTH_CONFIG.USER_KEY, user);
+            await this.saveToDB(AUTH_CONFIG.BUSINESS_KEY, business);
+
+            // Si ya hay suscripción push en el navegador, registrarla en el servidor
+            setTimeout(async () => {
+                try {
+                    if (typeof PushNotifications !== 'undefined' && Notification.permission === 'granted') {
+                        const reg = await navigator.serviceWorker.ready;
+                        const sub = await reg.pushManager.getSubscription();
+                        if (sub) {
+                            console.log('🔔 Re-registrando suscripción push tras login...');
+                            await PushNotifications._saveSubscriptionToServer(sub, 1);
+                        }
+                    }
+                } catch(e) { /* silencioso */ }
+            }, 1500);
+        }
+
 
     async clearSession() {
         this.token = null;
@@ -137,7 +168,7 @@ class AuthManager {
 
     async verifyTelegramCode(telegramId, code, telegramUsername, telegramFirstName) {
         try {
-            console.log('� Verificando código...');
+            console.log('� Verificando código...');
             
             const response = await fetch(`${AUTH_CONFIG.API_URL}/api/auth/telegram/verify`, {
                 method: 'POST',

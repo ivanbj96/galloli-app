@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.25'; // Auto re-registro push al cargar sesion
+const APP_VERSION = '7.14.26'; // Fix notifyBackupCreated + log estado push
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

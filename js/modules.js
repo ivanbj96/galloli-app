@@ -3151,9 +3151,9 @@ const BackupModule = {
         localStorage.setItem('lastBackup', new Date().toISOString());
         
         // Notificar backup creado (sin bloquear si falla)
-        if (typeof NotificationsModule !== 'undefined') {
+        if (typeof PushNotifications !== 'undefined') {
             try {
-                NotificationsModule.notifyBackupCreated().catch(err => {
+                PushNotifications.notifyBackupSuccess('backup').catch(err => {
                     console.warn('No se pudo enviar notificación:', err);
                 });
             } catch (err) {

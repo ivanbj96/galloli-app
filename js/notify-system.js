@@ -108,23 +108,43 @@ const PushNotifications = {
         }
     },
 
-    // Guardar suscripción en el Worker
-    async _saveSubscriptionToServer(subscription) {
-        try {
-            const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : null;
-            if (!token) return; // Sin sesión, no guardar
+    // Guardar suscripción en el Worker (con reintentos si no hay token aún)
+    async _saveSubscriptionToServer(subscription, retries = 5) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : null;
+                if (!token) {
+                    if (i < retries - 1) {
+                        await new Promise(r => setTimeout(r, 2000)); // esperar 2s y reintentar
+                        continue;
+                    }
+                    console.warn('🔔 Sin token JWT, suscripción guardada solo en navegador');
+                    return false;
+                }
 
-            await fetch(`${WORKER_URL}/api/push/subscribe`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ subscription: subscription.toJSON() })
-            });
-        } catch (e) {
-            console.warn('No se pudo guardar suscripción en servidor:', e.message);
+                const res = await fetch(`${WORKER_URL}/api/push/subscribe`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ subscription: subscription.toJSON() })
+                });
+
+                if (res.ok) {
+                    console.log('✅ Suscripción push guardada en servidor');
+                    return true;
+                } else {
+                    const err = await res.text();
+                    console.error('❌ Error guardando suscripción:', res.status, err);
+                    return false;
+                }
+            } catch (e) {
+                console.warn(`Intento ${i+1} fallido:`, e.message);
+                if (i < retries - 1) await new Promise(r => setTimeout(r, 2000));
+            }
         }
+        return false;
     },
 
     // Iniciar verificaciones periódicas locales
@@ -244,11 +264,38 @@ const PushNotifications = {
         const granted = await this.requestPermission();
         if (!granted) return false;
 
-        await this.show('🧪 Prueba 1/3', 'Notificación básica funcionando', { tag: 'test-1' });
-        setTimeout(() => this.show('🧪 Prueba 2/3', 'Notificación con vibración', { tag: 'test-2', vibrate: [300, 100, 300] }), 2000);
-        setTimeout(() => this.show('🧪 Prueba 3/3', 'Sistema funcionando ✅', { tag: 'test-3', requireInteraction: true }), 4000);
+        // Prueba local (app abierta)
+        await this.show('🧪 Prueba local', 'Notificación local funcionando ✅', { tag: 'test-local' });
 
+        // Prueba push real desde servidor (app puede estar cerrada)
+        setTimeout(() => this.testServerPush(), 3000);
         return true;
+    },
+
+    // Enviar push de prueba desde el servidor (verifica todo el pipeline VAPID)
+    async testServerPush() {
+        try {
+            const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : null;
+            if (!token) {
+                console.warn('Sin token para test push');
+                return false;
+            }
+            const res = await fetch(`${WORKER_URL}/api/push/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    title: '🔔 Push Real Funcionando',
+                    body: 'Esta notificación llegó desde el servidor ✅',
+                    tag: 'test-server-push'
+                })
+            });
+            const data = await res.json();
+            console.log('Test push resultado:', data);
+            return data.success;
+        } catch (e) {
+            console.error('testServerPush error:', e.message);
+            return false;
+        }
     },
 
     // Convertir VAPID public key de base64url a Uint8Array

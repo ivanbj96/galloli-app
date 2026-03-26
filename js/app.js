@@ -48,8 +48,8 @@ const App = {
         // INICIALIZAR TOGGLE DE MODO DESARROLLO INMEDIATAMENTE
         this.initDevModeToggle();
         
-        // Inicializar toggle de notificaciones
-        setTimeout(() => App.initNotifToggle(), 500);
+        // Inicializar toggle de notificaciones (después de que SW esté listo)
+        setTimeout(() => App.initNotifToggle(), 3000);
         
         // SINCRONIZAR CON SERVICE WORKER
         this.syncDevModeWithServiceWorker();
@@ -5590,9 +5590,28 @@ App.initNotifToggle = async function() {
     }
 
     if (Notification.permission === 'granted') {
-        // Verificar si hay suscripción activa
         const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
+        let sub = await reg.pushManager.getSubscription();
+
+        if (!sub) {
+            // Permiso concedido pero sin suscripción — re-suscribir automáticamente
+            try {
+                const res = await fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/vapid-key');
+                const { publicKey } = await res.json();
+                sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: PushNotifications._urlBase64ToUint8Array(publicKey)
+                });
+                await PushNotifications._saveSubscriptionToServer(sub, 3);
+                console.log('🔔 Suscripcion push restaurada automaticamente');
+            } catch(e) {
+                console.warn('No se pudo restaurar suscripcion push:', e.message);
+            }
+        } else {
+            // Suscripción existe — asegurar que esté registrada en el servidor
+            await PushNotifications._saveSubscriptionToServer(sub, 1);
+        }
+
         sw.checked = !!sub;
         sw.disabled = false;
         status.textContent = sub ? 'Activas' : 'Toca para activar';

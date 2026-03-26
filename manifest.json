@@ -71,6 +71,7 @@
 
   "scope_extensions": [
     {
+      "type": "origin",
       "origin": "https://galloli.pages.dev"
     }
   ],

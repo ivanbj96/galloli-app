@@ -66,7 +66,12 @@ const PushNotifications = {
         }
 
         if (!this.swRegistration) {
-            this.swRegistration = await navigator.serviceWorker.ready;
+            try {
+                this.swRegistration = await navigator.serviceWorker.ready;
+            } catch(e) {
+                alert('Service Worker no disponible. Recarga la página.');
+                return false;
+            }
         }
 
         await this._setupSubscription();
@@ -79,6 +84,10 @@ const PushNotifications = {
     // Obtener VAPID public key del servidor y suscribirse
     async _setupSubscription() {
         try {
+            // Siempre obtener el SW registration fresco
+            if (!('serviceWorker' in navigator)) throw new Error('Service Worker no soportado');
+            this.swRegistration = await navigator.serviceWorker.ready;
+
             // Obtener VAPID public key
             const res = await fetch(`${WORKER_URL}/api/push/vapid-key`);
             if (!res.ok) throw new Error('No se pudo obtener VAPID key');

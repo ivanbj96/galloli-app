@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.29'; // Debug initNotifToggle + usar _setupSubscription
+const APP_VERSION = '7.14.30'; // Fix SW timeout en initNotifToggle y setupSubscription
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

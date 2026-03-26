@@ -5595,7 +5595,11 @@ App.initNotifToggle = async function() {
     if (Notification.permission === 'granted') {
         console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');
         try {
-            const reg = await navigator.serviceWorker.ready;
+            // Usar timeout para evitar que serviceWorker.ready se bloquee
+            const reg = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000))
+            ]);
             let sub = await reg.pushManager.getSubscription();
             console.log('🔔 Suscripcion existente:', !!sub);
 

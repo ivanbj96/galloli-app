@@ -84,9 +84,12 @@ const PushNotifications = {
     // Obtener VAPID public key del servidor y suscribirse
     async _setupSubscription() {
         try {
-            // Siempre obtener el SW registration fresco
+            // Siempre obtener el SW registration fresco con timeout
             if (!('serviceWorker' in navigator)) throw new Error('Service Worker no soportado');
-            this.swRegistration = await navigator.serviceWorker.ready;
+            this.swRegistration = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000))
+            ]);
 
             // Obtener VAPID public key
             const res = await fetch(`${WORKER_URL}/api/push/vapid-key`);

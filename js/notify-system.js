@@ -126,7 +126,7 @@ const PushNotifications = {
     async _saveSubscriptionToServer(subscription, retries = 5) {
         for (let i = 0; i < retries; i++) {
             try {
-                const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : null;
+                const token = typeof AuthManager !== 'undefined' ? AuthManager.token : null;
                 if (!token) {
                     if (i < retries - 1) {
                         await new Promise(r => setTimeout(r, 2000)); // esperar 2s y reintentar

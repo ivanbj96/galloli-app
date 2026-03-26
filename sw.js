@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.33'; // Registro SW al inicio de init para fix push
+const APP_VERSION = '7.14.34'; // Fix AuthManager.token en lugar de getToken()'
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -76,7 +76,6 @@ class AuthManager {
                 setTimeout(async () => {
                     try {
                         const perm = typeof Notification !== 'undefined' ? Notification.permission : 'N/A';
-                        console.log('🔔 Estado permiso push al cargar sesion:', perm);
                         if (typeof PushNotifications !== 'undefined' && perm === 'granted') {
                             const reg = await navigator.serviceWorker.ready;
                             const sub = await reg.pushManager.getSubscription();

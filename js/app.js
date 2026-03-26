@@ -5591,8 +5591,7 @@ App.initNotifToggle = async function() {
     }
 
     if (Notification.permission === 'granted') {
-        console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');
-        try {
+        console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');        try {
             // Usar la registration guardada, o esperar con ready
             const reg = App._swRegistration || await navigator.serviceWorker.ready;
             if (!reg) {

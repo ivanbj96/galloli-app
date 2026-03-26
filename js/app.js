@@ -5664,7 +5664,7 @@ App.onNotifSwitchChange = async function(checked) {
             const sub = await reg.pushManager.getSubscription();
             if (sub) {
                 // Notificar al servidor
-                const token = typeof AuthManager !== 'undefined' ? AuthManager.token : null;
+                const token = window.AuthManager ? window.AuthManager.token : null;
                 if (token) {
                     fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/subscribe', {
                         method: 'DELETE',

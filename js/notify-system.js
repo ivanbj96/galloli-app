@@ -67,10 +67,11 @@ const PushNotifications = {
 
         if (!this.swRegistration) {
             try {
-                this.swRegistration = await navigator.serviceWorker.getRegistration();
-                if (!this.swRegistration) throw new Error('No SW');
+                this.swRegistration = (typeof App !== 'undefined' && App._swRegistration)
+                    ? App._swRegistration
+                    : await navigator.serviceWorker.ready;
             } catch(e) {
-                alert('Service Worker no disponible. Recarga la página.');
+                alert('Service Worker no disponible. Recarga la pagina.');
                 return false;
             }
         }
@@ -85,10 +86,11 @@ const PushNotifications = {
     // Obtener VAPID public key del servidor y suscribirse
     async _setupSubscription() {
         try {
-            // getRegistration() es inmediato, no bloquea como serviceWorker.ready
             if (!('serviceWorker' in navigator)) throw new Error('Service Worker no soportado');
-            const reg = await navigator.serviceWorker.getRegistration();
-            if (!reg) throw new Error('No hay SW registrado');
+            // Usar registration guardada por App, o esperar con ready
+            const reg = (typeof App !== 'undefined' && App._swRegistration) 
+                ? App._swRegistration 
+                : await navigator.serviceWorker.ready;
             this.swRegistration = reg;
 
             // Obtener VAPID public key

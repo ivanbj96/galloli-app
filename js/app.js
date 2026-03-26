@@ -4751,6 +4751,9 @@ async cleanDuplicatePayments() {
                 navigator.serviceWorker.register('sw.js').then(
                     (registration) => {
                         console.log('ServiceWorker registrado: ', registration.scope);
+                        // Guardar registration para uso en push notifications
+                        App._swRegistration = registration;
+                        PushNotifications.swRegistration = registration;
                     },
                     (err) => {
                         console.log('Error al registrar ServiceWorker: ', err);
@@ -5595,8 +5598,8 @@ App.initNotifToggle = async function() {
     if (Notification.permission === 'granted') {
         console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');
         try {
-            // getRegistration() es inmediato, no espera como serviceWorker.ready
-            const reg = await navigator.serviceWorker.getRegistration();
+            // Usar la registration guardada, o esperar con ready
+            const reg = App._swRegistration || await navigator.serviceWorker.ready;
             if (!reg) {
                 console.warn('🔔 No hay SW registrado aun');
                 sw.checked = false;

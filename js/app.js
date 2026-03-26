@@ -5574,7 +5574,10 @@ window.addEventListener('pagehide', () => {
 App.initNotifToggle = async function() {
     const sw = document.getElementById('notif-switch');
     const status = document.getElementById('notif-status-sidebar');
-    if (!sw || !status) return;
+    if (!sw || !status) {
+        console.warn('🔔 Toggle notif: elementos no encontrados en DOM');
+        return;
+    }
 
     if (!('Notification' in window) || !('PushManager' in window)) {
         status.textContent = 'No soportado';
@@ -5590,32 +5593,33 @@ App.initNotifToggle = async function() {
     }
 
     if (Notification.permission === 'granted') {
-        const reg = await navigator.serviceWorker.ready;
-        let sub = await reg.pushManager.getSubscription();
+        console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            let sub = await reg.pushManager.getSubscription();
+            console.log('🔔 Suscripcion existente:', !!sub);
 
-        if (!sub) {
-            // Permiso concedido pero sin suscripción — re-suscribir automáticamente
-            try {
-                const res = await fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/vapid-key');
-                const { publicKey } = await res.json();
-                sub = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: PushNotifications._urlBase64ToUint8Array(publicKey)
-                });
-                await PushNotifications._saveSubscriptionToServer(sub, 3);
-                console.log('🔔 Suscripcion push restaurada automaticamente');
-            } catch(e) {
-                console.warn('No se pudo restaurar suscripcion push:', e.message);
+            if (!sub) {
+                // Re-suscribir automáticamente
+                console.log('🔔 Re-suscribiendo automaticamente...');
+                await PushNotifications._setupSubscription();
+                sub = await reg.pushManager.getSubscription();
+            } else {
+                // Ya existe — asegurar registro en servidor
+                await PushNotifications._saveSubscriptionToServer(sub, 1);
             }
-        } else {
-            // Suscripción existe — asegurar que esté registrada en el servidor
-            await PushNotifications._saveSubscriptionToServer(sub, 1);
-        }
 
-        sw.checked = !!sub;
-        sw.disabled = false;
-        status.textContent = sub ? 'Activas' : 'Toca para activar';
-        status.style.color = sub ? 'rgba(76, 175, 80, 0.9)' : '';
+            sw.checked = !!sub;
+            sw.disabled = false;
+            status.textContent = sub ? 'Activas' : 'Toca para activar';
+            status.style.color = sub ? 'rgba(76, 175, 80, 0.9)' : '';
+            console.log('🔔 Toggle notif estado final:', sw.checked ? 'activo' : 'inactivo');
+        } catch(e) {
+            console.error('🔔 Error en initNotifToggle:', e.message);
+            sw.checked = false;
+            sw.disabled = false;
+            status.textContent = 'Toca para activar';
+        }
     } else {
         sw.checked = false;
         sw.disabled = false;

@@ -12,6 +12,17 @@ const App = {
 
     // Inicialización
     async init() {
+        // Registrar Service Worker primero y guardar la registration
+        if ('serviceWorker' in navigator) {
+            try {
+                App._swRegistration = await navigator.serviceWorker.register('sw.js');
+                PushNotifications.swRegistration = App._swRegistration;
+                console.log('ServiceWorker registrado:', App._swRegistration.scope);
+            } catch(e) {
+                console.warn('Error registrando SW:', e.message);
+            }
+        }
+
         // Inicializar IndexedDB primero
         try {
             await DB.init();
@@ -4745,24 +4756,8 @@ async cleanDuplicatePayments() {
 
     // PWA
     setupPWA() {
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(
-                    (registration) => {
-                        console.log('ServiceWorker registrado: ', registration.scope);
-                        // Guardar registration para uso en push notifications
-                        App._swRegistration = registration;
-                        PushNotifications.swRegistration = registration;
-                    },
-                    (err) => {
-                        console.log('Error al registrar ServiceWorker: ', err);
-                    }
-                ).catch(err => {
-                    console.log('Error en ServiceWorker:', err);
-                });
-            });
-        }
+        // Service Worker registrado al inicio de init()
+        // (ver App.init() arriba)
 
         // Install Prompt - Corregido
         let deferredPrompt;

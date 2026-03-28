@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.36'; // Push notifications funcionando - limpieza logs
+const APP_VERSION = '7.14.38'; // Nuevas VAPID keys + auto re-suscripcion si key cambia
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

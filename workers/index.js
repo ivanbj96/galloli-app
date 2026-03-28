@@ -32,6 +32,16 @@ export default {
       if (path.startsWith('/api/auth')) {
         return handleAuth(request, env, path, corsHeaders);
       }
+
+      // Reset push subscriptions (temporal, protegido con secret)
+      if (path === '/api/push/reset' && request.method === 'GET') {
+        const url = new URL(request.url);
+        if (url.searchParams.get('secret') !== 'galloli-reset-2026') {
+          return jsonResponse({ error: 'Forbidden' }, corsHeaders, 403);
+        }
+        await env.DB.prepare('DELETE FROM push_subscriptions').run();
+        return jsonResponse({ success: true, message: 'Suscripciones eliminadas' }, corsHeaders);
+      }
       
       // Verificar autenticación para endpoints protegidos
       const authHeader = request.headers.get('Authorization');
@@ -99,8 +109,6 @@ export default {
       // Test cron endpoint (público para pruebas - REMOVER EN PRODUCCIÓN)
       if (path === '/api/test-cron' && request.method === 'GET') {
         console.log('🧪 Ejecutando prueba manual del cron...');
-        
-        // Ejecutar la misma lógica del scheduled
         try {
           await runScheduledBackup(env);
           return jsonResponse({ 
@@ -109,10 +117,37 @@ export default {
             timestamp: new Date().toISOString()
           }, corsHeaders);
         } catch (error) {
-          return jsonResponse({ 
-            success: false, 
-            error: error.message 
-          }, corsHeaders, 500);
+          return jsonResponse({ success: false, error: error.message }, corsHeaders, 500);
+        }
+      }
+
+      // Test push endpoint (solo para desarrollo)
+      if (path === '/api/test-push' && request.method === 'GET') {        try {
+          const subs = await env.DB.prepare(
+            `SELECT id, endpoint, p256dh, auth, business_id FROM push_subscriptions WHERE is_active = 1`
+          ).all();
+          
+          const results = [];
+          for (const sub of (subs.results || [])) {
+            try {
+              const payload = JSON.stringify({
+                title: '🔔 Test Push Servidor',
+                body: 'Notificación de prueba desde el Worker',
+                tag: 'test-server'
+              });
+              // Versión diagnóstica que devuelve el error FCM
+              const diagResult = await sendWebPushDiag(sub.endpoint, sub.p256dh, sub.auth, payload, env);
+              results.push({ id: sub.id, endpoint: sub.endpoint.substring(0, 50), ...diagResult });
+              if (!diagResult.success) {
+                await env.DB.prepare(`UPDATE push_subscriptions SET is_active = 0 WHERE id = ?`).bind(sub.id).run();
+              }
+            } catch(e) {
+              results.push({ id: sub.id, endpoint: sub.endpoint.substring(0, 50), error: e.message });
+            }
+          }
+          return jsonResponse({ total: subs.results?.length || 0, results }, corsHeaders);
+        } catch(e) {
+          return jsonResponse({ error: e.message }, corsHeaders, 500);
         }
       }
       
@@ -1844,62 +1879,45 @@ async function sendPushToAllSubs(businessId, title, body, data = {}, env) {
   }
 }
 
-// Enviar Web Push usando VAPID
-async function sendWebPush(endpoint, p256dh, auth, payload, env) {
+// Helper: crear JWT VAPID y clave privada
+async function buildVapidAuth(endpoint, env) {
+  const vapidPublicKey = env.VAPID_PUBLIC_KEY;
+  const vapidPrivateKey = env.VAPID_PRIVATE_KEY;
+  const vapidX = env.VAPID_PUBLIC_X;
+  const vapidY = env.VAPID_PUBLIC_Y;
+  const vapidSubject = 'mailto:ivqb96@gmail.com';
+
+  const endpointUrl = new URL(endpoint);
+  const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
+  const expiration = Math.floor(Date.now() / 1000) + 12 * 60 * 60;
+
+  const header = btoa(JSON.stringify({ typ: 'JWT', alg: 'ES256' })).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const payload = btoa(JSON.stringify({ aud: audience, exp: expiration, sub: vapidSubject })).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const signingInput = `${header}.${payload}`;
+
+  const privateKey = await crypto.subtle.importKey(
+    'jwk',
+    { kty: 'EC', crv: 'P-256', d: vapidPrivateKey, x: vapidX, y: vapidY, key_ops: ['sign'] },
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+
+  const sig = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    new TextEncoder().encode(signingInput)
+  );
+
+  const encodedSig = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+  const token = `${signingInput}.${encodedSig}`;
+  return `vapid t=${token},k=${vapidPublicKey}`;
+}
+
+// Versión diagnóstica de sendWebPush que devuelve el error FCM
+async function sendWebPushDiag(endpoint, p256dh, auth, payload, env) {
   try {
-    const vapidPublicKey = env.VAPID_PUBLIC_KEY;
-    const vapidPrivateKey = env.VAPID_PRIVATE_KEY;
-    const vapidSubject = 'mailto:ivqb96@gmail.com';
-
-    // Crear JWT VAPID
-    const endpointUrl = new URL(endpoint);
-    const audience = `${endpointUrl.protocol}//${endpointUrl.host}`;
-    const expiration = Math.floor(Date.now() / 1000) + 12 * 60 * 60; // 12 horas
-
-    const vapidHeader = { typ: 'JWT', alg: 'ES256' };
-    const vapidPayload = { aud: audience, exp: expiration, sub: vapidSubject };
-
-    const encodedHeader = btoa(JSON.stringify(vapidHeader)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    const encodedPayload = btoa(JSON.stringify(vapidPayload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    const signingInput = `${encodedHeader}.${encodedPayload}`;
-
-    // Importar clave privada VAPID usando JWK
-    // La VAPID_PUBLIC_KEY es la clave uncompressed (65 bytes: 0x04 + 32 x + 32 y)
-    // Hay que extraer x e y de los bytes, no del string
-    const pubKeyBytes = base64urlToBytes(vapidPublicKey); // 65 bytes: [0x04, x(32), y(32)]
-    const xBytes = pubKeyBytes.slice(1, 33);
-    const yBytes = pubKeyBytes.slice(33, 65);
-    const bytesToBase64url = (b) => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-    const privateKey = await crypto.subtle.importKey(
-      'jwk',
-      {
-        kty: 'EC',
-        crv: 'P-256',
-        d: vapidPrivateKey,
-        x: bytesToBase64url(xBytes),
-        y: bytesToBase64url(yBytes),
-        key_ops: ['sign']
-      },
-      { name: 'ECDSA', namedCurve: 'P-256' },
-      false,
-      ['sign']
-    );
-
-    const encoder = new TextEncoder();
-    const signature = await crypto.subtle.sign(
-      { name: 'ECDSA', hash: 'SHA-256' },
-      privateKey,
-      encoder.encode(signingInput)
-    );
-
-    const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-    const vapidToken = `${signingInput}.${encodedSignature}`;
-    const vapidAuthHeader = `vapid t=${vapidToken},k=${vapidPublicKey}`;
-
-    // Cifrar el payload con ECDH + AES-GCM (Web Push Encryption RFC 8291)
+    const vapidAuthHeader = await buildVapidAuth(endpoint, env);
     const encryptedPayload = await encryptWebPush(p256dh, auth, payload);
 
     const response = await fetch(endpoint, {
@@ -1913,12 +1931,46 @@ async function sendWebPush(endpoint, p256dh, auth, payload, env) {
       body: encryptedPayload
     });
 
-    return response.status === 201 || response.status === 200;
+    const responseBody = await response.text().catch(() => '');
+    return {
+      success: response.status === 201 || response.status === 200,
+      status: response.status,
+      fcmResponse: responseBody.substring(0, 300)
+    };
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// Enviar Web Push usando VAPID
+async function sendWebPush(endpoint, p256dh, auth, payload, env) {
+  try {
+    const vapidAuthHeader = await buildVapidAuth(endpoint, env);
+    const encryptedPayload = await encryptWebPush(p256dh, auth, payload);
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': vapidAuthHeader,
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'TTL': '86400',
+      },
+      body: encryptedPayload
+    });
+
+    const ok = response.status === 201 || response.status === 200;
+    if (!ok) {
+      const body = await response.text().catch(() => '');
+      console.error(`sendWebPush FCM status ${response.status}:`, body.substring(0, 200));
+    }
+    return ok;
   } catch (error) {
     console.error('sendWebPush error:', error);
     return false;
   }
 }
+
 
 // Cifrado Web Push (RFC 8291 - aes128gcm)
 async function encryptWebPush(p256dhBase64, authBase64, plaintext) {

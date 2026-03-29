@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.39'; // Push notifications con app cerrada funcionando'
+const APP_VERSION = '7.14.40'; // Dominio galloli.ivapps.store activo
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

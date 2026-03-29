@@ -5,8 +5,8 @@
   "description": "Gestión integral de venta de pollos pelados con contabilidad y estadísticas",
   "lang": "es",
   "dir": "ltr",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "https://galloli.ivapps.store/",
+  "scope": "https://galloli.ivapps.store/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
   "background_color": "#4CAF50",
@@ -72,7 +72,7 @@
   "scope_extensions": [
     {
       "type": "origin",
-      "origin": "https://galloli.pages.dev"
+      "origin": "https://galloli.ivapps.store"
     }
   ],
 

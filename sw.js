@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.42'; // Excluir carpetas Android del deploy Pages
+const APP_VERSION = '7.14.43'; // Fix assetlinks fingerprint Google Play Signing'
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

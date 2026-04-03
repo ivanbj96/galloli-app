@@ -13,11 +13,12 @@ PWA + TWA (Google Play) de gestión integral para venta de pollos pelados. Uso e
 ## Stack
 
 - **Frontend**: HTML/CSS/JS vanilla, IndexedDB, Service Worker, Leaflet.js, jsPDF
-- **Hosting**: Cloudflare Pages → `https://galloli.pages.dev`
+- **Hosting**: Cloudflare Pages → `https://galloli.pages.dev` y `https://galloli.ivapps.store`
 - **Worker API**: `https://galloli-sync.ivanbj-96.workers.dev` (nombre: `galloli-sync`, archivo: `workers/index.js`)
 - **DB**: Cloudflare D1 SQLite → `galloli` (id: `c5dd06b9-2998-49d5-834e-fd0d5f7f8da1`)
 - **Realtime**: Durable Objects `SessionManager` para WebSockets
 - **Auth**: JWT HMAC-SHA256, login con Telegram / Email / PIN
+- **TWA**: Bubblewrap CLI → `GallOli - Google Play package2/`
 
 ---
 
@@ -25,20 +26,21 @@ PWA + TWA (Google Play) de gestión integral para venta de pollos pelados. Uso e
 
 ```
 /
-├── index.html          # SPA principal
-├── sw.js               # Service Worker — APP_VERSION aquí
-├── manifest.json       # PWA manifest
+├── index.html
+├── sw.js                          # APP_VERSION aquí — incrementar SIEMPRE antes de deploy
+├── manifest.json                  # start_url y scope apuntan a galloli.ivapps.store
+├── _headers                       # Headers Cloudflare Pages
 ├── css/styles.css
 ├── js/
-│   ├── app.js          # App object — controlador principal
-│   ├── modules.js      # Todos los módulos de datos
-│   ├── auth.js         # AuthManager
-│   ├── sync-engine.js  # SyncEngine (WebSocket + REST)
-│   ├── auto-backup.js  # AutoBackup (10 PM diario)
-│   ├── db.js           # IndexedDB wrapper
+│   ├── app.js                     # App object — controlador principal
+│   ├── modules.js                 # Todos los módulos de datos
+│   ├── auth.js                    # AuthManager (window.AuthManager)
+│   ├── sync-engine.js             # SyncEngine (WebSocket + REST)
+│   ├── auto-backup.js             # AutoBackup (10 PM diario)
+│   ├── db.js                      # IndexedDB wrapper
 │   ├── utils.js
-│   ├── creditos.js     # CreditosModule
-│   ├── notify-system.js # PushNotifications / NotificationsModule
+│   ├── creditos.js
+│   ├── notify-system.js           # PushNotifications / NotificationsModule
 │   ├── payment-processor.js
 │   ├── pdf-generator.js
 │   ├── offline-queue.js
@@ -46,15 +48,22 @@ PWA + TWA (Google Play) de gestión integral para venta de pollos pelados. Uso e
 │   ├── facturacion-electronica.js
 │   └── facturacion-ui.js
 ├── workers/
-│   ├── index.js        # Worker API REST + WebSocket + Cron
+│   ├── index.js                   # Worker API REST + WebSocket + Cron
 │   ├── session-manager.js
 │   ├── wrangler.toml
 │   └── schema.sql
-├── .well-known/assetlinks.json  # TWA fingerprint
+├── .well-known/assetlinks.json    # Fingerprint Google Play Signing — NO el del keystore local
+├── GallOli - Google Play package2/ # Proyecto Android TWA (en .gitignore)
+│   ├── app/src/main/AndroidManifest.xml
+│   ├── app/build.gradle
+│   ├── gradle.properties          # Debe tener android.overridePathCheck=true
+│   ├── twa-manifest.json
+│   ├── signing.keystore           # NUNCA commitear
+│   └── signing-key-info.txt       # NUNCA commitear
 ├── privacy.html
 ├── terms.html
-├── feedback.html       # Formulario → Telegram del dev
-└── wrangler.toml       # Cloudflare Pages config
+├── feedback.html
+└── wrangler.toml                  # Cloudflare Pages config
 ```
 
 ---
@@ -80,19 +89,13 @@ PWA + TWA (Google Play) de gestión integral para venta de pollos pelados. Uso e
 
 `dashboard`, `sales`, `orders`, `clients`, `merma`, `stats`, `accounting`, `diezmos`, `backup`, `cloud-sync`, `rutas`, `creditos`, `payment-history`, `config`
 
-**Páginas públicas** (accesibles desde sidebar y URL directa):
-- `/feedback.html` — comentarios → Telegram del dev
-- `/privacy.html` — política de privacidad
-- `/terms.html` — términos y condiciones
-
 ---
 
 ## Layout Visual
 
-- **Desktop (>1024px)**: sidebar fijo a la izquierda, siempre visible. El botón hamburguesa lo colapsa con clase `collapsed`. El `main-content` tiene `margin-left: var(--sidebar-width)`.
-- **Móvil (≤1024px)**: sidebar oculto por defecto, se abre con clase `active` + overlay. Bottom nav visible.
-- **Header**: logo + botón hamburguesa (siempre visible) + botón sync (llama `SyncEngine.forceFullSync()` si hay sesión activa).
-- Los links de Privacidad/Términos/Feedback están al final del sidebar, antes del toggle de modo desarrollo.
+- **Desktop (>1024px)**: sidebar fijo izquierda, hamburguesa lo colapsa con clase `collapsed`
+- **Móvil (≤1024px)**: sidebar oculto, se abre con clase `active` + overlay. Bottom nav visible
+- **Header**: logo + hamburguesa + botón sync (`SyncEngine.forceFullSync()`)
 
 ---
 
@@ -100,85 +103,77 @@ PWA + TWA (Google Play) de gestión integral para venta de pollos pelados. Uso e
 
 Cuando se agregue cualquier dato nuevo, actualizar TODOS estos puntos:
 
-1. `BackupModule.createBackup()` en `js/modules.js` (~línea 2850)
-2. `runScheduledBackup()` en `workers/index.js` (~línea 130)
-3. `handleBackup()` en `workers/index.js` (~línea 950)
-4. `getLocalData()` en `js/sync-engine.js` (~línea 530)
-5. `BackupModule.importFromData()` en `js/modules.js` (~línea 2920)
-
-**Estructura completa del backup:**
-```javascript
-{
-  clients, sales, orders, expenses,
-  mermaPrices, mermaRecords,
-  diezmosRecords, diezmosConfig,
-  paymentHistory,
-  creditosData: { creditSales, paymentHistory },
-  config: { appName, primaryColor, secondaryColor, ... },
-  telegramConfig: { botToken, chatId },
-  metadata: { exportDate, version, totalClients, ... }
-}
-```
-
-**Credenciales Telegram del usuario**: guardadas encriptadas en IndexedDB `GallOliSecure`. Acceso via `AutoBackup.saveCredentials()` / `AutoBackup.getCredentials()`.
+1. `BackupModule.createBackup()` en `js/modules.js`
+2. `runScheduledBackup()` en `workers/index.js`
+3. `handleBackup()` en `workers/index.js`
+4. `getLocalData()` en `js/sync-engine.js`
+5. `BackupModule.importFromData()` en `js/modules.js`
 
 ---
 
 ## Sistema de Sincronización
 
-- `SyncEngine` en `js/sync-engine.js`
 - WebSocket: `wss://galloli-sync.ivanbj-96.workers.dev/ws`
 - REST: `https://galloli-sync.ivanbj-96.workers.dev/api/sync/`
-- Merge por timestamp (`lastModified` > `timestamp` > `date`)
-- Cola offline: `OfflineQueueManager`
-- Tipos sincronizados: clients, sales, orders, expenses, prices, mermaRecords, diezmos, paymentHistory, config, telegramCredentials
+- Tipos: clients, sales, orders, expenses, prices, mermaRecords, diezmos, paymentHistory, config, telegramCredentials
 
 ---
 
-## Sistema de Feedback
+## Notificaciones Push (VAPID)
 
-- Página: `/feedback.html` (rating 1-5 + mensaje)
-- POST a `/api/feedback` en el Worker
-- Worker reenvía al Telegram del dev (chat_id: `5115479408`)
-- Secret en Worker: `FEEDBACK_BOT_TOKEN` — NUNCA exponer en frontend
-
----
-
-## Notificaciones Push
-
-- Sistema: `PushNotifications` / `NotificationsModule` en `js/notify-system.js`
-- Requiere permisos del usuario — se solicitan al hacer clic en "Probar Notificaciones Push"
-- Al conceder permisos, `requestPermission()` activa `isInitialized = true` y arranca verificaciones periódicas
-- Verifica merma pendiente y créditos cada 5 minutos
+- VAPID keys guardadas como secrets en el Worker (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_X`, `VAPID_PUBLIC_Y`)
+- Suscripciones en D1 tabla `push_subscriptions`
+- Crons: 8AM, 12PM, 6PM, 10PM hora Ecuador (UTC-5 = UTC+0: 13, 17, 23, 03)
+- Toggle en sidebar — `App.initNotifToggle()` se llama 3s después del init
+- El SW se registra al inicio de `App.init()` y se guarda en `App._swRegistration`
+- `window.AuthManager.token` (NO `AuthManager.getToken()`) para obtener el JWT
 
 ---
 
-## Google Play Store
+## Google Play Store / TWA
 
 - App ID: `dev.pages.galloli.twa`
-- TWA generada con PWABuilder
-- Fingerprint: `1D:D5:BE:56...` — debe coincidir con `.well-known/assetlinks.json`
+- Dominio TWA: `galloli.ivapps.store`
+- Keystore: `GallOli - Google Play package2\signing.keystore`
+- Key alias: `galloli-iQ-Apps`
+- Fingerprint assetlinks (Google Play Signing): `B5:09:51:3F:F2:D5:DF:34:A2:0D:9F:EE:CE:5C:1C:07:7A:40:09:60:9B:DF:F0:48:FE:C7:C2:4A:8E:56:C6:CF`
 - Carpetas `GallOli - Google Play package*/` y `*.keystore` en `.gitignore` — NUNCA trackear
 
 ---
 
 ## Despliegue
 
-### Cloudflare Pages (frontend) — SIEMPRE en una línea:
+### Solo cambios en PWA (JS/CSS/HTML) — comando único:
 ```bash
-git add . ; git commit -m "vX.X.X - descripción" ; wrangler pages deploy . --project-name=galloli --branch=main
+git add . ; git commit -m "vX.X.X - descripcion" ; wrangler pages deploy . --project-name=galloli --branch=main
 ```
 
-### Cloudflare Worker (cuando se modifica workers/index.js):
+### Worker modificado — primero Worker, luego Pages:
 ```bash
-# Ejecutar desde workers/ ANTES de desplegar Pages
+# Desde workers/
 wrangler deploy
+# Luego desde raiz:
+git add . ; git commit -m "vX.X.X - descripcion" ; wrangler pages deploy . --project-name=galloli --branch=main
+```
+
+### Nuevo build TWA para Play Store:
+```powershell
+# Desde GallOli - Google Play package2/
+# 1. Incrementar versionCode y versionName en app/build.gradle y twa-manifest.json
+# 2. Build:
+$keystore = "C:\Users\Ivan Quiñonez\Desktop\github-repos\GalloApp\GallOli - Google Play package2\signing.keystore"
+.\gradlew clean bundleRelease "-Pandroid.injected.signing.store.file=$keystore" "-Pandroid.injected.signing.store.password=PASS" "-Pandroid.injected.signing.key.alias=galloli-iQ-Apps" "-Pandroid.injected.signing.key.password=PASS"
+# 3. AAB en: app\build\outputs\bundle\release\app-release.aab
+# 4. Probar APK antes de subir:
+.\gradlew assembleRelease ...
+C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\app-release.apk"
+# 5. Si ADB dice Success, subir AAB a Play Store
 ```
 
 ### Versionado:
-- Versión en `sw.js` → `const APP_VERSION = 'X.X.X'`
-- Incrementar SIEMPRE antes de desplegar
-- Formato commit: `"vX.X.X - descripción breve"`
+- `sw.js` → `const APP_VERSION = 'X.X.X'` — incrementar SIEMPRE
+- Commit: `"vX.X.X - descripcion breve"`
+- TWA: `versionCode` entero creciente en `build.gradle` y `twa-manifest.json`
 
 ---
 
@@ -189,6 +184,10 @@ wrangler deploy
 | `JWT_SECRET` | Secret | Firma JWT |
 | `TELEGRAM_BOT_TOKEN` | Secret | Bot auth Telegram |
 | `FEEDBACK_BOT_TOKEN` | Secret | Bot feedback usuarios |
+| `VAPID_PUBLIC_KEY` | Secret | Clave pública VAPID push |
+| `VAPID_PRIVATE_KEY` | Secret | Clave privada VAPID push |
+| `VAPID_PUBLIC_X` | Secret | Coordenada X de la clave pública |
+| `VAPID_PUBLIC_Y` | Secret | Coordenada Y de la clave pública |
 | `DB` | D1 | Base de datos |
 | `SESSION_MANAGER` | Durable Object | WebSockets |
 | `ENVIRONMENT` | Var | `"production"` |
@@ -198,13 +197,17 @@ wrangler deploy
 ## Reglas de Desarrollo
 
 1. **Incrementar `APP_VERSION` en `sw.js`** antes de cada deploy
-2. **No crear archivos markdown de resumen** — informar solo en el chat (2-3 oraciones)
-3. **No crear** `CHANGES.md`, `SUMMARY.md`, `UPDATE.md`, `CHANGELOG.md` ni ningún `.md` de resumen
+2. **No crear archivos markdown de resumen** — informar solo en el chat
+3. **No crear** `CHANGES.md`, `SUMMARY.md`, `UPDATE.md`, `CHANGELOG.md`
 4. **Backup completeness**: dato nuevo = actualizar los 5 puntos de backup
 5. **No exponer secrets en frontend** — usar Worker como proxy
-6. **Google Play carpetas son sensibles** — están en `.gitignore`
+6. **Google Play carpetas son sensibles** — en `.gitignore`
 7. **Modificar Worker** → `wrangler deploy` desde `workers/` ANTES de Pages
-8. **Visualizar mentalmente el app** antes de hacer cambios de UI: el sidebar está a la izquierda en desktop, bottom nav en móvil, header con hamburguesa + sync arriba
+8. **TWA build**: siempre probar con ADB antes de subir a Play Store
+9. **assetlinks.json**: usar fingerprint de Google Play Signing, NO del keystore local
+10. **AndroidManifest**: NUNCA usar `.json` como mimeType — causa `INSTALL_PARSE_FAILED_MANIFEST_MALFORMED`
+11. **gradle.properties**: siempre tener `android.overridePathCheck=true`
+12. **AuthManager**: acceder token con `window.AuthManager.token`, no con `.getToken()`
 
 ---
 
@@ -214,5 +217,5 @@ wrangler deploy
 - Moneda configurable (GTQ / USD)
 - Vendedor en campo con rutas diarias
 - Merma = diferencia peso vivo vs pelado
-- Diezmos = % configurable de ganancia neta (uso personal del dueño)
+- Diezmos = % configurable de ganancia neta
 - Facturación electrónica SRI Ecuador (en desarrollo)

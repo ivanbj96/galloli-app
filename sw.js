@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.48'; // Fix balanza CAMRY protocolo 0xFFE0 ASCII'
+const APP_VERSION = '7.14.49'; // Balanza muestra valor y unidad original sin conversion
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

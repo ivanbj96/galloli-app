@@ -5,8 +5,9 @@ const BluetoothScale = {
     characteristic: null,
     isConnected: false,
     isConnecting: false,
-    currentWeight: 0,       // en libras siempre
-    currentUnit: 'kg',      // unidad original de la balanza
+    currentWeight: 0,       // en libras para cálculos internos
+    currentRawWeight: 0,    // valor original de la balanza (sin convertir)
+    currentUnit: 'lb',      // unidad original de la balanza
     weightListeners: [],
     STORAGE_KEY: 'galloli_scales',
     ACTIVE_KEY: 'galloli_scale_active',
@@ -171,26 +172,25 @@ const BluetoothScale = {
         const result = this._parseWeight(dataView, bytes);
         if (result !== null && result.weight > 0 && result.weight < 2000) {
             this.currentUnit = result.unit;
-            this.currentWeight = parseFloat(result.weight.toFixed(3));
+            this.currentRawWeight = parseFloat(result.weight.toFixed(3)); // valor original
+            this.currentWeight = parseFloat(this._toLbs(result.weight, result.unit).toFixed(3)); // en lb para cálculos
             this._notifyListeners(this.currentWeight);
             this._updateWeightDisplays();
         }
     },
 
-    // Parser — retorna { weight (en lb), unit (original) } o null
+    // Parser — retorna { weight (valor original), unit (original) } o null
     _parseWeight(dataView, bytes) {
         // --- Formato 1: ASCII texto (CAMRY, XS y mayoría) ---
-        // Ejemplos: "050.60kg", "112.00lb", "ST,GS,+  050.60 kg"
+        // Ejemplos: "050.60kg", "001.30lb", "ST,GS,+  050.60 kg"
         try {
             const text = new TextDecoder('utf-8', { fatal: false }).decode(dataView.buffer).trim();
             if (text.length > 0) {
                 const match = text.match(/([+-]?\s*\d+\.?\d*)\s*(kg|lb|g|KG|LB|G)/i);
                 if (match) {
-                    let val = parseFloat(match[1].replace(/\s/g, ''));
+                    const val = parseFloat(match[1].replace(/\s/g, ''));
                     const unit = match[2].toLowerCase();
-                    if (unit === 'kg') return { weight: val * 2.20462, unit: 'kg' };
-                    if (unit === 'g')  return { weight: val / 453.592, unit: 'g' };
-                    return { weight: val, unit: 'lb' };
+                    if (val > 0) return { weight: val, unit };
                 }
             }
         } catch(e) {}
@@ -201,23 +201,30 @@ const BluetoothScale = {
             const raw = dataView.getUint16(1, true);
             if (raw > 0) {
                 if (flags & 0x01) return { weight: raw * 0.01, unit: 'lb' };
-                else return { weight: (raw * 0.005) * 2.20462, unit: 'kg' };
+                else return { weight: raw * 0.005, unit: 'kg' };
             }
         }
 
         // --- Formato 3: 2 bytes big-endian en gramos ---
         if (bytes.length >= 2) {
             const grams = (bytes[0] << 8) | bytes[1];
-            if (grams > 0 && grams < 300000) return { weight: grams / 453.592, unit: 'g' };
+            if (grams > 0 && grams < 300000) return { weight: grams / 1000, unit: 'kg' };
         }
 
         // --- Formato 4: 2 bytes little-endian en gramos ---
         if (bytes.length >= 2) {
             const grams = dataView.getUint16(0, true);
-            if (grams > 0 && grams < 300000) return { weight: grams / 453.592, unit: 'g' };
+            if (grams > 0 && grams < 300000) return { weight: grams / 1000, unit: 'kg' };
         }
 
         return null;
+    },
+
+    // Convertir a libras para cálculos internos
+    _toLbs(weight, unit) {
+        if (unit === 'kg') return weight * 2.20462;
+        if (unit === 'g')  return weight / 453.592;
+        return weight; // ya es lb
     },
 
     _notifyListeners(weight) {
@@ -225,21 +232,26 @@ const BluetoothScale = {
     },
 
     _updateWeightDisplays() {
-        const w = this.currentWeight;
+        const raw = this.currentRawWeight;  // valor tal cual de la balanza
+        const unit = this.currentUnit;
+        const lbs = this.currentWeight;     // en lb para cálculos
+
+        // Campos de peso — mostrar valor original de la balanza
         const fields = ['sale-weight','live-weight','processed-weight','order-weight','delivery-weight','edit-sale-weight'];
         fields.forEach(id => {
             const el = document.getElementById(id);
             if (el && document.activeElement !== el) {
                 const current = parseFloat(el.value) || 0;
-                if (Math.abs(current - w) > 0.005) {
-                    el.value = w.toFixed(3);
+                if (Math.abs(current - raw) > 0.005) {
+                    el.value = raw.toFixed(3);
                     el.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }
         });
 
+        // Indicador flotante — mostrar valor y unidad original
         const valueEl = document.getElementById('scale-weight-value');
-        if (valueEl) valueEl.textContent = w.toFixed(3) + ' lb';
+        if (valueEl) valueEl.textContent = `${raw.toFixed(3)} ${unit}`;
 
         const indicator = document.getElementById('scale-weight-indicator');
         if (indicator) indicator.style.display = 'flex';
@@ -294,10 +306,11 @@ const BluetoothScale = {
         }
         const el = document.getElementById(fieldId);
         if (el) {
-            el.value = this.currentWeight.toFixed(3);
+            el.value = this.currentRawWeight.toFixed(3);
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.style.borderColor = 'var(--primary)';
             setTimeout(() => el.style.borderColor = '', 1000);
+            Utils.showNotification(`${this.currentRawWeight.toFixed(3)} ${this.currentUnit} capturado`, 'success', 1500);
         }
     },
 

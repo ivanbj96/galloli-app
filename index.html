@@ -177,6 +177,22 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="sidebar-item" style="cursor: pointer; border-left: 3px solid transparent;" onclick="App.toggleScaleFromSidebar()">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center;">
+                            <i class="fas fa-weight" style="width: 24px; margin-right: 15px; font-size: 1.1rem;"></i>
+                            <div>
+                                <span style="font-size: 0.9rem;">Balanza BLE</span>
+                                <small id="scale-status-sidebar" style="font-size: 0.75rem; color: var(--gray); display: block;">Toca para conectar</small>
+                            </div>
+                        </div>
+                        <label class="switch" style="margin: 0;" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="scale-switch" onchange="App.onScaleSwitchChange(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
                 <a href="feedback.html" class="sidebar-item" target="_blank" onclick="App.toggleSidebar();">
                     <i class="fas fa-comment-dots"></i>
                     <span>Comentarios y Sugerencias</span>
@@ -380,6 +396,7 @@
     <script src="js/modules.js"></script>
     <script src="js/creditos.js"></script>
     <script src="js/notify-system.js"></script>
+    <script src="js/bluetooth-scale.js"></script>
     <script src="js/payment-processor.js"></script>
     <script src="js/auto-backup.js"></script>
     <script src="js/facturacion-electronica.js"></script>
@@ -396,6 +413,12 @@
             <div class="modal-body"></div>
             <div class="modal-footer"></div>
         </div>
+    </div>
+
+    <!-- Indicador flotante de peso de la balanza -->
+    <div id="scale-weight-indicator" style="display:none; position:fixed; bottom:80px; right:16px; background:var(--primary); color:white; padding:10px 16px; border-radius:24px; font-size:1.2rem; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:999; cursor:pointer; align-items:center; gap:8px;" onclick="App.showScaleCapture()">
+        <i class="fas fa-weight"></i>
+        <span id="scale-weight-value">0.00 lb</span>
     </div>
 
     <script>

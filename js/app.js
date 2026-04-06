@@ -61,6 +61,9 @@ const App = {
         
         // Inicializar toggle de notificaciones (después de que SW esté listo)
         setTimeout(() => App.initNotifToggle(), 3000);
+
+        // Inicializar balanza BLE
+        BluetoothScale.init();
         
         // SINCRONIZAR CON SERVICE WORKER
         this.syncDevModeWithServiceWorker();
@@ -2380,8 +2383,15 @@ async cleanDuplicatePayments() {
                         
                         <div class="form-group">
                             <label class="form-label" for="sale-weight">Peso Total (lb)</label>
-                            <input type="number" step="0.01" min="0.01" class="form-input" id="sale-weight" required 
-                                   placeholder="Ej: 45.5" oninput="App.updateSalePreview()">
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="number" step="0.01" min="0.01" class="form-input" id="sale-weight" required 
+                                       placeholder="Ej: 45.5" oninput="App.updateSalePreview()" style="flex:1;">
+                                <button type="button" class="btn btn-outline scale-capture-btn" 
+                                        onclick="BluetoothScale.captureWeight('sale-weight')"
+                                        style="display:none; padding:10px 12px; white-space:nowrap;" title="Capturar peso de balanza">
+                                    <i class="fas fa-weight"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="sale-quantity">Cantidad de Pollos</label>
@@ -2752,9 +2762,16 @@ async cleanDuplicatePayments() {
                         <div class="merma-form">
                             <div class="form-group">
                                 <label class="form-label" for="live-weight">Peso total pollos vivos (lb)</label>
-                                <input type="number" step="0.01" min="0" class="form-input" id="live-weight"
-                                       placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()" 
-                                       value="${selectedMermaRecord ? selectedMermaRecord.liveWeight : ''}">
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input type="number" step="0.01" min="0" class="form-input" id="live-weight"
+                                           placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()" 
+                                           value="${selectedMermaRecord ? selectedMermaRecord.liveWeight : ''}" style="flex:1;">
+                                    <button type="button" class="btn btn-outline scale-capture-btn"
+                                            onclick="BluetoothScale.captureWeight('live-weight')"
+                                            style="display:none; padding:10px 12px;" title="Capturar peso de balanza">
+                                        <i class="fas fa-weight"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="live-cost">Costo por lb pollo vivo ($)</label>
@@ -2764,9 +2781,16 @@ async cleanDuplicatePayments() {
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="processed-weight">Peso total pollos pelados (lb)</label>
-                                <input type="number" step="0.01" min="0" class="form-input" id="processed-weight"
-                                       placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()"
-                                       value="${selectedMermaRecord ? selectedMermaRecord.processedWeight : ''}">
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <input type="number" step="0.01" min="0" class="form-input" id="processed-weight"
+                                           placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()"
+                                           value="${selectedMermaRecord ? selectedMermaRecord.processedWeight : ''}" style="flex:1;">
+                                    <button type="button" class="btn btn-outline scale-capture-btn"
+                                            onclick="BluetoothScale.captureWeight('processed-weight')"
+                                            style="display:none; padding:10px 12px;" title="Capturar peso de balanza">
+                                        <i class="fas fa-weight"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="chicken-count">Cantidad de pollos procesados</label>
@@ -5568,8 +5592,44 @@ window.addEventListener('pagehide', () => {
 
 
 
-// Métodos para el toggle de notificaciones en el sidebar
-App.initNotifToggle = async function() {
+// Métodos para la balanza BLE
+App.toggleScaleFromSidebar = function() {
+    const sw = document.getElementById('scale-switch');
+    if (sw && !sw.disabled) {
+        sw.checked = !sw.checked;
+        App.onScaleSwitchChange(sw.checked);
+    }
+};
+
+App.onScaleSwitchChange = async function(checked) {
+    if (checked) {
+        await BluetoothScale.connect();
+    } else {
+        await BluetoothScale.disconnect();
+    }
+};
+
+App.showScaleCapture = function() {
+    if (!BluetoothScale.isConnected) return;
+    const w = BluetoothScale.currentWeight;
+    if (w <= 0) {
+        Utils.showNotification('Esperando lectura de la balanza...', 'info', 2000);
+        return;
+    }
+    // Detectar qué formulario está activo y capturar el peso
+    const fields = ['sale-weight', 'live-weight', 'processed-weight', 'order-weight', 'delivery-weight'];
+    for (const id of fields) {
+        const el = document.getElementById(id);
+        if (el) {
+            BluetoothScale.captureWeight(id);
+            Utils.showNotification(`Peso capturado: ${w.toFixed(2)} lb`, 'success', 2000);
+            return;
+        }
+    }
+    Utils.showNotification(`Peso actual: ${w.toFixed(2)} lb`, 'info', 3000);
+};
+
+// Métodos para el toggle de notificaciones en el sidebarApp.initNotifToggle = async function() {
     const sw = document.getElementById('notif-switch');
     const status = document.getElementById('notif-status-sidebar');
     if (!sw || !status) {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.43'; // Fix assetlinks fingerprint Google Play Signing'
+const APP_VERSION = '7.14.44'; // Balanza BLE integrada
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

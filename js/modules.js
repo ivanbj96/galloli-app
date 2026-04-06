@@ -921,8 +921,15 @@ const OrdersModule = {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Peso del Pedido (lb)</label>
-                            <input type="number" step="0.01" min="0.01" class="form-input" 
-                                   id="delivery-weight" value="${order.weight}" required>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="number" step="0.01" min="0.01" class="form-input" 
+                                       id="delivery-weight" value="${order.weight}" required style="flex:1;">
+                                <button type="button" class="btn btn-outline scale-capture-btn"
+                                        onclick="BluetoothScale.captureWeight('delivery-weight')"
+                                        style="display:none; padding:10px 12px;" title="Capturar peso de balanza">
+                                    <i class="fas fa-weight"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cantidad de Pollos</label>

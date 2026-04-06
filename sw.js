@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.46'; // Balanza BLE multi-dispositivo + debug + reconexion'
+const APP_VERSION = '7.14.47'; // Fix cache bluetooth-scale.js
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

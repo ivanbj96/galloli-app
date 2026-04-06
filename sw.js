@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.44'; // Balanza BLE integrada
+const APP_VERSION = '7.14.45'; // Fix syntax error balanza BLE
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

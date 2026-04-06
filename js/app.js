@@ -5629,7 +5629,8 @@ App.showScaleCapture = function() {
     Utils.showNotification(`Peso actual: ${w.toFixed(2)} lb`, 'info', 3000);
 };
 
-// Métodos para el toggle de notificaciones en el sidebarApp.initNotifToggle = async function() {
+// Métodos para el toggle de notificaciones en el sidebar
+App.initNotifToggle = async function() {
     const sw = document.getElementById('notif-switch');
     const status = document.getElementById('notif-status-sidebar');
     if (!sw || !status) {

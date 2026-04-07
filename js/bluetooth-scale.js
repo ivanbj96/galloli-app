@@ -136,7 +136,6 @@ const BluetoothScale = {
             this.currentWeight = 0;
             this.updateUI();
             this._notifyListeners(null);
-            // Reconexión en el próximo gesto del usuario
             const tryReconnect = async () => {
                 document.removeEventListener('touchstart', tryReconnect);
                 document.removeEventListener('click', tryReconnect);
@@ -146,8 +145,7 @@ const BluetoothScale = {
             document.addEventListener('click', tryReconnect, { once: true });
         });
 
-        // Estrategia 1: ir directo al servicio 0xFFE0 (CAMRY y mayoría de balanzas)
-        let subscribed = false;
+        // Ir directo al servicio 0xFFE0 (CAMRY y mayoría de balanzas BLE)
         try {
             const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
             const char = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
@@ -156,37 +154,37 @@ const BluetoothScale = {
                 this._handleData(e.target.value);
             });
             this.characteristic = char;
-            subscribed = true;
-        } catch(e) { /* no tiene 0xFFE0, probar otros */ }
-
-        // Estrategia 2: descubrir todos los servicios y suscribirse a cualquier notify
-        if (!subscribed) {
-            const services = await server.getPrimaryServices();
-            for (const service of services) {
-                if (subscribed) break;
-                try {
-                    const chars = await service.getCharacteristics();
-                    for (const char of chars) {
-                        if (char.properties.notify || char.properties.indicate) {
-                            try {
-                                await char.startNotifications();
-                                char.addEventListener('characteristicvaluechanged', (e) => {
-                                    this._handleData(e.target.value);
-                                });
-                                this.characteristic = char;
-                                subscribed = true;
-                                break;
-                            } catch(e) { /* continuar */ }
-                        }
-                    }
-                } catch(e) { /* continuar */ }
-            }
+            this.isConnected = true;
+            this.updateUI();
+            return;
+        } catch(e) {
+            // No tiene 0xFFE0, intentar otros servicios conocidos
         }
 
-        if (!subscribed) throw new Error('No se encontraron características de notificación');
+        // Fallback: probar servicios alternativos uno por uno (sin descubrir todos)
+        const fallbackServices = [
+            { s: '0000fff0-0000-1000-8000-00805f9b34fb', c: '0000fff1-0000-1000-8000-00805f9b34fb' },
+            { s: '0000181d-0000-1000-8000-00805f9b34fb', c: '00002a9d-0000-1000-8000-00805f9b34fb' },
+        ];
 
-        this.isConnected = true;
-        this.updateUI();
+        for (const pair of fallbackServices) {
+            try {
+                const service = await server.getPrimaryService(pair.s);
+                const char = await service.getCharacteristic(pair.c);
+                if (char.properties.notify || char.properties.indicate) {
+                    await char.startNotifications();
+                    char.addEventListener('characteristicvaluechanged', (e) => {
+                        this._handleData(e.target.value);
+                    });
+                    this.characteristic = char;
+                    this.isConnected = true;
+                    this.updateUI();
+                    return;
+                }
+            } catch(e) { /* continuar */ }
+        }
+
+        throw new Error('No se pudo conectar a la balanza. Verifica que esté encendida y en rango.');
     },
 
     _handleData(dataView) {

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.54'; // Force cache update bluetooth-scale kg x2
+const APP_VERSION = '7.14.55'; // Fix GATT error conexion balanza directa 0xFFE0
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

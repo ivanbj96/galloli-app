@@ -5690,8 +5690,12 @@ App.startChainWeighing = function() {
                 <div id="chain-client-section" style="display:none;">
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-user"></i> Cliente</label>
-                        <select class="form-input" id="chain-client-select">
-                            <option value="">Seleccionar cliente...</option>
+                        <input type="text" class="form-input" id="chain-client-search" 
+                               placeholder="Buscar cliente..." autocomplete="off"
+                               oninput="App.filterChainClients(this.value)"
+                               style="margin-bottom:6px;">
+                        <select class="form-input" id="chain-client-select" size="4" style="height:auto;">
+                            <option value="">-- Seleccionar --</option>
                             ${ClientsModule.clients.filter(c => c.isActive !== false).map(c =>
                                 `<option value="${c.id}">${c.name}</option>`
                             ).join('')}
@@ -5842,8 +5846,22 @@ App.cancelChainCapture = function() {
     App._chainWeighingWeight = 0;
 };
 
+App.filterChainClients = function(query) {
+    const select = document.getElementById('chain-client-select');
+    if (!select) return;
+    const q = query.toLowerCase().trim();
+    const clients = ClientsModule.clients.filter(c => c.isActive !== false);
+    select.innerHTML = '<option value="">-- Seleccionar --</option>' +
+        clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q)))
+               .map(c => `<option value="${c.id}">${c.name}</option>`)
+               .join('');
+    // Si solo hay un resultado, seleccionarlo automáticamente
+    if (select.options.length === 2) select.selectedIndex = 1;
+};
+
 App.confirmChainSale = function() {
-    const clientId = document.getElementById('chain-client-select')?.value;
+    const clientIdRaw = document.getElementById('chain-client-select')?.value;
+    const clientId = parseInt(clientIdRaw) || clientIdRaw; // convertir a número
     const quantity = parseInt(document.getElementById('chain-quantity')?.value) || 1;
     const payment = document.getElementById('chain-payment')?.value;
     const weight = App._chainWeighingWeight || 0;

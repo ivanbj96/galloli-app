@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.49'; // Balanza muestra valor y unidad original sin conversion
+const APP_VERSION = '7.14.50'; // Precio venta diario + Pesaje en Cadena universal
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

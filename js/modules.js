@@ -1932,13 +1932,16 @@ const MermaModule = {
         return this.mermaRecords.find(r => r.date === date);
     },
 
-    async saveDailyPrice(price, date = Utils.getTodayDate()) {
+    async saveDailyPrice(price, date = Utils.getTodayDate(), salePrice = null) {
         const existingIndex = this.dailyPrices.findIndex(p => p.date === date);
         
+        const existing = existingIndex > -1 ? this.dailyPrices[existingIndex] : null;
         const priceRecord = {
-            id: existingIndex > -1 ? this.dailyPrices[existingIndex].id : Date.now(),
+            id: existing ? existing.id : Date.now(),
             date,
-            price,
+            price,                                          // costo real por lb (merma)
+            salePrice: salePrice !== null ? salePrice : (existing ? existing.salePrice : null), // precio de venta por lb
+        };
             timestamp: new Date().getTime()
         };
         
@@ -1962,6 +1965,12 @@ const MermaModule = {
         const today = Utils.getTodayDate();
         const todayPrice = this.dailyPrices.find(p => p.date === today);
         return todayPrice ? todayPrice.price : null;
+    },
+
+    getTodaySalePrice() {
+        const today = Utils.getTodayDate();
+        const todayPrice = this.dailyPrices.find(p => p.date === today);
+        return todayPrice ? todayPrice.salePrice : null;
     },
 
     getMermaPriceByDate(date) {

@@ -2339,6 +2339,10 @@ async cleanDuplicatePayments() {
                 
                 <div class="card">
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
+                    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
+                        <i class="fas fa-weight"></i> Modo Pesaje en Cadena
+                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automática' : 'Ingresa pesos manualmente uno por uno'}</small>
+                    </button>
                     <form id="sale-form">
                         <div class="form-group">
                             <label class="form-label" for="sale-date">Fecha de la Venta</label>
@@ -2811,6 +2815,18 @@ async cleanDuplicatePayments() {
                                        value="${selectedMermaRecord ? selectedMermaRecord.realCostPerLb : ''}">
                                 <small style="color: var(--gray); display: block; margin-top: 5px;">
                                     <i class="fas fa-info-circle"></i> Puedes dejar vacío cualquier campo excepto "Cantidad de pollos"
+                                </small>
+                            </div>
+                            <div class="form-group" style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);padding:15px;border-radius:10px;border:2px solid var(--primary);">
+                                <label class="form-label" for="sale-price-per-lb" style="color:var(--primary);font-weight:700;">
+                                    <i class="fas fa-tag"></i> Precio de venta por lb ($) — Precio del día
+                                </label>
+                                <input type="number" step="0.01" min="0" class="form-input" id="sale-price-per-lb"
+                                       placeholder="Ej: 1.20" 
+                                       value="${MermaModule.getTodaySalePrice() || (selectedMermaRecord ? selectedMermaRecord.salePrice || '' : '')}"
+                                       style="font-size:1.2rem;font-weight:bold;">
+                                <small style="color:var(--primary);display:block;margin-top:5px;">
+                                    <i class="fas fa-bolt"></i> Este precio se usará automáticamente en todas las ventas del día
                                 </small>
                             </div>
                         </div>
@@ -4460,6 +4476,7 @@ async cleanDuplicatePayments() {
         const chickenCountInput = document.getElementById('chicken-count').value.trim();
         const processingCostInput = document.getElementById('processing-cost-per-chicken').value.trim();
         const realCostInput = document.getElementById('real-cost-per-lb')?.value.trim();
+        const salePriceInput = document.getElementById('sale-price-per-lb')?.value.trim();
         
         const liveWeight = liveWeightInput ? parseFloat(liveWeightInput) : null;
         const liveCost = liveCostInput ? parseFloat(liveCostInput) : null;
@@ -4467,6 +4484,7 @@ async cleanDuplicatePayments() {
         const chickenCount = chickenCountInput ? parseInt(chickenCountInput) : 0;
         const processingCostPerChicken = processingCostInput ? parseFloat(processingCostInput) : null;
         const realCostPerLb = realCostInput ? parseFloat(realCostInput) : null;
+        const salePrice = salePriceInput ? parseFloat(salePriceInput) : null;
 
         if (!mermaDate || !chickenCount || chickenCount <= 0) {
             Utils.showNotification('Fecha y cantidad de pollos son obligatorios', 'error', 5000);
@@ -4489,6 +4507,10 @@ async cleanDuplicatePayments() {
                 : (chickenCount > 0 ? result.processingCost / chickenCount : 0);
             
             const record = await MermaModule.saveMermaRecord(result, mermaDate);
+            // Guardar precio de venta del día si se ingresó
+            if (salePrice !== null && salePrice > 0) {
+                await MermaModule.saveDailyPrice(result.realCostPerLb, mermaDate, salePrice);
+            }
             const ventasRecalculadas = await MermaModule.recalcularVentasPorFecha(mermaDate);
             
             Utils.showLoading(false);
@@ -5592,9 +5614,265 @@ window.addEventListener('pagehide', () => {
 
 
 
+// Modo Pesaje en Cadena
+App.startChainWeighing = function() {
+    const todaySalePrice = MermaModule.getTodaySalePrice();
+    const todayCostPrice = MermaModule.getTodayMermaPrice();
+    const hasScale = BluetoothScale.isConnected;
+
+    if (!todaySalePrice) {
+        Utils.showNotification('Configura el precio de venta del día en Merma primero', 'warning', 4000);
+        App.loadPage('merma');
+        return;
+    }
+
+    let stableTimer = null;
+    let lastWeight = 0;
+    let capturedWeight = 0;
+    let unsubscribe = null;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'chain-weighing-modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header" style="background:var(--primary);color:white;border-radius:12px 12px 0 0;">
+                <h3 style="color:white;"><i class="fas fa-weight"></i> Pesaje en Cadena</h3>
+                <button class="close-modal" onclick="App.stopChainWeighing()" style="color:white;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+
+                <!-- Peso: balanza o manual -->
+                <div style="text-align:center;padding:20px;background:var(--light);border-radius:12px;margin-bottom:20px;">
+                    <div style="color:var(--gray);font-size:0.85rem;margin-bottom:5px;">
+                        ${hasScale ? 'PESO EN BALANZA' : 'INGRESA EL PESO'}
+                    </div>
+                    ${hasScale ? `
+                    <div id="chain-weight-display" style="font-size:3.5rem;font-weight:bold;color:var(--primary);line-height:1;">0.000</div>
+                    <div id="chain-unit-display" style="font-size:1rem;color:var(--gray);">lb</div>
+                    <div id="chain-stable-indicator" style="margin-top:8px;font-size:0.85rem;color:var(--gray);">
+                        <i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza
+                    </div>` : `
+                    <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:10px;">
+                        <input type="number" step="0.001" min="0" class="form-input" id="chain-manual-weight"
+                               placeholder="0.000" style="font-size:2rem;font-weight:bold;text-align:center;max-width:180px;"
+                               oninput="App.updateChainPreview()">
+                        <select class="form-input" id="chain-manual-unit" style="max-width:80px;" onchange="App.updateChainPreview()">
+                            <option value="lb">lb</option>
+                            <option value="kg">kg</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" style="margin-top:12px;width:100%;" onclick="App.captureManualChainWeight()">
+                        <i class="fas fa-check"></i> Confirmar peso
+                    </button>`}
+                </div>
+
+                <!-- Precio del día -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                    <div style="background:#e8f5e9;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:0.75rem;color:var(--gray);">PRECIO VENTA/lb</div>
+                        <div style="font-size:1.4rem;font-weight:bold;color:var(--primary);">$${todaySalePrice.toFixed(2)}</div>
+                    </div>
+                    <div style="background:#fff3e0;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:0.75rem;color:var(--gray);">COSTO/lb</div>
+                        <div style="font-size:1.4rem;font-weight:bold;color:var(--warning);">$${todayCostPrice ? todayCostPrice.toFixed(2) : '---'}</div>
+                    </div>
+                </div>
+
+                <!-- Total estimado -->
+                <div id="chain-total-preview" style="display:none;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;padding:15px;border-radius:10px;text-align:center;margin-bottom:20px;">
+                    <div style="font-size:0.85rem;opacity:0.9;">TOTAL A COBRAR</div>
+                    <div id="chain-total-amount" style="font-size:2.5rem;font-weight:bold;">$0.00</div>
+                    <div id="chain-profit-amount" style="font-size:0.9rem;opacity:0.85;">Ganancia: $0.00</div>
+                </div>
+
+                <!-- Selección de cliente -->
+                <div id="chain-client-section" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-user"></i> Cliente</label>
+                        <select class="form-input" id="chain-client-select">
+                            <option value="">Seleccionar cliente...</option>
+                            ${ClientsModule.clients.filter(c => c.isActive !== false).map(c =>
+                                `<option value="${c.id}">${c.name}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-egg"></i> Cantidad de pollos</label>
+                        <input type="number" class="form-input" id="chain-quantity" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i class="fas fa-credit-card"></i> Pago</label>
+                        <select class="form-input" id="chain-payment">
+                            <option value="cash">Efectivo</option>
+                            <option value="credit">Crédito</option>
+                        </select>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <button class="btn btn-outline" onclick="App.cancelChainCapture()">
+                            <i class="fas fa-redo"></i> Cancelar
+                        </button>
+                        <button class="btn btn-success" onclick="App.confirmChainSale()" style="font-size:1rem;padding:14px;">
+                            <i class="fas fa-check"></i> Registrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumen del día -->
+                <div style="margin-top:15px;padding:12px;background:var(--light);border-radius:8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+                        <span style="color:var(--gray);">Ventas hoy:</span>
+                        <strong id="chain-sales-count">${SalesModule.getTodaySales().length}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-top:4px;">
+                        <span style="color:var(--gray);">Total lb vendidas:</span>
+                        <strong id="chain-total-lbs">${SalesModule.getTotalWeightByDate(Utils.getTodayDate()).toFixed(2)} lb</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-top:4px;">
+                        <span style="color:var(--gray);">Total cobrado:</span>
+                        <strong id="chain-total-revenue">${Utils.formatCurrency(SalesModule.getTotalSalesByDate(Utils.getTodayDate()))}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    document.body.appendChild(modal);
+
+    // Si hay balanza, escuchar cambios de peso
+    if (hasScale) {
+        unsubscribe = BluetoothScale.onWeight((weight) => {
+            if (!weight) return;
+            const raw = BluetoothScale.currentRawWeight;
+            const unit = BluetoothScale.currentUnit;
+
+            const display = document.getElementById('chain-weight-display');
+            const unitDisplay = document.getElementById('chain-unit-display');
+            const stableIndicator = document.getElementById('chain-stable-indicator');
+
+            if (display) display.textContent = raw.toFixed(3);
+            if (unitDisplay) unitDisplay.textContent = unit;
+
+            if (Math.abs(raw - lastWeight) > 0.01) {
+                lastWeight = raw;
+                clearTimeout(stableTimer);
+                if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:orange;"></i> Estabilizando...';
+
+                if (raw > 0.05) {
+                    stableTimer = setTimeout(() => {
+                        capturedWeight = raw;
+                        App._chainWeighingWeight = raw;
+                        if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:var(--success);"></i> Estable — selecciona cliente';
+                        App._showChainClientSection(raw, todaySalePrice, todayCostPrice);
+                    }, 1500);
+                } else {
+                    App.cancelChainCapture();
+                    if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza';
+                }
+            }
+        });
+        App._chainWeighingUnsubscribe = unsubscribe;
+    }
+
+    App._chainWeighingWeight = 0;
+};
+
+App.stopChainWeighing = function() {
+    if (App._chainWeighingUnsubscribe) {
+        App._chainWeighingUnsubscribe();
+        App._chainWeighingUnsubscribe = null;
+    }
+    const modal = document.getElementById('chain-weighing-modal');
+    if (modal) modal.remove();
+};
+
+App._showChainClientSection = function(weight, salePrice, costPrice) {
+    const totalPreview = document.getElementById('chain-total-preview');
+    const totalAmount = document.getElementById('chain-total-amount');
+    const profitAmount = document.getElementById('chain-profit-amount');
+    const clientSection = document.getElementById('chain-client-section');
+
+    const total = weight * salePrice;
+    const profit = costPrice ? weight * (salePrice - costPrice) : 0;
+    if (totalPreview) totalPreview.style.display = 'block';
+    if (totalAmount) totalAmount.textContent = Utils.formatCurrency(total);
+    if (profitAmount) profitAmount.textContent = `Ganancia: ${Utils.formatCurrency(profit)}`;
+    if (clientSection) clientSection.style.display = 'block';
+};
+
+App.updateChainPreview = function() {
+    const weightEl = document.getElementById('chain-manual-weight');
+    const unitEl = document.getElementById('chain-manual-unit');
+    if (!weightEl) return;
+    const raw = parseFloat(weightEl.value) || 0;
+    const unit = unitEl ? unitEl.value : 'lb';
+    const lbs = unit === 'kg' ? raw * 2.20462 : raw;
+    const salePrice = MermaModule.getTodaySalePrice();
+    const costPrice = MermaModule.getTodayMermaPrice();
+    if (raw > 0 && salePrice) {
+        App._showChainClientSection(lbs, salePrice, costPrice);
+        App._chainWeighingWeight = lbs;
+    }
+};
+
+App.captureManualChainWeight = function() {
+    const weightEl = document.getElementById('chain-manual-weight');
+    const unitEl = document.getElementById('chain-manual-unit');
+    if (!weightEl || !parseFloat(weightEl.value)) {
+        Utils.showNotification('Ingresa el peso', 'warning', 2000);
+        return;
+    }
+    const raw = parseFloat(weightEl.value);
+    const unit = unitEl ? unitEl.value : 'lb';
+    const lbs = unit === 'kg' ? raw * 2.20462 : raw;
+    App._chainWeighingWeight = lbs;
+    const salePrice = MermaModule.getTodaySalePrice();
+    const costPrice = MermaModule.getTodayMermaPrice();
+    App._showChainClientSection(lbs, salePrice, costPrice);
+};
+
+App.cancelChainCapture = function() {
+    const clientSection = document.getElementById('chain-client-section');
+    const totalPreview = document.getElementById('chain-total-preview');
+    const stableIndicator = document.getElementById('chain-stable-indicator');
+    const manualWeight = document.getElementById('chain-manual-weight');
+    if (clientSection) clientSection.style.display = 'none';
+    if (totalPreview) totalPreview.style.display = 'none';
+    if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza';
+    if (manualWeight) manualWeight.value = '';
+    App._chainWeighingWeight = 0;
+};
+
+App.confirmChainSale = function() {
+    const clientId = document.getElementById('chain-client-select')?.value;
+    const quantity = parseInt(document.getElementById('chain-quantity')?.value) || 1;
+    const payment = document.getElementById('chain-payment')?.value;
+    const weight = App._chainWeighingWeight || 0;
+
+    if (!clientId) { Utils.showNotification('Selecciona un cliente', 'warning', 2000); return; }
+    if (weight <= 0) { Utils.showNotification('Peso inválido', 'warning', 2000); return; }
+
+    const salePrice = MermaModule.getTodaySalePrice();
+    const isPaid = payment === 'cash';
+
+    const sale = SalesModule.addSale(clientId, weight, quantity, salePrice, null, isPaid);
+    ClientsModule.updateClientStats(clientId, weight, quantity, sale.total);
+
+    // Actualizar resumen
+    const salesCount = document.getElementById('chain-sales-count');
+    const totalLbs = document.getElementById('chain-total-lbs');
+    const totalRevenue = document.getElementById('chain-total-revenue');
+    if (salesCount) salesCount.textContent = SalesModule.getTodaySales().length;
+    if (totalLbs) totalLbs.textContent = SalesModule.getTotalWeightByDate(Utils.getTodayDate()).toFixed(2) + ' lb';
+    if (totalRevenue) totalRevenue.textContent = Utils.formatCurrency(SalesModule.getTotalSalesByDate(Utils.getTodayDate()));
+
+    App.cancelChainCapture();
+
+    const client = ClientsModule.getClientById(clientId);
+    Utils.showNotification(`✅ ${client?.name} — ${weight.toFixed(3)} lb — ${Utils.formatCurrency(sale.total)}`, 'success', 3000);
+};
+
 // Métodos para la balanza BLE
-App.toggleScaleFromSidebar = function() {
-    const sw = document.getElementById('scale-switch');
+App.toggleScaleFromSidebar = function() {    const sw = document.getElementById('scale-switch');
     if (sw && !sw.disabled) {
         sw.checked = !sw.checked;
         App.onScaleSwitchChange(sw.checked);

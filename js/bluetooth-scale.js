@@ -27,8 +27,17 @@ const BluetoothScale = {
         if (!this.isSupported()) return;
         this._loadSavedScales();
         this.updateUI();
+
+        // Reconexión automática al primer gesto del usuario
+        // (el navegador requiere interacción antes de acceder a Bluetooth)
         if (this.activeScaleId) {
-            setTimeout(() => this._tryAutoReconnect(), 2000);
+            const tryOnce = async () => {
+                document.removeEventListener('touchstart', tryOnce);
+                document.removeEventListener('click', tryOnce);
+                await this._tryAutoReconnect();
+            };
+            document.addEventListener('touchstart', tryOnce, { once: true, passive: true });
+            document.addEventListener('click', tryOnce, { once: true });
         }
     },
 
@@ -56,16 +65,25 @@ const BluetoothScale = {
 
     async _tryAutoReconnect() {
         if (!navigator.bluetooth.getDevices) return;
+        if (this.isConnected || this.isConnecting) return;
         try {
             const devices = await navigator.bluetooth.getDevices();
             const saved = this.savedScales.find(s => s.id === this.activeScaleId);
             if (!saved) return;
             const device = devices.find(d => d.id === this.activeScaleId);
             if (device) {
+                this.isConnecting = true;
+                this.updateUI();
                 this.device = device;
                 await this._connectToDevice();
+                // Silencioso — no mostrar notificación para no molestar
             }
-        } catch(e) { /* silencioso */ }
+        } catch(e) {
+            // Silencioso
+        } finally {
+            this.isConnecting = false;
+            this.updateUI();
+        }
     },
 
     async connect() {
@@ -118,7 +136,14 @@ const BluetoothScale = {
             this.currentWeight = 0;
             this.updateUI();
             this._notifyListeners(null);
-            setTimeout(() => this._tryAutoReconnect(), 3000);
+            // Reconexión en el próximo gesto del usuario
+            const tryReconnect = async () => {
+                document.removeEventListener('touchstart', tryReconnect);
+                document.removeEventListener('click', tryReconnect);
+                await this._tryAutoReconnect();
+            };
+            document.addEventListener('touchstart', tryReconnect, { once: true, passive: true });
+            document.addEventListener('click', tryReconnect, { once: true });
         });
 
         // Estrategia 1: ir directo al servicio 0xFFE0 (CAMRY y mayoría de balanzas)

@@ -449,3 +449,5 @@ const BluetoothScale = {
         if (valueEl && !this.isConnected) valueEl.textContent = '0.000 lb';
     }
 };
+
+// v7.14.54 - kg x2 = lb visual

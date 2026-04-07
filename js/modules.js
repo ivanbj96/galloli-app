@@ -1939,9 +1939,8 @@ const MermaModule = {
         const priceRecord = {
             id: existing ? existing.id : Date.now(),
             date,
-            price,                                          // costo real por lb (merma)
-            salePrice: salePrice !== null ? salePrice : (existing ? existing.salePrice : null), // precio de venta por lb
-        };
+            price,
+            salePrice: salePrice !== null ? salePrice : (existing ? existing.salePrice : null),
             timestamp: new Date().getTime()
         };
         

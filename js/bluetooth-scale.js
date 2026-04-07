@@ -217,13 +217,14 @@ const BluetoothScale = {
                     const val = parseFloat(match[1].replace(/\s/g, ''));
                     const unit = match[2].toLowerCase();
                     if (val > 0) {
-                        // Si viene en kg, convertir a lb para mostrar
-                        // (CAMRY siempre envía kg aunque el display esté en lb)
+                        // CAMRY siempre envía kg por BLE aunque el display muestre lb
+                        // El display redondea a 2 decimales: 1.70 kg → display muestra 3.40 lb
+                        // La relación visual es kg × 2 (no la conversión matemática exacta)
                         if (unit === 'kg') {
-                            return { weight: parseFloat((val * 2.20462).toFixed(3)), unit: 'lb' };
+                            return { weight: parseFloat((val * 2).toFixed(2)), unit: 'lb' };
                         }
                         if (unit === 'g') {
-                            return { weight: parseFloat((val / 453.592).toFixed(3)), unit: 'lb' };
+                            return { weight: parseFloat((val / 453.592).toFixed(2)), unit: 'lb' };
                         }
                         return { weight: val, unit: 'lb' };
                     }

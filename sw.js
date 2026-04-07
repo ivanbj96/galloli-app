@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.52'; // Fix balanza CAMRY siempre convierte kg BLE a lb
+const APP_VERSION = '7.14.53'; // Balanza CAMRY kg x2 = lb visual del display
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

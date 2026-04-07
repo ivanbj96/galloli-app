@@ -196,18 +196,19 @@ const BluetoothScale = {
 
         const result = this._parseWeight(dataView, bytes);
         if (result !== null && result.weight > 0 && result.weight < 2000) {
-            this.currentUnit = result.unit;
-            this.currentRawWeight = parseFloat(result.weight.toFixed(3)); // valor original
-            this.currentWeight = parseFloat(this._toLbs(result.weight, result.unit).toFixed(3)); // en lb para cálculos
+            this.currentUnit = 'lb'; // siempre lb
+            this.currentRawWeight = result.weight;
+            this.currentWeight = result.weight;
             this._notifyListeners(this.currentWeight);
             this._updateWeightDisplays();
         }
     },
 
-    // Parser — retorna { weight (valor original), unit (original) } o null
+    // Parser — retorna { weight (valor a mostrar), unit } o null
     _parseWeight(dataView, bytes) {
-        // --- Formato 1: ASCII texto (CAMRY, XS y mayoría) ---
-        // Ejemplos: "050.60kg", "001.30lb", "ST,GS,+  050.60 kg"
+        // --- Formato 1: ASCII texto (CAMRY y mayoría) ---
+        // CAMRY SIEMPRE envía en kg por BLE aunque el display muestre lb
+        // Ejemplo: "ST NT 00001.70kg.." cuando display muestra 3.40 lb
         try {
             const text = new TextDecoder('utf-8', { fatal: false }).decode(dataView.buffer).trim();
             if (text.length > 0) {
@@ -215,7 +216,17 @@ const BluetoothScale = {
                 if (match) {
                     const val = parseFloat(match[1].replace(/\s/g, ''));
                     const unit = match[2].toLowerCase();
-                    if (val > 0) return { weight: val, unit };
+                    if (val > 0) {
+                        // Si viene en kg, convertir a lb para mostrar
+                        // (CAMRY siempre envía kg aunque el display esté en lb)
+                        if (unit === 'kg') {
+                            return { weight: parseFloat((val * 2.20462).toFixed(3)), unit: 'lb' };
+                        }
+                        if (unit === 'g') {
+                            return { weight: parseFloat((val / 453.592).toFixed(3)), unit: 'lb' };
+                        }
+                        return { weight: val, unit: 'lb' };
+                    }
                 }
             }
         } catch(e) {}
@@ -226,30 +237,30 @@ const BluetoothScale = {
             const raw = dataView.getUint16(1, true);
             if (raw > 0) {
                 if (flags & 0x01) return { weight: raw * 0.01, unit: 'lb' };
-                else return { weight: raw * 0.005, unit: 'kg' };
+                else return { weight: parseFloat((raw * 0.005 * 2.20462).toFixed(3)), unit: 'lb' };
             }
         }
 
         // --- Formato 3: 2 bytes big-endian en gramos ---
         if (bytes.length >= 2) {
             const grams = (bytes[0] << 8) | bytes[1];
-            if (grams > 0 && grams < 300000) return { weight: grams / 1000, unit: 'kg' };
+            if (grams > 0 && grams < 300000) return { weight: parseFloat((grams / 453.592).toFixed(3)), unit: 'lb' };
         }
 
         // --- Formato 4: 2 bytes little-endian en gramos ---
         if (bytes.length >= 2) {
             const grams = dataView.getUint16(0, true);
-            if (grams > 0 && grams < 300000) return { weight: grams / 1000, unit: 'kg' };
+            if (grams > 0 && grams < 300000) return { weight: parseFloat((grams / 453.592).toFixed(3)), unit: 'lb' };
         }
 
         return null;
     },
 
-    // Convertir a libras para cálculos internos
+    // Convertir a libras (ya no necesario pero se mantiene por compatibilidad)
     _toLbs(weight, unit) {
         if (unit === 'kg') return weight * 2.20462;
         if (unit === 'g')  return weight / 453.592;
-        return weight; // ya es lb
+        return weight;
     },
 
     _notifyListeners(weight) {

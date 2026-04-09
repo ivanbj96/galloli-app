@@ -1,4 +1,4 @@
-﻿// app.js - COMPLETO Y FUNCIONAL
+// app.js - COMPLETO Y FUNCIONAL
 const App = {
     currentPage: 'dashboard',
     currentDate: Utils.getTodayDate(),
@@ -7,10 +7,10 @@ const App = {
     selectedCoordinates: null,
     selectedAddress: '',
     mapaDashboardInicializado: false, // NUEVO: Para controlar si el mapa del dashboard ya fue inicializado
-    devModeCheckInterval: null, // NUEVO: Para el intervalo de verificación del modo desarrollo
+    devModeCheckInterval: null, // NUEVO: Para el intervalo de verificaci�n del modo desarrollo
     handleDevModeChange: null, // NUEVO: Para almacenar la referencia del event listener
 
-    // Inicialización
+    // Inicializaci�n
     async init() {
         // Registrar Service Worker primero y guardar la registration
         if ('serviceWorker' in navigator) {
@@ -32,19 +32,19 @@ const App = {
             Utils.showNotification('Usando almacenamiento local', 'warning', 3000);
         }
         
-        // INICIALIZAR SISTEMA DE AUTENTICACIÓN Y SINCRONIZACIÓN
+        // INICIALIZAR SISTEMA DE AUTENTICACI�N Y SINCRONIZACI�N
         try {
             await window.AuthManager.init();
             
-            // Si hay sesión activa, iniciar sincronización
+            // Si hay sesi�n activa, iniciar sincronizaci�n
             if (window.AuthManager.isAuthenticated()) {
-                console.log('🔐 Sesión activa detectada:', window.AuthManager.user.name);
+                console.log('?? Sesi�n activa detectada:', window.AuthManager.user.name);
                 await window.SyncEngine.init();
             } else {
-                console.log('⚠️ No hay sesión activa');
+                console.log('?? No hay sesi�n activa');
             }
         } catch (error) {
-            console.error('Error inicializando autenticación:', error);
+            console.error('Error inicializando autenticaci�n:', error);
         }
         
         // Inicializar sistema de modales
@@ -59,7 +59,7 @@ const App = {
         // INICIALIZAR TOGGLE DE MODO DESARROLLO INMEDIATAMENTE
         this.initDevModeToggle();
         
-        // Inicializar toggle de notificaciones (después de que SW esté listo)
+        // Inicializar toggle de notificaciones (despu�s de que SW est� listo)
         setTimeout(() => App.initNotifToggle(), 3000);
 
         // Inicializar balanza BLE
@@ -68,7 +68,7 @@ const App = {
         // SINCRONIZAR CON SERVICE WORKER
         this.syncDevModeWithServiceWorker();
         
-        // Inicializar configuración PRIMERO
+        // Inicializar configuraci�n PRIMERO
         await ConfigModule.init();
         
         // Cargar datos
@@ -78,13 +78,13 @@ const App = {
         this.loadPage('dashboard');
         this.setupPWA();
 
-        // App lista — ocultar splash inmediatamente
+        // App lista � ocultar splash inmediatamente
         this.hideSplash();
 
-        // INICIALIZAR NOTIFICACIONES PUSH — sin await, no debe bloquear el arranque
+        // INICIALIZAR NOTIFICACIONES PUSH � sin await, no debe bloquear el arranque
         this.initPushNotifications();
         
-        // INICIALIZAR BACKUP AUTOMÁTICO
+        // INICIALIZAR BACKUP AUTOM�TICO
         await AutoBackup.init();
         
         // Configurar recordatorio diario
@@ -93,16 +93,16 @@ const App = {
         // Ocultar recibo al iniciar
         this.closeReceipt();
         
-        // Ocultar notificación al iniciar
+        // Ocultar notificaci�n al iniciar
         Utils.hideNotification();
         
-        // Aplicar configuración después de cargar
+        // Aplicar configuraci�n despu�s de cargar
         setTimeout(() => {
             ConfigModule.applyLogo();
             ConfigModule.updateDynamicManifest();
         }, 500);
         
-        // Procesar acción de notificación desde URL
+        // Procesar acci�n de notificaci�n desde URL
         this.checkNotificationActionFromURL();
 
         // Manejar file_handlers (archivos abiertos desde el explorador)
@@ -129,39 +129,39 @@ const App = {
         
         document.addEventListener('visibilitychange', async () => {
             if (!document.hidden) {
-                // La app se volvió visible
+                // La app se volvi� visible
                 const now = Date.now();
                 const timeSinceLastChange = now - lastVisibilityChange;
                 
-                console.log('👁️ App visible - Tiempo desde último cambio:', timeSinceLastChange, 'ms');
+                console.log('??? App visible - Tiempo desde �ltimo cambio:', timeSinceLastChange, 'ms');
                 
-                // Si pasaron más de 2 segundos desde el último cambio, recargar datos
+                // Si pasaron m�s de 2 segundos desde el �ltimo cambio, recargar datos
                 if (timeSinceLastChange > 2000) {
-                    console.log('🔄 Recargando datos...');
+                    console.log('?? Recargando datos...');
                     
                     // Recargar todos los datos
                     await this.loadAllData();
                     
-                    // Recargar la página actual para reflejar cambios
+                    // Recargar la p�gina actual para reflejar cambios
                     this.loadPage(this.currentPage);
                     
-                    console.log('✅ Datos actualizados');
+                    console.log('? Datos actualizados');
                 }
                 
                 lastVisibilityChange = now;
             }
         });
         
-        // También detectar cuando la ventana recibe foco
+        // Tambi�n detectar cuando la ventana recibe foco
         window.addEventListener('focus', async () => {
             const now = Date.now();
             const timeSinceLastChange = now - lastVisibilityChange;
             
             if (timeSinceLastChange > 2000) {
-                console.log('🔄 Ventana enfocada - Recargando datos...');
+                console.log('?? Ventana enfocada - Recargando datos...');
                 await this.loadAllData();
                 this.loadPage(this.currentPage);
-                console.log('✅ Datos actualizados');
+                console.log('? Datos actualizados');
                 lastVisibilityChange = now;
             }
         });
@@ -179,7 +179,7 @@ const App = {
         await PaymentHistoryModule.init();
     },
 
-    // Configurar navegación
+    // Configurar navegaci�n
     setupNavigation() {
         // Sidebar
         const sidebarItems = document.querySelectorAll('.sidebar-item');
@@ -206,7 +206,7 @@ const App = {
                     });
                     item.classList.add('active');
                     
-                    // Cerrar recibo al cambiar de página
+                    // Cerrar recibo al cambiar de p�gina
                     this.closeReceipt();
                 });
             }
@@ -236,26 +236,26 @@ const App = {
         // Escuchar mensajes del Service Worker (acciones de notificaciones)
         navigator.serviceWorker.addEventListener('message', (event) => {
             console.log('========================================');
-            console.log('📨 MENSAJE RECIBIDO DEL SERVICE WORKER');
+            console.log('?? MENSAJE RECIBIDO DEL SERVICE WORKER');
             console.log('Tipo:', event.data?.type);
-            console.log('Acción:', event.data?.action);
+            console.log('Acci�n:', event.data?.action);
             console.log('Datos:', event.data?.data);
             console.log('========================================');
             
             if (event.data && event.data.type === 'notification-action') {
-                console.log('✅ Procesando acción de notificación...');
+                console.log('? Procesando acci�n de notificaci�n...');
                 this.handleNotificationAction(event.data.action, event.data.data);
             }
             
             // NUEVO: Procesar pagos desde notificaciones
             if (event.data && event.data.type === 'process-payment') {
-                console.log('💰 Procesando pago desde notificación...');
+                console.log('?? Procesando pago desde notificaci�n...');
                 PaymentProcessor.processPaymentFromNotification(event.data);
             }
         });
     },
     
-    // Verificar si hay una acción de notificación en la URL
+    // Verificar si hay una acci�n de notificaci�n en la URL
     checkNotificationActionFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
@@ -264,13 +264,13 @@ const App = {
         const totalDebt = urlParams.get('totalDebt');
         
         if (action) {
-            console.log('🔔 Acción de notificación desde URL:', action);
-            console.log('📋 Parámetros:', { clientId, clientName, totalDebt });
+            console.log('?? Acci�n de notificaci�n desde URL:', action);
+            console.log('?? Par�metros:', { clientId, clientName, totalDebt });
             
             // Limpiar la URL
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Procesar la acción después de que la app esté lista
+            // Procesar la acci�n despu�s de que la app est� lista
             setTimeout(() => {
                 this.handleNotificationAction(action, {
                     clientId: clientId,
@@ -288,7 +288,7 @@ const App = {
         window.launchQueue.setConsumer(async (launchParams) => {
             if (!launchParams.files || launchParams.files.length === 0) return;
 
-            console.log('📂 Archivo recibido via file_handler:', launchParams.files.length);
+            console.log('?? Archivo recibido via file_handler:', launchParams.files.length);
 
             for (const fileHandle of launchParams.files) {
                 try {
@@ -296,7 +296,7 @@ const App = {
                     if (file.type === 'application/json' || file.name.endsWith('.json')) {
                         const text = await file.text();
                         const data = JSON.parse(text);
-                        // Reutilizar la lógica de importación existente
+                        // Reutilizar la l�gica de importaci�n existente
                         await BackupModule.importFromData(data);
                         Utils.showNotification(`Backup "${file.name}" importado correctamente`, 'success');
                         this.loadPage('dashboard');
@@ -344,7 +344,7 @@ const App = {
         }
     },
 
-    // Cargar página
+    // Cargar p�gina
     async loadPage(page) {
         this.currentPage = page;
         const mainContent = document.getElementById('main-content');
@@ -382,7 +382,7 @@ const App = {
                 this.loadAccountingPage();
                 break;
             case 'backup':
-                await this.loadBackupPage(); // ESPERAR carga asíncrona
+                await this.loadBackupPage(); // ESPERAR carga as�ncrona
                 break;
             case 'cloud-sync':
                 await this.loadCloudSyncPage();
@@ -404,7 +404,7 @@ const App = {
                 break;
         }
         
-        // REINICIALIZAR TOGGLE DE MODO DESARROLLO DESPUÁ‰S DE CARGAR PÁGINA
+        // REINICIALIZAR TOGGLE DE MODO DESARROLLO DESPU��S DE CARGAR P��GINA
         setTimeout(() => {
             this.initDevModeToggle();
         }, 100);
@@ -418,7 +418,7 @@ const App = {
         }
     },
     
-    // Página de Diezmos y Ofrendas
+    // P�gina de Diezmos y Ofrendas
     loadDiezmosPage() {
         const preview = DiezmosModule.getPreview(this.currentDate);
         const sales = SalesModule.getSalesByDate(this.currentDate);
@@ -427,7 +427,7 @@ const App = {
         const html = `
             <div class="page active" id="diezmos-page">
                 <h2><i class="fas fa-hand-holding-heart"></i> Diezmos y Ofrendas</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Cálculo automático basado en ganancia neta</p>
+                <p style="margin: 10px 0 20px; color: var(--gray);">C�lculo autom�tico basado en ganancia neta</p>
                 
                 <div class="date-filter">
                     <input type="date" class="date-input" id="diezmos-date-filter" value="${this.currentDate}">
@@ -461,7 +461,7 @@ const App = {
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-cog"></i> Configuración de Porcentajes</h3>
+                    <h3><i class="fas fa-cog"></i> Configuraci�n de Porcentajes</h3>
                     <form id="diezmos-config-form">
                         <div class="form-group">
                             <label class="form-label">Porcentaje de Diezmo (%)</label>
@@ -474,14 +474,14 @@ const App = {
                                    id="ofrenda-percent" value="${DiezmosModule.config.ofrendaPercent}" required>
                         </div>
                         <button type="submit" class="btn btn-primary" style="width: 100%;">
-                            <i class="fas fa-save"></i> Guardar Configuración
+                            <i class="fas fa-save"></i> Guardar Configuraci�n
                         </button>
                     </form>
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-save"></i> Guardar Registro del Día</h3>
-                    <p style="color: var(--gray); margin-bottom: 15px;">Guarda el cálculo de diezmos y ofrendas para ${this.currentDate}</p>
+                    <h3><i class="fas fa-save"></i> Guardar Registro del D�a</h3>
+                    <p style="color: var(--gray); margin-bottom: 15px;">Guarda el c�lculo de diezmos y ofrendas para ${this.currentDate}</p>
                     <button class="btn btn-success" onclick="App.saveDiezmosRecord()" style="width: 100%;" ${sales.length === 0 ? 'disabled' : ''}>
                         <i class="fas fa-check"></i> Guardar Registro de Hoy
                     </button>
@@ -509,7 +509,7 @@ const App = {
                     </div>
                     
                     <ul class="sales-list" id="diezmos-records-list">
-                        <!-- Los registros se agregarán aquí -->
+                        <!-- Los registros se agregar�n aqu� -->
                     </ul>
                 </div>
             </div>
@@ -551,7 +551,7 @@ const App = {
         const ofrendaPercent = parseFloat(document.getElementById('ofrenda-percent').value);
         
         DiezmosModule.updateConfig(diezmoPercent, ofrendaPercent);
-        Utils.showNotification('Configuración guardada correctamente', 'success', 3000);
+        Utils.showNotification('Configuraci�n guardada correctamente', 'success', 3000);
         this.loadDiezmosPage();
     },
 
@@ -569,11 +569,11 @@ const App = {
         await DiezmosModule.saveDailyRecord(today);
         Utils.showNotification('Diezmos guardados correctamente', 'success', 3000);
         
-        // Notificación push
+        // Notificaci�n push
         if (NotificationsModule) {
             const preview = DiezmosModule.getPreview(today);
-            NotificationsModule.show('💰 Diezmos Guardados', `Total: ${Utils.formatCurrency(preview.total)}`).catch(err => {
-                console.warn('No se pudo enviar notificación:', err);
+            NotificationsModule.show('?? Diezmos Guardados', `Total: ${Utils.formatCurrency(preview.total)}`).catch(err => {
+                console.warn('No se pudo enviar notificaci�n:', err);
             });
         }
         
@@ -583,7 +583,7 @@ const App = {
     // NUEVO: Recalcular todos los diezmos pendientes
     async recalcularTodosDiezmos() {
         const confirmed = await Utils.showConfirm(
-            '¿Recalcular diezmos para TODOS los días con ganancias? Esto puede tomar unos segundos.',
+            '�Recalcular diezmos para TODOS los d�as con ganancias? Esto puede tomar unos segundos.',
             'Recalcular Diezmos',
             'Recalcular',
             'Cancelar'
@@ -599,10 +599,10 @@ const App = {
             const resultado = await DiezmosModule.forzarRecalculoCompleto();
             
             if (resultado.creados > 0 || resultado.actualizados > 0) {
-                // Recargar la página para mostrar los nuevos registros
+                // Recargar la p�gina para mostrar los nuevos registros
                 this.loadDiezmosPage();
             } else {
-                Utils.showNotification('No se encontraron días con ganancias pendientes de calcular', 'info', 3000);
+                Utils.showNotification('No se encontraron d�as con ganancias pendientes de calcular', 'info', 3000);
             }
         } catch (error) {
             Utils.showNotification('Error al recalcular diezmos: ' + error.message, 'error', 5000);
@@ -699,12 +699,12 @@ const App = {
 
         const html = `
             <div class="page active" id="creditos-page">
-                <h2><i class="fas fa-credit-card"></i> Control de Créditos</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Gestiona ventas a crédito y pagos</p>
+                <h2><i class="fas fa-credit-card"></i> Control de Cr�ditos</h2>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Gestiona ventas a cr�dito y pagos</p>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">Créditos Activos</div>
+                        <div class="stat-label">Cr�ditos Activos</div>
                         <div class="stat-value" style="color: var(--warning)">${creditSales.length}</div>
                     </div>
                     <div class="stat-card">
@@ -720,7 +720,7 @@ const App = {
                 ${Object.keys(clientsWithDebt).length === 0 ? `
                     <div class="card" style="background: #E8F5E9; border-left: 4px solid var(--success);">
                         <p style="margin: 0; color: var(--success);">
-                            <i class="fas fa-check-circle"></i> No hay créditos pendientes
+                            <i class="fas fa-check-circle"></i> No hay cr�ditos pendientes
                         </p>
                     </div>
                 ` : ''}
@@ -741,8 +741,8 @@ const App = {
                         <div style="background: linear-gradient(135deg, #4CAF50, #388E3C); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                 <div style="color: white;">
-                                    <div style="font-size: 0.9rem; opacity: 0.9;">💡 Pago Inteligente</div>
-                                    <div style="font-size: 1.3rem; font-weight: bold;">${data.sales.length} créditos activos</div>
+                                    <div style="font-size: 0.9rem; opacity: 0.9;">?? Pago Inteligente</div>
+                                    <div style="font-size: 1.3rem; font-weight: bold;">${data.sales.length} cr�ditos activos</div>
                                 </div>
                                 <button class="btn" onclick="App.showSmartPaymentModal(${data.client.id})" 
                                         style="background: white; color: #4CAF50; font-weight: bold; padding: 12px 24px;">
@@ -758,7 +758,7 @@ const App = {
                                     <div class="sale-info">
                                         <h4>${sale.date} ${sale.time}</h4>
                                         <p class="sale-details">
-                                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb × 
+                                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb � 
                                             <i class="fas fa-egg"></i> ${sale.quantity} pollos
                                         </p>
                                         <p class="sale-details">
@@ -828,7 +828,7 @@ const App = {
                             <label class="form-label">Monto a Pagar</label>
                             <input type="number" step="0.01" min="0.01" 
                                    class="form-input" id="payment-amount" required 
-                                   placeholder="Máximo: ${sale.remainingDebt.toFixed(2)}">
+                                   placeholder="M�ximo: ${sale.remainingDebt.toFixed(2)}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Fecha del Pago</label>
@@ -869,7 +869,7 @@ const App = {
         const clientSales = SalesModule.getCreditSales().filter(s => s.clientId === clientId);
         const totalDebt = clientSales.reduce((sum, sale) => sum + sale.remainingDebt, 0);
 
-        // Ordenar ventas por fecha (más antiguas primero - FIFO)
+        // Ordenar ventas por fecha (m�s antiguas primero - FIFO)
         clientSales.sort((a, b) => {
             const dateA = new Date(a.date + ' ' + a.time);
             const dateB = new Date(b.date + ' ' + b.time);
@@ -889,7 +889,7 @@ const App = {
                 <div class="modal-body">
                     <div style="background: #E8F5E9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                         <p style="margin: 0 0 10px 0;"><strong>Cliente:</strong> ${client.name}</p>
-                        <p style="margin: 0 0 10px 0;"><strong>Créditos activos:</strong> ${clientSales.length}</p>
+                        <p style="margin: 0 0 10px 0;"><strong>Cr�ditos activos:</strong> ${clientSales.length}</p>
                         <p style="margin: 0; font-size: 1.2rem; color: #4CAF50; font-weight: bold;">
                             <strong>Deuda total:</strong> ${Utils.formatCurrency(totalDebt)}
                         </p>
@@ -897,10 +897,10 @@ const App = {
 
                     <div style="background: #FFF3CD; padding: 12px; border-radius: 8px; border-left: 4px solid #FF9800; margin-bottom: 20px;">
                         <p style="margin: 0; color: #856404; font-size: 0.9rem;">
-                            <i class="fas fa-info-circle"></i> <strong>¿Cómo funciona?</strong>
+                            <i class="fas fa-info-circle"></i> <strong>�C�mo funciona?</strong>
                         </p>
                         <p style="margin: 5px 0 0 0; color: #856404; font-size: 0.85rem;">
-                            El pago se distribuirá automáticamente entre los créditos más antiguos primero (FIFO).
+                            El pago se distribuir� autom�ticamente entre los cr�ditos m�s antiguos primero (FIFO).
                         </p>
                     </div>
 
@@ -909,7 +909,7 @@ const App = {
                             <label class="form-label">Monto a Pagar</label>
                             <input type="number" step="0.01" min="0.01" max="${totalDebt.toFixed(2)}"
                                    class="form-input" id="smart-payment-amount" required 
-                                   placeholder="Máximo: ${totalDebt.toFixed(2)}">
+                                   placeholder="M�ximo: ${totalDebt.toFixed(2)}">
                             <div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">
                                 <button type="button" class="btn btn-outline" onclick="document.getElementById('smart-payment-amount').value = ${(totalDebt / 4).toFixed(2)}" style="flex: 1; min-width: 60px; padding: 8px; font-size: 0.85rem;">
                                     25%
@@ -934,7 +934,7 @@ const App = {
 
                         <div id="payment-preview" style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
                             <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--gray);">
-                                <i class="fas fa-eye"></i> Vista Previa de Distribución
+                                <i class="fas fa-eye"></i> Vista Previa de Distribuci�n
                             </h4>
                             <div id="preview-content"></div>
                         </div>
@@ -1010,7 +1010,7 @@ const App = {
                         <i class="fas fa-arrow-right"></i> Pago: ${Utils.formatCurrency(d.payment)}
                     </span>
                     <span style="color: ${d.remaining === 0 ? 'var(--success)' : 'var(--warning)'}; font-weight: bold;">
-                        ${d.remaining === 0 ? '✓ Liquidado' : `Resta: ${Utils.formatCurrency(d.remaining)}`}
+                        ${d.remaining === 0 ? '? Liquidado' : `Resta: ${Utils.formatCurrency(d.remaining)}`}
                     </span>
                 </div>
             </div>
@@ -1039,7 +1039,7 @@ const App = {
         // Esperar a que se guarden todos los cambios
         await SalesModule.saveSales();
 
-        // CR�TICO: Notificar al sistema de sincronización sobre los pagos procesados
+        // CR?TICO: Notificar al sistema de sincronizaci�n sobre los pagos procesados
         if (paymentsProcessed > 0 && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             // Notificar cada venta modificada
             for (const saleId of processedSaleIds) {
@@ -1049,7 +1049,7 @@ const App = {
 
         if (paymentsProcessed > 0) {
             Utils.showNotification(
-                `✅ Pago inteligente aplicado: ${Utils.formatCurrency(totalAmount - remaining)} distribuido en ${paymentsProcessed} crédito${paymentsProcessed > 1 ? 's' : ''}`,
+                `? Pago inteligente aplicado: ${Utils.formatCurrency(totalAmount - remaining)} distribuido en ${paymentsProcessed} cr�dito${paymentsProcessed > 1 ? 's' : ''}`,
                 'success',
                 5000
             );
@@ -1060,14 +1060,14 @@ const App = {
 
     markSaleAsCredit(saleId) {
         if (SalesModule.markAsCredit(saleId)) {
-            Utils.showNotification('Venta marcada como crédito', 'success', 3000);
+            Utils.showNotification('Venta marcada como cr�dito', 'success', 3000);
             CreditosModule.updateCreditBadges();
             return true;
         }
         return false;
     },
 
-    // Página de Historial de Pagos
+    // P�gina de Historial de Pagos
     loadPaymentHistoryPage() {
         const allPayments = PaymentHistoryModule.getAllPayments();
         const stats = PaymentHistoryModule.getStats();
@@ -1094,7 +1094,7 @@ const App = {
                         </div>
                     </div>
                     <div class="stat-card" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; border: none;">
-                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Clientes Únicos</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Clientes �nicos</div>
                         <div class="stat-value" style="color: white; font-size: 2.5rem;">${stats.uniqueClients}</div>
                         <div style="margin-top: 5px; font-size: 0.85rem; opacity: 0.9;">
                             <i class="fas fa-users"></i> Clientes
@@ -1110,7 +1110,7 @@ const App = {
                 </div>
                 
                 <div class="card" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                    <h3 style="margin-bottom: 20px;"><i class="fas fa-filter"></i> Filtros de Búsqueda</h3>
+                    <h3 style="margin-bottom: 20px;"><i class="fas fa-filter"></i> Filtros de B�squeda</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
                         <div class="form-group" style="margin: 0;">
                             <label class="form-label" style="font-weight: 600;">
@@ -1320,19 +1320,19 @@ const App = {
     exportPaymentHistory() {
         const clientId = document.getElementById('filter-client').value;
         PaymentHistoryModule.exportPayments(clientId || null);
-        Utils.showNotification('✅ Historial exportado correctamente', 'success', 3000);
+        Utils.showNotification('? Historial exportado correctamente', 'success', 3000);
     },
 
-    // Página de Configuración (NUEVA)
+    // P�gina de Configuraci�n (NUEVA)
 loadConfigPage() {
     ConfigModule.init();
     
     const html = `
         <div class="page active" id="config-page">
-            <h2><i class="fas fa-cog"></i> Configuración de la App</h2>
-            <p style="margin: 10px 0 20px; color: var(--gray);">Personaliza colores, nombre y logo de la aplicación</p>
+            <h2><i class="fas fa-cog"></i> Configuraci�n de la App</h2>
+            <p style="margin: 10px 0 20px; color: var(--gray);">Personaliza colores, nombre y logo de la aplicaci�n</p>
             
-            <!-- Configuración de Colores -->
+            <!-- Configuraci�n de Colores -->
             <div class="config-group">
                 <h4><i class="fas fa-palette"></i> Colores de la Interfaz</h4>
                 
@@ -1361,8 +1361,7 @@ loadConfigPage() {
                 <p style="margin: 20px 0 10px; font-weight: 600;">Colores personalizados:</p>
                 <div class="color-picker-container">
                     ${Object.entries(ConfigModule.currentConfig.colors).map(([key, value]) => `
-                        <div class="color-option" onclick="App.openColorPicker('${key}', '${value}')">
-                            <div class="color-preview ${'color-' + key}" style="background: ${value}"></div>
+                        <div class="color-option" onclick="App.openColorPicker('${key}', '${value}')">                            <div class="color-preview ${'color-' + key}" style="background: ${value}"></div>
                             <div class="color-name">${key}</div>
                             <div class="color-value">${value}</div>
                         </div>
@@ -1393,13 +1392,13 @@ loadConfigPage() {
                 </div>
             </div>
             
-            <!-- Configuración de Nombre y Logo -->
+            <!-- Configuraci�n de Nombre y Logo -->
             <div class="config-group">
                 <h4><i class="fas fa-font"></i> Nombre y Logo</h4>
                 
                 <!-- Nombre de la App -->
                 <div class="form-group">
-                    <label class="form-label">Nombre de la Aplicación</label>
+                    <label class="form-label">Nombre de la Aplicaci�n</label>
                     <input type="text" class="form-input" id="config-app-name" 
                            value="${ConfigModule.currentConfig.appName}"
                            onchange="ConfigModule.setAppName(this.value)">
@@ -1435,7 +1434,7 @@ loadConfigPage() {
     <div class="logo-upload-container" onclick="document.getElementById('logo-upload').click()">
         <i class="fas fa-cloud-upload-alt"></i>
         <p>Haz clic para subir un logo</p>
-        <p style="font-size: 0.8rem; color: var(--gray);">PNG, JPG o SVG (recomendado 512Á—512, máximo 2MB)</p>
+        <p style="font-size: 0.8rem; color: var(--gray);">PNG, JPG o SVG (recomendado 512x512, maximo 2MB)</p>
         <input type="file" id="logo-upload" accept="image/*" style="display: none;" 
                onchange="App.handleLogoUpload(this.files[0])">
         ${ConfigModule.currentConfig.logoImage ? `
@@ -1478,9 +1477,9 @@ loadConfigPage() {
                 </div>
             </div>
             
-            <!-- Depuración -->
+            <!-- Depuraci�n -->
             <div class="config-group">
-                <h4><i class="fas fa-bug"></i> Depuración</h4>
+                <h4><i class="fas fa-bug"></i> Depuraci�n</h4>
                 <p style="margin-bottom: 15px; color: var(--gray); font-size: 0.9rem;">
                     <i class="fas fa-info-circle"></i> Herramientas para diagnosticar problemas en la app
                 </p>
@@ -1501,7 +1500,7 @@ loadConfigPage() {
             <div class="config-group" style="border: 2px solid var(--danger); border-radius: 12px; padding: 20px;">
                 <h4 style="color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> Zona de Peligro</h4>
                 <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">
-                    Estas acciones son irreversibles. Todos tus datos serán eliminados permanentemente.
+                    Estas acciones son irreversibles. Todos tus datos ser�n eliminados permanentemente.
                 </p>
                 ${window.AuthManager && window.AuthManager.isAuthenticated() ? `
                 <button class="btn btn-danger" onclick="App.confirmDeleteAccount()" style="width: 100%;">
@@ -1509,7 +1508,7 @@ loadConfigPage() {
                 </button>
                 ` : `
                 <p style="color: var(--gray); font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Debes iniciar sesión en la nube para eliminar tu cuenta.
+                    <i class="fas fa-info-circle"></i> Debes iniciar sesi�n en la nube para eliminar tu cuenta.
                 </p>
                 `}
             </div>
@@ -1548,15 +1547,29 @@ loadConfigPage() {
 },
 
 
-// Métodos auxiliares para configuración
+// M�todos auxiliares para configuraci�n
 openColorPicker(colorName, currentValue) {
-    ConfigModule.openColorPicker(colorName, currentValue).then(newValue => {
+    // Usar input color nativo del navegador
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = currentValue;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    input.style.pointerEvents = 'none';
+    document.body.appendChild(input);
+    input.click();
+    input.addEventListener('change', () => {
+        const newValue = input.value;
         if (newValue && newValue !== currentValue) {
             ConfigModule.currentConfig.colors[colorName] = newValue;
             ConfigModule.applyConfig();
             ConfigModule.saveConfig();
             App.updateConfigUI();
         }
+        document.body.removeChild(input);
+    });
+    input.addEventListener('blur', () => {
+        setTimeout(() => document.body.contains(input) && document.body.removeChild(input), 500);
     });
 },
 
@@ -1596,7 +1609,7 @@ updateConfigUI() {
 },
 
 async confirmDeleteAccount() {
-    // Modal de confirmación con texto que el usuario debe escribir
+    // Modal de confirmaci�n con texto que el usuario debe escribir
     const html = `
         <div class="modal active" id="delete-account-modal">
             <div class="modal-content" style="max-width: 420px;">
@@ -1604,13 +1617,13 @@ async confirmDeleteAccount() {
                     <h3><i class="fas fa-exclamation-triangle"></i> Eliminar cuenta</h3>
                 </div>
                 <div class="modal-body">
-                    <p style="margin-bottom: 15px;">Esta acción es <strong>irreversible</strong>. Se eliminarán:</p>
+                    <p style="margin-bottom: 15px;">Esta acci�n es <strong>irreversible</strong>. Se eliminar�n:</p>
                     <ul style="margin: 0 0 20px 20px; color: var(--gray); font-size: 0.9rem;">
                         <li>Tu cuenta de usuario</li>
                         <li>Todos tus clientes, ventas, pedidos y gastos</li>
-                        <li>Historial de pagos y créditos</li>
+                        <li>Historial de pagos y cr�ditos</li>
                         <li>Datos de merma y diezmos</li>
-                        <li>Configuración y backups en la nube</li>
+                        <li>Configuraci�n y backups en la nube</li>
                     </ul>
                     <p style="margin-bottom: 10px; font-weight: 600;">Escribe <span style="color: var(--danger);">ELIMINAR</span> para confirmar:</p>
                     <input type="text" id="delete-confirm-input" class="form-input" placeholder="ELIMINAR" autocomplete="off">
@@ -1657,12 +1670,12 @@ handleLogoUpload(file) {
     
     const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-        Utils.showNotification('Formato no válido. Usa JPG, PNG, SVG o GIF', 'error', 5000);
+        Utils.showNotification('Formato no v�lido. Usa JPG, PNG, SVG o GIF', 'error', 5000);
         return;
     }
     
     if (file.size > 2 * 1024 * 1024) {
-        Utils.showNotification('La imagen es muy grande. Máximo 2MB', 'error', 5000);
+        Utils.showNotification('La imagen es muy grande. M�ximo 2MB', 'error', 5000);
         return;
     }
     
@@ -1709,13 +1722,13 @@ handleLogoUpload(file) {
     reader.readAsDataURL(file);
 },
 
-// Método para redimensionar imagen
+// M�todo para redimensionar imagen
 resizeImage(img, maxWidth, maxHeight) {
     const canvas = document.createElement('canvas');
     let width = img.width;
     let height = img.height;
     
-    // Calcular nuevas dimensiones manteniendo proporción
+    // Calcular nuevas dimensiones manteniendo proporci�n
     if (width > height) {
         if (width > maxWidth) {
             height = Math.round(height * maxWidth / width);
@@ -1736,7 +1749,7 @@ resizeImage(img, maxWidth, maxHeight) {
     return canvas.toDataURL('image/png', 0.9);
 },
 
-// Método para actualizar vista previa del logo
+// M�todo para actualizar vista previa del logo
 updateLogoPreview(imageData) {
     const uploadContainer = document.querySelector('.logo-upload-container');
     if (!uploadContainer) return;
@@ -1772,12 +1785,12 @@ async importConfig(file) {
     
     try {
         await ConfigModule.importConfig(file);
-        Utils.showNotification('Configuración importada correctamente', 'success', 3000);
+        Utils.showNotification('Configuraci�n importada correctamente', 'success', 3000);
         setTimeout(() => {
             window.location.reload();
         }, 1000);
     } catch (error) {
-        Utils.showNotification('Error al importar configuración: ' + error.message, 'error', 5000);
+        Utils.showNotification('Error al importar configuraci�n: ' + error.message, 'error', 5000);
     }
 },
 
@@ -1789,18 +1802,18 @@ async cleanDuplicatePayments() {
         if (count > 0) {
             // Subir los datos limpios al servidor para sincronizar
             if (window.SyncEngine && window.AuthManager?.isAuthenticated()) {
-                console.log('📤 Subiendo historial limpio al servidor...');
+                console.log('?? Subiendo historial limpio al servidor...');
                 try {
                     await SyncEngine.uploadAllData('paymentHistory', PaymentHistoryModule.payments);
-                    console.log('✅ Historial limpio sincronizado con el servidor');
+                    console.log('? Historial limpio sincronizado con el servidor');
                 } catch (error) {
-                    console.error('❌ Error sincronizando con servidor:', error);
+                    console.error('? Error sincronizando con servidor:', error);
                 }
             }
             
             Utils.showLoading(false);
             
-            // Recargar la página actual para reflejar los cambios
+            // Recargar la p�gina actual para reflejar los cambios
             if (this.currentPage === 'payment-history') {
                 this.loadPaymentHistoryPage();
             } else {
@@ -1817,7 +1830,7 @@ async cleanDuplicatePayments() {
     }
 },
 
-    // Página Dashboard (ACTUALIZADA con mapa)
+    // P�gina Dashboard (ACTUALIZADA con mapa)
     loadDashboardPage() {
         const todaySales = SalesModule.getTodaySales();
         const todayIncome = todaySales.reduce((sum, sale) => sum + sale.total, 0);
@@ -1859,7 +1872,7 @@ async cleanDuplicatePayments() {
                         <div class="dashboard-info">
                             <h3>Pedidos Pendientes</h3>
                             <div class="dashboard-value">${pendingOrders}</div>
-                            <div class="dashboard-subtitle">Requieren atención</div>
+                            <div class="dashboard-subtitle">Requieren atenci�n</div>
                         </div>
                     </div>
                     
@@ -1926,7 +1939,7 @@ async cleanDuplicatePayments() {
         if (mainContent) {
             mainContent.innerHTML = html;
             
-            // Inicializar mapa del dashboard después de un breve delay
+            // Inicializar mapa del dashboard despu�s de un breve delay
             setTimeout(() => {
                 this.inicializarMapaDashboard();
             }, 300);
@@ -1970,7 +1983,7 @@ async cleanDuplicatePayments() {
             mapContainer.style.height = '100%';
             mapaElement.appendChild(mapContainer);
             
-            // Inicializar mapa con ubicación actual o por defecto
+            // Inicializar mapa con ubicaci�n actual o por defecto
             let mapa;
             
             // Obtener clientes con coordenadas primero
@@ -1991,7 +2004,7 @@ async cleanDuplicatePayments() {
                 mapaElement.innerHTML = `
                     <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray);">
                         <i class="fas fa-map-marker-alt" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                        <p>Los clientes no tienen ubicación</p>
+                        <p>Los clientes no tienen ubicaci�n</p>
                     </div>
                 `;
                 return;
@@ -2015,10 +2028,10 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Método auxiliar para configurar el mapa del dashboard
+    // M�todo auxiliar para configurar el mapa del dashboard
     configurarMapaDashboard(mapa, clientesConCoordenadas) {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+            attribution: '� OpenStreetMap contributors'
         }).addTo(mapa);
             
         // Obtener clientes con coordenadas
@@ -2035,7 +2048,7 @@ async cleanDuplicatePayments() {
             
         rutaOptimizada.forEach((cliente, index) => {
             if (cliente.coordinates && cliente.coordinates.lat) {
-                // Determinar color según estado del pedido
+                // Determinar color seg�n estado del pedido
                 let colorIcono = 'var(--primary)';
                 if (cliente.pedidoStatus === 'delivered') {
                     colorIcono = 'var(--success)';
@@ -2043,7 +2056,7 @@ async cleanDuplicatePayments() {
                     colorIcono = 'var(--danger)';
                 }
                     
-                    // Crear marcador con número
+                    // Crear marcador con n�mero
                     const icon = L.divIcon({
                         className: 'numero-marcador',
                         html: `
@@ -2074,7 +2087,7 @@ async cleanDuplicatePayments() {
                                 <b>${index + 1}. ${cliente.name}</b><br>
                                 <small>${cliente.address}</small><br>
                                 <hr style="margin: 5px 0;">
-                                <strong>Pedido:</strong> ${cliente.peso.toFixed(2)} lb • ${cliente.cantidad} pollos<br>
+                                <strong>Pedido:</strong> ${cliente.peso.toFixed(2)} lb � ${cliente.cantidad} pollos<br>
                                 <strong>Estado:</strong> <span class="order-status ${cliente.pedidoStatus}">${OrdersModule.getStatusText(cliente.pedidoStatus)}</span>
                             </div>
                         `);
@@ -2084,7 +2097,7 @@ async cleanDuplicatePayments() {
                 }
             });
             
-            // Dibujar línea que conecta los puntos
+            // Dibujar l�nea que conecta los puntos
             if (coordenadas.length >= 2) {
                 L.polyline(coordenadas, {
                     color: 'var(--primary)',
@@ -2169,7 +2182,7 @@ async cleanDuplicatePayments() {
                 mapaElement.innerHTML = `
                     <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--gray);">
                         <i class="fas fa-map-marker-alt" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                        <p>Los clientes no tienen ubicación</p>
+                        <p>Los clientes no tienen ubicaci�n</p>
                     </div>
                 `;
             }
@@ -2185,7 +2198,7 @@ async cleanDuplicatePayments() {
         
         rutaOptimizada.forEach((cliente, index) => {
             if (cliente.coordinates && cliente.coordinates.lat) {
-                // Determinar color según estado del pedido
+                // Determinar color seg�n estado del pedido
                 let colorIcono = 'var(--primary)';
                 if (cliente.pedidoStatus === 'delivered') {
                     colorIcono = 'var(--success)';
@@ -2193,7 +2206,7 @@ async cleanDuplicatePayments() {
                     colorIcono = 'var(--danger)';
                 }
                 
-                // Crear marcador con número
+                // Crear marcador con n�mero
                 const icon = L.divIcon({
                     className: 'numero-marcador',
                     html: `
@@ -2224,7 +2237,7 @@ async cleanDuplicatePayments() {
                             <b>${index + 1}. ${cliente.name}</b><br>
                             <small>${cliente.address}</small><br>
                             <hr style="margin: 5px 0;">
-                            <strong>Pedido:</strong> ${cliente.peso.toFixed(2)} lb • ${cliente.cantidad} pollos<br>
+                            <strong>Pedido:</strong> ${cliente.peso.toFixed(2)} lb � ${cliente.cantidad} pollos<br>
                             <strong>Estado:</strong> <span class="order-status ${cliente.pedidoStatus}">${OrdersModule.getStatusText(cliente.pedidoStatus)}</span>
                         </div>
                     `);
@@ -2243,7 +2256,7 @@ async cleanDuplicatePayments() {
             });
         }
         
-        // Dibujar nueva línea que conecta los puntos
+        // Dibujar nueva l�nea que conecta los puntos
         if (coordenadas.length >= 2) {
             L.polyline(coordenadas, {
                 color: 'var(--primary)',
@@ -2275,9 +2288,9 @@ async cleanDuplicatePayments() {
         
         let html = '';
         allActivity.forEach(activity => {
-            // Verificar que ClientsModule esté disponible
+            // Verificar que ClientsModule est� disponible
             if (typeof ClientsModule === 'undefined' || !ClientsModule.getClientById) {
-                return; // Saltar si el módulo no está listo
+                return; // Saltar si el m�dulo no est� listo
             }
             
             const client = ClientsModule.getClientById(activity.clientId);
@@ -2323,7 +2336,7 @@ async cleanDuplicatePayments() {
         return html || '<p class="empty-state">No hay actividad reciente</p>';
     },
 
-    // Página de Ventas
+    // P�gina de Ventas
     loadSalesPage() {
         const html = `
             <div class="page active" id="sales-page">
@@ -2341,7 +2354,7 @@ async cleanDuplicatePayments() {
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
                     <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
                         <i class="fas fa-weight"></i> Modo Pesaje en Cadena
-                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automática' : 'Ingresa pesos manualmente uno por uno'}</small>
+                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada � captura autom�tica' : 'Ingresa pesos manualmente uno por uno'}</small>
                     </button>
                     <form id="sale-form">
                         <div class="form-group">
@@ -2361,19 +2374,19 @@ async cleanDuplicatePayments() {
                             </div>
                         </div>
                         
-                        <!-- Formulario rápido de cliente (oculto por defecto) -->
+                        <!-- Formulario r�pido de cliente (oculto por defecto) -->
                         <div id="quick-client-form" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
                             <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                                <i class="fas fa-user-plus"></i> Agregar Cliente Rápido
+                                <i class="fas fa-user-plus"></i> Agregar Cliente R�pido
                             </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
                                 <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Teléfono">
+                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Tel�fono">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-address" placeholder="Dirección">
+                                <input type="text" class="form-input" id="quick-client-address" placeholder="Direcci�n">
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button type="button" class="btn btn-primary" onclick="App.saveQuickClient()" style="flex: 1;">
@@ -2405,7 +2418,7 @@ async cleanDuplicatePayments() {
                         <div class="form-group">
                             <label class="form-label" for="sale-price">Precio por lb ($)</label>
                             <input type="number" step="0.01" min="0" class="form-input" id="sale-price" 
-                                   placeholder="Dejar vacío para usar precio de merma" oninput="App.updateSalePreview()">
+                                   placeholder="Dejar vac�o para usar precio de merma" oninput="App.updateSalePreview()">
                         </div>
                         
                         <div class="form-group">
@@ -2415,17 +2428,17 @@ async cleanDuplicatePayments() {
                                    title="Opcional: Para pollos pelados con costo diferente a la merma"></i>
                             </label>
                             <input type="number" step="0.01" min="0" class="form-input" id="sale-cost" 
-                                   placeholder="Dejar vacío para usar costo de merma" oninput="App.updateSalePreview()">
+                                   placeholder="Dejar vac�o para usar costo de merma" oninput="App.updateSalePreview()">
                             <small style="color: var(--gray); display: block; margin-top: 5px;">
                                 <i class="fas fa-drumstick-bite"></i> Usa este campo solo para pollos pelados con costo directo
                             </small>
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label" for="sale-payment-method">Método de Pago</label>
+                            <label class="form-label" for="sale-payment-method">M�todo de Pago</label>
                             <select class="form-input" id="sale-payment-method" required onchange="App.toggleInitialPayment()">
                                 <option value="cash">Efectivo (Pagado)</option>
-                                <option value="credit">Crédito (A deber)</option>
+                                <option value="credit">Cr�dito (A deber)</option>
                             </select>
                         </div>
                         
@@ -2434,7 +2447,7 @@ async cleanDuplicatePayments() {
                             <input type="number" step="0.01" min="0" class="form-input" id="sale-initial-payment" 
                                    placeholder="Monto del abono inicial" oninput="App.updateSalePreview()">
                             <small style="color: var(--gray); display: block; margin-top: 5px;">
-                                <i class="fas fa-info-circle"></i> Opcional: Deja vacío si no hay abono inicial
+                                <i class="fas fa-info-circle"></i> Opcional: Deja vac�o si no hay abono inicial
                             </small>
                         </div>
                         
@@ -2479,7 +2492,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-list"></i> Ventas del ${this.currentDate}</h3>
                     <ul class="sales-list" id="sales-list">
-                        <!-- Las ventas se agregarán aquí dinámicamente -->
+                        <!-- Las ventas se agregar�n aqu� din�micamente -->
                     </ul>
                 </div>
             </div>
@@ -2516,18 +2529,18 @@ async cleanDuplicatePayments() {
                         searchPlaceholder: 'Buscar cliente...'
                     });
                     CustomSelect.init('sale-payment-method', {
-                        placeholder: 'Método de pago'
+                        placeholder: 'M�todo de pago'
                     });
                 }
             }, 100);
         }
     },
 
-    // Página de Pedidos
+    // P�gina de Pedidos
     loadOrdersPage() {
         const html = `
             <div class="page active" id="orders-page">
-                <h2><i class="fas fa-clipboard-list"></i> Gestión de Pedidos</h2>
+                <h2><i class="fas fa-clipboard-list"></i> Gesti�n de Pedidos</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Registra y gestiona pedidos de clientes</p>
                 
                 <div class="order-status-filter">
@@ -2553,19 +2566,19 @@ async cleanDuplicatePayments() {
                             </div>
                         </div>
                         
-                        <!-- Formulario rápido de cliente -->
+                        <!-- Formulario r�pido de cliente -->
                         <div id="quick-client-form-order" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
                             <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                                <i class="fas fa-user-plus"></i> Agregar Cliente Rápido
+                                <i class="fas fa-user-plus"></i> Agregar Cliente R�pido
                             </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
                                 <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Teléfono">
+                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Tel�fono">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Dirección">
+                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Direcci�n">
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button type="button" class="btn btn-primary" onclick="App.saveQuickClientOrder()" style="flex: 1;">
@@ -2590,7 +2603,7 @@ async cleanDuplicatePayments() {
                         <div class="form-group">
                             <label class="form-label" for="order-price">Precio por lb ($)</label>
                             <input type="number" step="0.01" min="0" class="form-input" id="order-price" 
-                                   placeholder="Dejar vacío para usar precio de merma">
+                                   placeholder="Dejar vac�o para usar precio de merma">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="order-delivery-date">Fecha de Entrega (opcional)</label>
@@ -2609,7 +2622,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-list"></i> Lista de Pedidos</h3>
                     <ul class="orders-list" id="orders-list">
-                        <!-- Los pedidos se agregarán aquí dinámicamente -->
+                        <!-- Los pedidos se agregar�n aqu� din�micamente -->
                     </ul>
                 </div>
             </div>
@@ -2642,12 +2655,12 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Clientes
+    // P�gina de Clientes
     loadClientsPage() {
         const html = `
             <div class="page active" id="clients-page">
-                <h2><i class="fas fa-users"></i> Gestión de Clientes</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Agrega nuevos clientes con ubicación</p>
+                <h2><i class="fas fa-users"></i> Gesti�n de Clientes</h2>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Agrega nuevos clientes con ubicaci�n</p>
                 
                 <div class="card">
                     <h3><i class="fas fa-user-plus"></i> Agregar Cliente</h3>
@@ -2658,16 +2671,16 @@ async cleanDuplicatePayments() {
                             <input type="text" class="form-input" id="client-name" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="client-phone">Teléfono</label>
+                            <label class="form-label" for="client-phone">Tel�fono</label>
                             <input type="tel" class="form-input" id="client-phone" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="client-address">Dirección</label>
+                            <label class="form-label" for="client-address">Direcci�n</label>
                             <input type="text" class="form-input" id="client-address" required>
                         </div>
                         <div class="location-info">
                             <i class="fas fa-map-marker-alt location-icon"></i>
-                            <span id="current-location">Obteniendo ubicación actual...</span>
+                            <span id="current-location">Obteniendo ubicaci�n actual...</span>
                             <button type="button" class="btn btn-outline" onclick="App.openMapModal()" 
                                     style="margin-left: auto; padding: 5px 10px; font-size: 0.8rem;">
                                 <i class="fas fa-map"></i> Seleccionar en Mapa
@@ -2686,18 +2699,18 @@ async cleanDuplicatePayments() {
                     <div class="form-group" style="margin-bottom: 15px;">
                         <div style="position: relative;">
                             <input type="text" class="form-input" id="client-search" 
-                                   placeholder="Buscar por nombre, teléfono o dirección..." 
+                                   placeholder="Buscar por nombre, tel�fono o direcci�n..." 
                                    style="padding-left: 40px;">
                             <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--gray);"></i>
                         </div>
                         <small style="color: var(--gray); display: block; margin-top: 5px;">
-                            <span id="client-count">0 clientes</span> • 
+                            <span id="client-count">0 clientes</span> � 
                             <span id="client-filtered" style="display: none;">0 encontrados</span>
                         </small>
                     </div>
                     
                     <ul class="client-list" id="client-list">
-                        <!-- Los clientes se agregarán aquí dinámicamente -->
+                        <!-- Los clientes se agregar�n aqu� din�micamente -->
                     </ul>
                 </div>
             </div>
@@ -2708,7 +2721,7 @@ async cleanDuplicatePayments() {
             mainContent.innerHTML = html;
             ClientsModule.updateClientList();
             
-            // Obtener ubicación actual
+            // Obtener ubicaci�n actual
             this.getCurrentLocation();
             
             // Configurar formulario de cliente
@@ -2730,19 +2743,19 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Merma
+    // P�gina de Merma
     loadMermaPage() {
         const todayMermaPrice = MermaModule.getTodayMermaPrice();
         const selectedMermaRecord = MermaModule.getMermaRecordByDate(this.currentDate);
         
         const html = `
             <div class="page active" id="merma-page">
-                <h2><i class="fas fa-calculator"></i> Cálculo de Merma</h2>
+                <h2><i class="fas fa-calculator"></i> C�lculo de Merma</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Calcula el costo real por lb de pollo pelado</p>
 
-                <!-- Días pendientes del mes -->
+                <!-- D�as pendientes del mes -->
                 <div class="card">
-                    <h3><i class="fas fa-calendar-check"></i> Días del mes</h3>
+                    <h3><i class="fas fa-calendar-check"></i> D�as del mes</h3>
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
                         <input type="month" class="form-input" id="merma-month-filter"
                                value="${this.currentDate.substring(0,7)}"
@@ -2754,13 +2767,13 @@ async cleanDuplicatePayments() {
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-chart-line"></i> Datos de Producción</h3>
+                    <h3><i class="fas fa-chart-line"></i> Datos de Producci�n</h3>
                     <form id="merma-form">
                         <div class="form-group">
-                            <label class="form-label" for="merma-date">Fecha del Cálculo</label>
+                            <label class="form-label" for="merma-date">Fecha del C�lculo</label>
                             <input type="date" class="form-input" id="merma-date" value="${this.currentDate}" required>
                             <small style="color: var(--gray); display: block; margin-top: 5px;">
-                                <i class="fas fa-info-circle"></i> Puedes calcular merma de días anteriores
+                                <i class="fas fa-info-circle"></i> Puedes calcular merma de d�as anteriores
                             </small>
                         </div>
                         <div class="merma-form">
@@ -2768,7 +2781,7 @@ async cleanDuplicatePayments() {
                                 <label class="form-label" for="live-weight">Peso total pollos vivos (lb)</label>
                                 <div style="display:flex; gap:8px; align-items:center;">
                                     <input type="number" step="0.01" min="0" class="form-input" id="live-weight"
-                                           placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()" 
+                                           placeholder="Dejar vac�o para calcular" oninput="App.updateMermaPreview()" 
                                            value="${selectedMermaRecord ? selectedMermaRecord.liveWeight : ''}" style="flex:1;">
                                     <button type="button" class="btn btn-outline scale-capture-btn"
                                             onclick="BluetoothScale.captureWeight('live-weight')"
@@ -2780,14 +2793,14 @@ async cleanDuplicatePayments() {
                             <div class="form-group">
                                 <label class="form-label" for="live-cost">Costo por lb pollo vivo ($)</label>
                                 <input type="number" step="0.01" min="0" class="form-input" id="live-cost"
-                                       placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()"
+                                       placeholder="Dejar vac�o para calcular" oninput="App.updateMermaPreview()"
                                        value="${selectedMermaRecord ? selectedMermaRecord.liveCost : ''}">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="processed-weight">Peso total pollos pelados (lb)</label>
                                 <div style="display:flex; gap:8px; align-items:center;">
                                     <input type="number" step="0.01" min="0" class="form-input" id="processed-weight"
-                                           placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()"
+                                           placeholder="Dejar vac�o para calcular" oninput="App.updateMermaPreview()"
                                            value="${selectedMermaRecord ? selectedMermaRecord.processedWeight : ''}" style="flex:1;">
                                     <button type="button" class="btn btn-outline scale-capture-btn"
                                             onclick="BluetoothScale.captureWeight('processed-weight')"
@@ -2799,34 +2812,34 @@ async cleanDuplicatePayments() {
                             <div class="form-group">
                                 <label class="form-label" for="chicken-count">Cantidad de pollos procesados</label>
                                 <input type="number" min="1" class="form-input" id="chicken-count" required
-                                       placeholder="Número de pollos" oninput="App.updateMermaPreview()"
+                                       placeholder="N�mero de pollos" oninput="App.updateMermaPreview()"
                                        value="${selectedMermaRecord ? selectedMermaRecord.chickenCount : ''}">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="processing-cost-per-chicken">Costo por pelar cada pollo ($)</label>
                                 <input type="number" step="0.01" min="0" class="form-input" id="processing-cost-per-chicken"
-                                       placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()"
+                                       placeholder="Dejar vac�o para calcular" oninput="App.updateMermaPreview()"
                                        value="${selectedMermaRecord ? selectedMermaRecord.processingCostPerChicken : ''}">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="real-cost-per-lb">Costo real por lb ($) - Opcional</label>
                                 <input type="number" step="0.01" min="0" class="form-input" id="real-cost-per-lb"
-                                       placeholder="Dejar vacío para calcular" oninput="App.updateMermaPreview()"
+                                       placeholder="Dejar vac�o para calcular" oninput="App.updateMermaPreview()"
                                        value="${selectedMermaRecord ? selectedMermaRecord.realCostPerLb : ''}">
                                 <small style="color: var(--gray); display: block; margin-top: 5px;">
-                                    <i class="fas fa-info-circle"></i> Puedes dejar vacío cualquier campo excepto "Cantidad de pollos"
+                                    <i class="fas fa-info-circle"></i> Puedes dejar vac�o cualquier campo excepto "Cantidad de pollos"
                                 </small>
                             </div>
                             <div class="form-group" style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);padding:15px;border-radius:10px;border:2px solid var(--primary);">
                                 <label class="form-label" for="sale-price-per-lb" style="color:var(--primary);font-weight:700;">
-                                    <i class="fas fa-tag"></i> Precio de venta por lb ($) — Precio del día
+                                    <i class="fas fa-tag"></i> Precio de venta por lb ($) � Precio del d�a
                                 </label>
                                 <input type="number" step="0.01" min="0" class="form-input" id="sale-price-per-lb"
                                        placeholder="Ej: 1.20" 
                                        value="${MermaModule.getTodaySalePrice() || (selectedMermaRecord ? selectedMermaRecord.salePrice || '' : '')}"
                                        style="font-size:1.2rem;font-weight:bold;">
                                 <small style="color:var(--primary);display:block;margin-top:5px;">
-                                    <i class="fas fa-bolt"></i> Este precio se usará automáticamente en todas las ventas del día
+                                    <i class="fas fa-bolt"></i> Este precio se usar� autom�ticamente en todas las ventas del d�a
                                 </small>
                             </div>
                         </div>
@@ -2834,7 +2847,7 @@ async cleanDuplicatePayments() {
                         <!-- VISTA PREVIA EN TIEMPO REAL -->
                         <div id="merma-preview" style="background: linear-gradient(135deg, var(--light) 0%, #e8f5e9 100%); padding: 20px; border-radius: 12px; margin: 20px 0; display: none; border: 2px solid var(--primary);">
                             <h4 style="margin: 0 0 15px 0; color: var(--primary); text-align: center;">
-                                <i class="fas fa-eye"></i> Vista Previa del Cálculo
+                                <i class="fas fa-eye"></i> Vista Previa del C�lculo
                             </h4>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
                                 <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -2851,7 +2864,7 @@ async cleanDuplicatePayments() {
                                 </div>
                                 <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                     <div style="color: var(--gray); font-size: 0.85rem; margin-bottom: 5px;">
-                                        <i class="fas fa-chart-line"></i> Pérdida
+                                        <i class="fas fa-chart-line"></i> P�rdida
                                     </div>
                                     <div id="preview-loss-amount" style="color: var(--warning); font-size: 1.8rem; font-weight: bold;">$0.00</div>
                                 </div>
@@ -2873,7 +2886,7 @@ async cleanDuplicatePayments() {
                         </button>
                         ${selectedMermaRecord ? `
                             <p style="text-align: center; margin-top: 10px; color: var(--success);">
-                                <i class="fas fa-check-circle"></i> Ya existe cálculo para ${this.currentDate}
+                                <i class="fas fa-check-circle"></i> Ya existe c�lculo para ${this.currentDate}
                             </p>
                         ` : ''}
                     </form>
@@ -2906,7 +2919,7 @@ async cleanDuplicatePayments() {
             if (dateInput) {
                 dateInput.addEventListener('change', (e) => {
                     this.currentDate = e.target.value;
-                    // Recargar página para mostrar datos de la nueva fecha
+                    // Recargar p�gina para mostrar datos de la nueva fecha
                     this.loadMermaPage();
                 });
             }
@@ -2916,12 +2929,12 @@ async cleanDuplicatePayments() {
                 setTimeout(() => this.updateMermaPreview(), 100);
             }
 
-            // Renderizar lista de días del mes
+            // Renderizar lista de d�as del mes
             this.renderMermaDaysList(this.currentDate.substring(0, 7));
         }
     },
 
-    // Lista de días del mes con estado de merma calculada
+    // Lista de d�as del mes con estado de merma calculada
     renderMermaDaysList(yearMonth) {
         const container = document.getElementById('merma-days-list');
         if (!container) return;
@@ -2943,13 +2956,13 @@ async cleanDuplicatePayments() {
         }
 
         if (days.length === 0) {
-            container.innerHTML = '<p style="color:var(--gray); font-size:0.9rem; text-align:center; padding:10px;">No hay días registrados en este mes.</p>';
+            container.innerHTML = '<p style="color:var(--gray); font-size:0.9rem; text-align:center; padding:10px;">No hay d�as registrados en este mes.</p>';
             return;
         }
 
         const pending = days.filter(function(d) { return !d.record; }).length;
         const done = days.filter(function(d) { return d.record; }).length;
-        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mi�', 'Jue', 'Vie', 'S�b'];
 
         let html = '<div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">'
             + '<span style="display:flex; align-items:center; gap:6px; font-size:0.85rem;"><span style="width:12px; height:12px; border-radius:50%; background:var(--success); display:inline-block;"></span>Calculada (' + done + ')</span>'
@@ -2969,13 +2982,13 @@ async cleanDuplicatePayments() {
                 const price = day.record.realCostPerLb ? Utils.formatCurrency(day.record.realCostPerLb) + '/lb' : '';
                 html += '<li style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#E8F5E9; border-left:4px solid var(--success);">'
                     + '<span style="font-weight:700; min-width:42px; color:var(--success);">' + dayName + ' ' + dayNum + '</span>'
-                    + '<span style="flex:1; font-size:0.88rem; color:#2e7d32;"><i class="fas fa-check-circle"></i> Merma calculada' + (price ? ' — ' + price : '') + '</span>'
+                    + '<span style="flex:1; font-size:0.88rem; color:#2e7d32;"><i class="fas fa-check-circle"></i> Merma calculada' + (price ? ' � ' + price : '') + '</span>'
                     + todayBadge
                     + '</li>';
             } else if (day.hasSales) {
                 html += '<li onclick="App.goToMermaDate(\'' + day.date + '\')" style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:8px; background:#FFEBEE; border-left:4px solid var(--danger); cursor:pointer;">'
                     + '<span style="font-weight:700; min-width:42px; color:var(--danger);">' + dayName + ' ' + dayNum + '</span>'
-                    + '<span style="flex:1; font-size:0.88rem; color:#c62828;"><i class="fas fa-exclamation-circle"></i> Pendiente — toca para calcular</span>'
+                    + '<span style="flex:1; font-size:0.88rem; color:#c62828;"><i class="fas fa-exclamation-circle"></i> Pendiente � toca para calcular</span>'
                     + todayBadge
                     + '<i class="fas fa-chevron-right" style="color:var(--danger); font-size:0.8rem;"></i>'
                     + '</li>';
@@ -3062,13 +3075,13 @@ async cleanDuplicatePayments() {
                 };
                 deducedMessage = `<div style="background: #E3F2FD; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
                     <i class="fas fa-calculator" style="color: var(--primary);"></i> 
-                    <strong style="color: var(--primary);">${labels[result.deducedValue]}</strong> calculado automáticamente
+                    <strong style="color: var(--primary);">${labels[result.deducedValue]}</strong> calculado autom�ticamente
                 </div>`;
             }
             
             preview.innerHTML = `
                 <h4 style="margin: 0 0 15px 0; color: var(--primary); text-align: center;">
-                    <i class="fas fa-eye"></i> Vista Previa del Cálculo
+                    <i class="fas fa-eye"></i> Vista Previa del C�lculo
                 </h4>
                 ${deducedMessage}
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
@@ -3086,7 +3099,7 @@ async cleanDuplicatePayments() {
                     </div>
                     <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <div style="color: var(--gray); font-size: 0.85rem; margin-bottom: 5px;">
-                            <i class="fas fa-chart-line"></i> Pérdida
+                            <i class="fas fa-chart-line"></i> P�rdida
                         </div>
                         <div style="color: var(--warning); font-size: 1.8rem; font-weight: bold;">$${result.lossAmount.toFixed(2)}</div>
                     </div>
@@ -3102,9 +3115,9 @@ async cleanDuplicatePayments() {
                     <div style="color: var(--primary); font-size: 1.3rem; font-weight: bold;">${(result.liveWeight - result.processedWeight).toFixed(2)} lb</div>
                 </div>
                 <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; font-size: 0.85rem; color: #856404;">
-                    <strong><i class="fas fa-info-circle"></i> Fórmula aplicada:</strong><br>
-                    Costo real/lb = (${result.liveWeight.toFixed(2)} lb × $${result.liveCost.toFixed(2)} + $${result.processingCost.toFixed(2)}) ÷ ${result.processedWeight.toFixed(2)} lb pelado<br>
-                    = ($${(result.liveWeight * result.liveCost).toFixed(2)} + $${result.processingCost.toFixed(2)}) ÷ ${result.processedWeight.toFixed(2)}<br>
+                    <strong><i class="fas fa-info-circle"></i> F�rmula aplicada:</strong><br>
+                    Costo real/lb = (${result.liveWeight.toFixed(2)} lb � $${result.liveCost.toFixed(2)} + $${result.processingCost.toFixed(2)}) � ${result.processedWeight.toFixed(2)} lb pelado<br>
+                    = ($${(result.liveWeight * result.liveCost).toFixed(2)} + $${result.processingCost.toFixed(2)}) � ${result.processedWeight.toFixed(2)}<br>
                     = <strong>$${result.realCostPerLb.toFixed(4)}/lb</strong>
                 </div>
             `;
@@ -3121,11 +3134,11 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Estadísticas
+    // P�gina de Estad�sticas
     loadStatsPage() {
         const html = `
             <div class="page active" id="stats-page">
-                <h2><i class="fas fa-chart-line"></i> Estadísticas de Ventas</h2>
+                <h2><i class="fas fa-chart-line"></i> Estad�sticas de Ventas</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Resumen de ventas y rendimiento</p>
                 
                 <div class="date-filter">
@@ -3165,12 +3178,12 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-layer-group"></i> Desglose por Tipo de Pollo</h3>
                     <div id="chicken-type-breakdown" style="padding: 15px; background: var(--light); border-radius: 8px;">
-                        <!-- Desglose se agregará aquí -->
+                        <!-- Desglose se agregar� aqu� -->
                     </div>
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-money-bill-wave"></i> Precio de Merma del Día</h3>
+                    <h3><i class="fas fa-money-bill-wave"></i> Precio de Merma del D�a</h3>
                     <div class="stat-value" id="merma-price-today" style="text-align: center; margin: 10px 0;">
                         No definido
                     </div>
@@ -3179,7 +3192,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-user-chart"></i> Ventas por Cliente</h3>
                     <ul class="client-list" id="client-stats">
-                        <!-- Las estadísticas por cliente se agregarán aquí dinámicamente -->
+                        <!-- Las estad�sticas por cliente se agregar�n aqu� din�micamente -->
                     </ul>
                 </div>
             </div>
@@ -3200,7 +3213,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-     // Página de Contabilidad
+     // P�gina de Contabilidad
      loadAccountingPage() {
         const html = `
             <div class="page active" id="accounting-page">
@@ -3257,7 +3270,7 @@ async cleanDuplicatePayments() {
                         <i class="fas fa-bug"></i> Debug: Ver Todos los Gastos
                     </button>
                     <ul class="sales-list" id="expenses-list">
-                        <!-- Los gastos se agregarán aquí dinámicamente -->
+                        <!-- Los gastos se agregar�n aqu� din�micamente -->
                     </ul>
                 </div>
             </div>
@@ -3290,16 +3303,16 @@ async cleanDuplicatePayments() {
             setTimeout(() => {
                 if (typeof CustomSelect !== 'undefined') {
                     CustomSelect.init('expense-category', {
-                        placeholder: 'Seleccionar categoría'
+                        placeholder: 'Seleccionar categor�a'
                     });
                 }
             }, 100);
         }
     },
 
-    // Página de Backup (NUEVA)
+    // P�gina de Backup (NUEVA)
     async loadBackupPage() {
-        // IMPORTANTE: Cargar credenciales de forma asíncrona ANTES de verificar
+        // IMPORTANTE: Cargar credenciales de forma as�ncrona ANTES de verificar
         await BackupModule.loadTelegramConfig();
         
         const stats = BackupModule.getBackupStats();
@@ -3307,11 +3320,11 @@ async cleanDuplicatePayments() {
         
         const html = `
             <div class="page active" id="backup-page">
-                <h2><i class="fas fa-database"></i> Backup y Restauración</h2>
+                <h2><i class="fas fa-database"></i> Backup y Restauraci�n</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Gestiona copias de seguridad de tus datos</p>
                 
                 <div class="card">
-                    <h3><i class="fas fa-chart-pie"></i> Estadísticas de Datos</h3>
+                    <h3><i class="fas fa-chart-pie"></i> Estad�sticas de Datos</h3>
                     <div class="backup-stats">
                         <div class="backup-stat">
                             <div class="stat-label">Clientes</div>
@@ -3334,12 +3347,12 @@ async cleanDuplicatePayments() {
                             <div class="stat-value">${stats.totalPrices}</div>
                         </div>
                         <div class="backup-stat">
-                            <div class="stat-label">Tamaño Total</div>
+                            <div class="stat-label">Tama�o Total</div>
                             <div class="stat-value">${stats.totalSize}</div>
                         </div>
                     </div>
                     <p style="text-align: center; margin-top: 10px; color: var(--gray); font-size: 0.9rem;">
-                        <i class="fas fa-clock"></i> Último backup: ${stats.lastBackup}
+                        <i class="fas fa-clock"></i> �ltimo backup: ${stats.lastBackup}
                     </p>
                 </div>
                 
@@ -3373,7 +3386,7 @@ async cleanDuplicatePayments() {
                 
                 <div class="card">
                     <h3><i class="fas fa-file-pdf"></i> Generar Reportes</h3>
-                    <p>Genera reportes PDF de ventas por período.</p>
+                    <p>Genera reportes PDF de ventas por per�odo.</p>
                     <div class="backup-actions">
                         <button class="btn btn-success" onclick="App.generateReport()">
                             <i class="fas fa-chart-line"></i> Generar Reporte PDF
@@ -3392,24 +3405,24 @@ async cleanDuplicatePayments() {
                                 <i class="fab fa-telegram"></i> Enviar Backup
                             </button>
                             <button class="btn btn-outline" onclick="App.testTelegramConnection()">
-                                <i class="fas fa-plug"></i> Probar Conexión
+                                <i class="fas fa-plug"></i> Probar Conexi�n
                             </button>
                         </div>
                         <div style="margin-top: 10px;">
                             <button class="btn btn-danger" onclick="App.clearTelegramConfig()" style="width: 100%; font-size: 0.9rem;">
-                                <i class="fas fa-trash"></i> Eliminar Configuración
+                                <i class="fas fa-trash"></i> Eliminar Configuraci�n
                             </button>
                         </div>
                     ` : `
                         <p style="margin-bottom: 15px; color: var(--gray);">
-                            <i class="fas fa-info-circle"></i> Configura tu bot de Telegram para enviar backups automáticos
+                            <i class="fas fa-info-circle"></i> Configura tu bot de Telegram para enviar backups autom�ticos
                         </p>
                         
                         <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
-                            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">📋 Instrucciones:</h4>
+                            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">?? Instrucciones:</h4>
                             <ol style="margin: 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.6;">
                                 <li>Abre <a href="https://t.me/BotFather" target="_blank" style="color: var(--primary);">@BotFather</a> en Telegram</li>
-                                <li>Envía el comando <code>/newbot</code></li>
+                                <li>Env�a el comando <code>/newbot</code></li>
                                 <li>Sigue las instrucciones y copia el <strong>token</strong></li>
                                 <li>Abre <a href="https://t.me/userinfobot" target="_blank" style="color: var(--primary);">@userinfobot</a></li>
                                 <li>Copia tu <strong>Chat ID</strong></li>
@@ -3434,30 +3447,30 @@ async cleanDuplicatePayments() {
                         </div>
                         
                         <button class="btn btn-primary" onclick="App.saveTelegramConfig()" style="width: 100%;">
-                            <i class="fas fa-save"></i> Guardar Configuración
+                            <i class="fas fa-save"></i> Guardar Configuraci�n
                         </button>
                     `}
                 </div>
                 
                 ${telegramConfigured ? `
                 <div class="card">
-                    <h3><i class="fas fa-robot"></i> Backup Automático</h3>
+                    <h3><i class="fas fa-robot"></i> Backup Autom�tico</h3>
                     <p style="margin-bottom: 15px; color: var(--gray);">
-                        <i class="fas fa-clock"></i> El backup automático se ejecuta todos los días a las <strong>10:00 PM</strong>
+                        <i class="fas fa-clock"></i> El backup autom�tico se ejecuta todos los d�as a las <strong>10:00 PM</strong>
                     </p>
                     <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--success);">
                         <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;">
-                            ✅ El sistema verifica automáticamente si hay cambios en los datos<br>
-                            ✅ Solo crea backup si detecta cambios (evita duplicados)<br>
-                            ✅ Usa el mismo método que el backup manual<br>
-                            ✅ Envía el backup a tu Telegram configurado
+                            ? El sistema verifica autom�ticamente si hay cambios en los datos<br>
+                            ? Solo crea backup si detecta cambios (evita duplicados)<br>
+                            ? Usa el mismo m�todo que el backup manual<br>
+                            ? Env�a el backup a tu Telegram configurado
                         </p>
                     </div>
                     <button class="btn btn-success" onclick="App.testAutoBackup()" style="width: 100%;">
-                        <i class="fas fa-robot"></i> 🤖 Probar Backup Automático
+                        <i class="fas fa-robot"></i> ?? Probar Backup Autom�tico
                     </button>
                     <p style="margin-top: 10px; text-align: center; color: var(--gray); font-size: 0.85rem;">
-                        Este botón ejecuta el mismo backup que se enviará a las 10 PM
+                        Este bot�n ejecuta el mismo backup que se enviar� a las 10 PM
                     </p>
                 </div>
                 ` : ''}
@@ -3470,7 +3483,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Sincronización en la Nube
+    // P�gina de Sincronizaci�n en la Nube
     async loadCloudSyncPage() {
         const mainContent = document.getElementById('main-content');
         if (mainContent) {
@@ -3479,11 +3492,11 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Rutas (MEJORADA)
+    // P�gina de Rutas (MEJORADA)
     loadRutasPage() {
         const html = `
             <div class="page active" id="rutas-page">
-                <h2><i class="fas fa-route"></i> Optimización de Rutas</h2>
+                <h2><i class="fas fa-route"></i> Optimizaci�n de Rutas</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Optimiza las rutas de entrega para clientes</p>
                 
                 <!-- NUEVO: Mapa permanente siempre visible -->
@@ -3521,9 +3534,9 @@ async cleanDuplicatePayments() {
                 </div>
                 
                 <div class="card" style="margin-bottom: 20px;">
-                    <h3><i class="fas fa-directions"></i> Información de la Ruta</h3>
+                    <h3><i class="fas fa-directions"></i> Informaci�n de la Ruta</h3>
                     <div id="ruta-detalles">
-                        <!-- Los detalles de la ruta se mostrarán aquí dinámicamente -->
+                        <!-- Los detalles de la ruta se mostrar�n aqu� din�micamente -->
                     </div>
                 </div>
                 
@@ -3540,7 +3553,7 @@ async cleanDuplicatePayments() {
         if (mainContent) {
             mainContent.innerHTML = html;
             
-            // Inicializar mapa automáticamente al cargar la página
+            // Inicializar mapa autom�ticamente al cargar la p�gina
             setTimeout(() => {
                 RutasModule.inicializarMapa();
                 RutasModule.actualizarMapa();
@@ -3548,13 +3561,13 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Métodos de negocio
+    // M�todos de negocio
     async getCurrentLocation() {
         try {
             Utils.showLoading(true);
             const location = await LocationModule.getLocation();
             LocationModule.setCurrentLocation(location.address, location.latitude, location.longitude);
-            Utils.showNotification('Ubicación obtenida correctamente', 'success', 5000);
+            Utils.showNotification('Ubicaci�n obtenida correctamente', 'success', 5000);
         } catch (error) {
             LocationModule.setCurrentLocation(error);
             Utils.showNotification(error, 'error', 5000);
@@ -3588,10 +3601,10 @@ async cleanDuplicatePayments() {
             const confirmed = await Utils.showDangerConfirm(
                 `Ya existe un cliente con datos similares:<br><br>
                 <strong>Nombre:</strong> ${duplicate.name}<br>
-                <strong>Teléfono:</strong> ${duplicate.phone}<br>
-                <strong>Dirección:</strong> ${duplicate.address}<br><br>
-                ¿Deseas guardar este cliente de todas formas?`,
-                '⚠️ Cliente Duplicado Detectado',
+                <strong>Tel�fono:</strong> ${duplicate.phone}<br>
+                <strong>Direcci�n:</strong> ${duplicate.address}<br><br>
+                �Deseas guardar este cliente de todas formas?`,
+                '?? Cliente Duplicado Detectado',
                 'Guardar de Todas Formas'
             );
             
@@ -3600,7 +3613,7 @@ async cleanDuplicatePayments() {
             }
         }
         
-        // Usar ubicación seleccionada si existe, si no usar la actual
+        // Usar ubicaci�n seleccionada si existe, si no usar la actual
         let locationData = this.selectedAddress || LocationModule.getCurrentLocation().address;
         let coordinates = this.selectedCoordinates || LocationModule.getCurrentLocation();
 
@@ -3608,11 +3621,11 @@ async cleanDuplicatePayments() {
         ClientsModule.updateClientList();
         ClientsModule.updateClientSelect();
         
-        // Limpiar formulario después de guardar exitosamente
+        // Limpiar formulario despu�s de guardar exitosamente
         document.getElementById('client-form').reset();
         Utils.showNotification(`Cliente ${nameValue} agregado correctamente`, 'success', 5000);
         
-        // Limpiar ubicación seleccionada
+        // Limpiar ubicaci�n seleccionada
         this.selectedCoordinates = null;
         this.selectedAddress = '';
         
@@ -3688,16 +3701,16 @@ async cleanDuplicatePayments() {
         }
 
         if (!weight || weight <= 0) {
-            Utils.showNotification('Ingrese un peso válido en libras', 'error', 5000);
+            Utils.showNotification('Ingrese un peso v�lido en libras', 'error', 5000);
             return;
         }
 
         if (!quantity || quantity <= 0) {
-            Utils.showNotification('Ingrese una cantidad válida de pollos', 'error', 5000);
+            Utils.showNotification('Ingrese una cantidad v�lida de pollos', 'error', 5000);
             return;
         }
 
-        // Validar abono inicial si es crédito
+        // Validar abono inicial si es cr�dito
         if (paymentMethod === 'credit' && initialPayment > 0) {
             const mermaPrice = MermaModule.getTodayMermaPrice();
             const salePrice = price || mermaPrice || 0;
@@ -3712,7 +3725,7 @@ async cleanDuplicatePayments() {
         const isPaid = paymentMethod === 'cash';
         const sale = SalesModule.addSale(clientId, weight, quantity, price, saleDate, isPaid, initialPayment, customCost);
         
-        // NUEVO: Notificación automática ok
+        // NUEVO: Notificaci�n autom�tica ok
         const client = ClientsModule.getClientById(clientId);
         if (client) {
             this.notifyNewSale(sale, client);
@@ -3730,22 +3743,22 @@ async cleanDuplicatePayments() {
         // Mostrar recibo
         this.showReceipt(sale.id);
         
-        // Actualizar estadísticas y contabilidad
+        // Actualizar estad�sticas y contabilidad
         StatsModule.updateStats(this.currentDate);
         AccountingModule.updateAccounting(this.currentDate);
         
-        // NUEVO: Actualizar diezmos automáticamente si estamos en esa página
+        // NUEVO: Actualizar diezmos autom�ticamente si estamos en esa p�gina
         if (this.currentPage === 'diezmos') {
             this.updateDiezmosPreview();
         }
         
-        let paymentStatus = isPaid ? 'Pagado' : 'A Crédito';
+        let paymentStatus = isPaid ? 'Pagado' : 'A Cr�dito';
         if (!isPaid && initialPayment > 0) {
-            paymentStatus = `Crédito con abono de ${Utils.formatCurrency(initialPayment)}`;
+            paymentStatus = `Cr�dito con abono de ${Utils.formatCurrency(initialPayment)}`;
         }
         Utils.showNotification(`Venta registrada: ${Utils.formatCurrency(sale.total)} (${paymentStatus})`, 'success', 5000);
         
-        // Actualizar badges de créditos
+        // Actualizar badges de cr�ditos
         CreditosModule.updateCreditBadges();
     },
 
@@ -3825,7 +3838,7 @@ async cleanDuplicatePayments() {
             totalProfitElement.textContent = Utils.formatCurrency(totalProfit);
             totalProfitElement.style.color = totalProfit >= 0 ? 'var(--primary)' : 'var(--danger)';
 
-            // Cambiar color del total según si es válido
+            // Cambiar color del total seg�n si es v�lido
             const totalElement = document.getElementById('preview-total');
             if (total > 0 && weight > 0 && quantity > 0 && price > 0) {
                 totalElement.style.color = 'var(--success)';
@@ -3834,7 +3847,7 @@ async cleanDuplicatePayments() {
             }
         },
 
-    // NUEVO: Mostrar/ocultar formulario rápido de cliente
+    // NUEVO: Mostrar/ocultar formulario r�pido de cliente
     toggleQuickClientForm() {
         const form = document.getElementById('quick-client-form');
         if (!form) return;
@@ -3852,27 +3865,27 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NUEVO: Guardar cliente rápido con ubicación automática
+    // NUEVO: Guardar cliente r�pido con ubicaci�n autom�tica
     async saveQuickClient() {
         const name = document.getElementById('quick-client-name').value.trim();
         const phone = document.getElementById('quick-client-phone').value.trim();
-        const address = document.getElementById('quick-client-address').value.trim() || 'Sin dirección';
+        const address = document.getElementById('quick-client-address').value.trim() || 'Sin direcci�n';
         
         if (!name || !phone) {
-            Utils.showNotification('Ingresa nombre y teléfono', 'error', 3000);
+            Utils.showNotification('Ingresa nombre y tel�fono', 'error', 3000);
             return;
         }
         
         Utils.showLoading(true);
         
         try {
-            // Intentar crear cliente con ubicación automática
+            // Intentar crear cliente con ubicaci�n autom�tica
             const client = await ClientsModule.createQuickClient(name, phone);
             
             // Actualizar select de clientes
             ClientsModule.updateClientSelect();
             
-            // Seleccionar el nuevo cliente automáticamente
+            // Seleccionar el nuevo cliente autom�ticamente
             const clientSelect = document.getElementById('sale-client');
             if (clientSelect) {
                 clientSelect.value = client.id;
@@ -3888,7 +3901,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NUEVO: Métodos para formulario rápido en pedidos
+    // NUEVO: M�todos para formulario r�pido en pedidos
     toggleQuickClientFormOrder() {
         const form = document.getElementById('quick-client-form-order');
         if (!form) return;
@@ -3908,17 +3921,17 @@ async cleanDuplicatePayments() {
     async saveQuickClientOrder() {
         const name = document.getElementById('quick-client-name-order').value.trim();
         const phone = document.getElementById('quick-client-phone-order').value.trim();
-        const address = document.getElementById('quick-client-address-order').value.trim() || 'Sin dirección';
+        const address = document.getElementById('quick-client-address-order').value.trim() || 'Sin direcci�n';
         
         if (!name || !phone) {
-            Utils.showNotification('Ingresa nombre y teléfono', 'error', 3000);
+            Utils.showNotification('Ingresa nombre y tel�fono', 'error', 3000);
             return;
         }
         
         Utils.showLoading(true);
         
         try {
-            // Intentar crear cliente con ubicación automática
+            // Intentar crear cliente con ubicaci�n autom�tica
             const client = await ClientsModule.createQuickClient(name, phone);
             
             ClientsModule.updateClientSelect();
@@ -3952,28 +3965,28 @@ async cleanDuplicatePayments() {
         }
 
         if (!weight || weight <= 0) {
-            Utils.showNotification('Ingrese un peso válido en libras', 'error', 5000);
+            Utils.showNotification('Ingrese un peso v�lido en libras', 'error', 5000);
             return;
         }
 
         if (!quantity || quantity <= 0) {
-            Utils.showNotification('Ingrese una cantidad válida de pollos', 'error', 5000);
+            Utils.showNotification('Ingrese una cantidad v�lida de pollos', 'error', 5000);
             return;
         }
 
         const order = OrdersModule.addOrder(clientId, weight, quantity, price, deliveryDate, notes);
         
-        // NUEVO: Notificación automática
+        // NUEVO: Notificaci�n autom�tica
         const client = ClientsModule.getClientById(clientId);
         if (client) {
             this.notifyNewOrder(order, client);
         }
         
-        // NUEVO: Limpiar formulario después de guardar exitosamente
+        // NUEVO: Limpiar formulario despu�s de guardar exitosamente
         document.getElementById('order-form').reset();
         OrdersModule.updateOrdersList();
         
-        // ACTUALIZACIÁ“N: Actualizar mapas automáticamente
+        // ACTUALIZACI��N: Actualizar mapas autom�ticamente
         this.actualizarMapasAutomaticamente();
         
         Utils.showNotification(`Pedido registrado: ${Utils.formatCurrency(order.total)}`, 'success', 5000);
@@ -4017,95 +4030,95 @@ async cleanDuplicatePayments() {
 
     // NOTIFICACIONES PUSH - MEJORADO
     async initPushNotifications() {
-        console.log('🔔 ========================================');
-        console.log('🔔 INICIALIZANDO NOTIFICACIONES EN APP');
-        console.log('🔔 ========================================');
+        console.log('?? ========================================');
+        console.log('?? INICIALIZANDO NOTIFICACIONES EN APP');
+        console.log('?? ========================================');
         
         if (typeof PushNotifications === 'undefined') {
-            console.error('❌ PushNotifications no está definido');
-            console.log('💡 Verifica que js/notify-system.js esté cargado');
+            console.error('? PushNotifications no est� definido');
+            console.log('?? Verifica que js/notify-system.js est� cargado');
             return false;
         }
 
         try {
-            // Esperar un poco para asegurar que el Service Worker esté listo
-            console.log('⏳ Esperando 2 segundos para que el Service Worker esté listo...');
+            // Esperar un poco para asegurar que el Service Worker est� listo
+            console.log('? Esperando 2 segundos para que el Service Worker est� listo...');
             await new Promise(resolve => setTimeout(resolve, 2000));
             
-            console.log('🚀 Iniciando sistema de notificaciones...');
+            console.log('?? Iniciando sistema de notificaciones...');
             const initialized = await PushNotifications.init();
             
             if (initialized) {
-                console.log('✅ Sistema de notificaciones inicializado correctamente');
-                console.log('🔔 ========================================');
+                console.log('? Sistema de notificaciones inicializado correctamente');
+                console.log('?? ========================================');
                 return true;
             } else {
-                console.warn('⚠️ No se pudieron inicializar las notificaciones');
+                console.warn('?? No se pudieron inicializar las notificaciones');
                 console.warn('   Posibles causas:');
                 console.warn('   - Permisos denegados');
                 console.warn('   - Service Worker no disponible');
                 console.warn('   - Navegador no soporta notificaciones');
-                console.log('🔔 ========================================');
+                console.log('?? ========================================');
                 return false;
             }
         } catch (error) {
-            console.error('❌ Error inicializando notificaciones:', error);
+            console.error('? Error inicializando notificaciones:', error);
             console.error('   Mensaje:', error.message);
             console.error('   Stack:', error.stack);
-            console.log('🔔 ========================================');
+            console.log('?? ========================================');
             return false;
         }
     },
 
     async requestNotificationPermission() {
-        console.log('🔔 Solicitando permisos de notificación...');
+        console.log('?? Solicitando permisos de notificaci�n...');
         
         if (Notification.permission === 'granted') {
-            console.log('✅ Permisos ya concedidos');
+            console.log('? Permisos ya concedidos');
             return true;
         }
 
         if (Notification.permission === 'denied') {
-            console.log('❌ Permisos denegados');
+            console.log('? Permisos denegados');
             return false;
         }
 
         try {
             const permission = await Notification.requestPermission();
-            console.log('🔔 Resultado de permisos:', permission);
+            console.log('?? Resultado de permisos:', permission);
             
             if (permission === 'granted') {
-                Utils.showNotification('✅ Notificaciones activadas', 'success', 3000);
-                // Mostrar notificación de prueba
+                Utils.showNotification('? Notificaciones activadas', 'success', 3000);
+                // Mostrar notificaci�n de prueba
                 setTimeout(() => {
                     this.showLocalNotification(
-                        '🐔 GallOli - Notificaciones Activas',
-                        'Las notificaciones están funcionando correctamente'
+                        '?? GallOli - Notificaciones Activas',
+                        'Las notificaciones est�n funcionando correctamente'
                     );
                 }, 1000);
                 return true;
             } else {
-                console.log('❌ Permisos no concedidos:', permission);
+                console.log('? Permisos no concedidos:', permission);
                 return false;
             }
         } catch (error) {
-            console.error('❌ Error solicitando permisos:', error);
+            console.error('? Error solicitando permisos:', error);
             return false;
         }
     },
 
-    // Enviar notificación local - CORREGIDO
-    showLocalNotification(title, body, icon = '🐔') {
-        console.log('🔔 Intentando mostrar notificación:', title, body);
+    // Enviar notificaci�n local - CORREGIDO
+    showLocalNotification(title, body, icon = '??') {
+        console.log('?? Intentando mostrar notificaci�n:', title, body);
         
-        // Verificar si Notification está disponible
+        // Verificar si Notification est� disponible
         if (typeof Notification === 'undefined') {
-            console.log('❌ API de Notification no disponible en este navegador');
+            console.log('? API de Notification no disponible en este navegador');
             return false;
         }
         
         if (Notification.permission !== 'granted') {
-            console.log('❌ Sin permisos para notificaciones');
+            console.log('? Sin permisos para notificaciones');
             return false;
         }
 
@@ -4121,32 +4134,32 @@ async cleanDuplicatePayments() {
                 vibrate: [200, 100, 200]
             });
 
-            // Auto-cerrar después de 5 segundos
+            // Auto-cerrar despu�s de 5 segundos
             setTimeout(() => {
                 notification.close();
             }, 5000);
 
-            console.log('✅ Notificación mostrada correctamente');
+            console.log('? Notificaci�n mostrada correctamente');
             return true;
         } catch (error) {
-            console.error('❌ Error mostrando notificación:', error);
+            console.error('? Error mostrando notificaci�n:', error);
             return false;
         }
     },
 
-    // Notificaciones automáticas para eventos importantes - CORREGIDO
+    // Notificaciones autom�ticas para eventos importantes - CORREGIDO
     notifyNewSale(sale, client) {
-        console.log('💰 Notificando nueva venta:', sale.id);
+        console.log('?? Notificando nueva venta:', sale.id);
         this.showLocalNotification(
-            '💰 Nueva Venta Registrada',
+            '?? Nueva Venta Registrada',
             `${client.name}: ${Utils.formatCurrency(sale.total)} - ${sale.weight}lb`
         );
     },
 
     notifyNewOrder(order, client) {
-        console.log('📋 Notificando nuevo pedido:', order.id);
+        console.log('?? Notificando nuevo pedido:', order.id);
         this.showLocalNotification(
-            '📋 Nuevo Pedido',
+            '?? Nuevo Pedido',
             `${client.name}: ${order.weight}lb - ${order.quantity} pollos`
         );
     },
@@ -4156,14 +4169,14 @@ async cleanDuplicatePayments() {
         const totalIncome = todaySales.reduce((sum, sale) => sum + sale.total, 0);
         
         this.showLocalNotification(
-            '📊 Resumen del Día',
+            '?? Resumen del D�a',
             `${todaySales.length} ventas - ${Utils.formatCurrency(totalIncome)}`
         );
     },
 
     // Configurar recordatorio diario
     setupDailyReminder() {
-        // Recordatorio a las 8 PM todos los días
+        // Recordatorio a las 8 PM todos los d�as
         const now = new Date();
         const reminder = new Date();
         reminder.setHours(20, 0, 0, 0);
@@ -4182,13 +4195,13 @@ async cleanDuplicatePayments() {
         }, timeUntilReminder);
     },
 
-    // Métodos para activar/desactivar notificaciones desde la UI - CORREGIDO
+    // M�todos para activar/desactivar notificaciones desde la UI - CORREGIDO
     async enableNotifications() {
         const enabled = await this.requestNotificationPermission();
         if (enabled) {
-            Utils.showNotification('✅ Notificaciones activadas correctamente', 'success', 3000);
+            Utils.showNotification('? Notificaciones activadas correctamente', 'success', 3000);
         } else {
-            Utils.showNotification('❌ No se pudieron activar las notificaciones', 'error', 3000);
+            Utils.showNotification('? No se pudieron activar las notificaciones', 'error', 3000);
         }
         
         // Actualizar estado en la UI
@@ -4200,18 +4213,18 @@ async cleanDuplicatePayments() {
     },
 
     disableNotifications() {
-        Utils.showNotification('🔕 Notificaciones desactivadas', 'warning', 3000);
+        Utils.showNotification('?? Notificaciones desactivadas', 'warning', 3000);
     },
 
     testNotification() {
-        console.log('🧪 Probando notificación...');
+        console.log('?? Probando notificaci�n...');
         const success = this.showLocalNotification(
-            '🐔 Notificación de Prueba',
-            'Las notificaciones están funcionando correctamente en GallOli'
+            '?? Notificaci�n de Prueba',
+            'Las notificaciones est�n funcionando correctamente en GallOli'
         );
         
         if (!success) {
-            Utils.showNotification('❌ Error: Activa los permisos de notificación primero', 'error', 5000);
+            Utils.showNotification('? Error: Activa los permisos de notificaci�n primero', 'error', 5000);
         }
     },
 
@@ -4313,14 +4326,14 @@ async cleanDuplicatePayments() {
     },
 
 
-    // Métodos del mapa
+    // M�todos del mapa
     openMapModal() {
         const modal = document.getElementById('map-modal');
         if (modal) {
             modal.classList.add('active');
             modal.style.display = 'flex';
             
-            // Obtener ubicación actual y luego inicializar mapa
+            // Obtener ubicaci�n actual y luego inicializar mapa
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -4331,15 +4344,15 @@ async cleanDuplicatePayments() {
                         }, 100);
                     },
                     (error) => {
-                        // Si falla, usar ubicación por defecto (Ciudad de México)
-                        console.warn('No se pudo obtener ubicación:', error);
+                        // Si falla, usar ubicaci�n por defecto (Ciudad de M�xico)
+                        console.warn('No se pudo obtener ubicaci�n:', error);
                         setTimeout(() => {
                             MapModule.initMap(19.4326, -99.1332);
                         }, 100);
                     }
                 );
             } else {
-                // Si no hay geolocalización, usar ubicación por defecto
+                // Si no hay geolocalizaci�n, usar ubicaci�n por defecto
                 setTimeout(() => {
                     MapModule.initMap(19.4326, -99.1332);
                 }, 100);
@@ -4349,7 +4362,7 @@ async cleanDuplicatePayments() {
 
     // NUEVO: Abrir modal de mapa - SIMPLIFICADO
     showMapModal(lat = 14.6349, lng = -90.5069, mode = 'add') {
-        // Este método ya no se usa para edición, solo para agregar nuevos clientes
+        // Este m�todo ya no se usa para edici�n, solo para agregar nuevos clientes
         const modal = document.getElementById('map-modal');
         if (modal) {
             modal.classList.add('active');
@@ -4383,7 +4396,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Método general para cerrar todos los modales
+    // M�todo general para cerrar todos los modales
     closeAllModals() {
         // Cerrar modal de mapa
         this.closeMapModal();
@@ -4408,10 +4421,10 @@ async cleanDuplicatePayments() {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
                 MapModule.setCurrentLocation(lat, lng);
-                Utils.showNotification('Ubicación actual establecida', 'success', 3000);
+                Utils.showNotification('Ubicaci�n actual establecida', 'success', 3000);
             },
             (error) => {
-                Utils.showNotification('No se pudo obtener la ubicación actual', 'error', 5000);
+                Utils.showNotification('No se pudo obtener la ubicaci�n actual', 'error', 5000);
             }
         );
     },
@@ -4431,14 +4444,14 @@ async cleanDuplicatePayments() {
                 locationElement.style.color = 'var(--success)';
             }
             
-            Utils.showNotification('Ubicación guardada correctamente', 'success', 3000);
+            Utils.showNotification('Ubicaci�n guardada correctamente', 'success', 3000);
             this.closeMapModal();
         } else {
-            Utils.showNotification('Selecciona una ubicación en el mapa', 'error', 5000);
+            Utils.showNotification('Selecciona una ubicaci�n en el mapa', 'error', 5000);
         }
     },
 
-    // Otros métodos
+    // Otros m�todos
     filterSalesByDate() {
         const dateInput = document.getElementById('sales-date-filter');
         if (dateInput) {
@@ -4454,7 +4467,7 @@ async cleanDuplicatePayments() {
             this.currentDate = dateInput.value;
         }
         StatsModule.updateStats(this.currentDate);
-        Utils.showNotification(`Mostrando estadísticas del ${this.currentDate}`, 'info', 2000);
+        Utils.showNotification(`Mostrando estad�sticas del ${this.currentDate}`, 'info', 2000);
     },
 
     filterAccountingByDate() {
@@ -4467,7 +4480,7 @@ async cleanDuplicatePayments() {
         Utils.showNotification(`Mostrando contabilidad del ${this.currentDate}`, 'info', 2000);
     },
 
-    // NUEVO: Método para calcular y guardar merma con recalculación
+    // NUEVO: M�todo para calcular y guardar merma con recalculaci�n
     async calculateAndSaveMerma() {
         const mermaDate = document.getElementById('merma-date').value;
         const liveWeightInput = document.getElementById('live-weight').value.trim();
@@ -4494,20 +4507,20 @@ async cleanDuplicatePayments() {
         Utils.showLoading(true);
 
         try {
-            // null si el campo estaba vacío, para que calculateMerma pueda deducirlo
+            // null si el campo estaba vac�o, para que calculateMerma pueda deducirlo
             const totalProcessingCost = processingCostPerChicken != null
                 ? chickenCount * processingCostPerChicken
                 : null;
             const result = MermaModule.calculateMerma(liveWeight, liveCost, processedWeight, totalProcessingCost, realCostPerLb);
             
             result.chickenCount = chickenCount;
-            // Si el costo por pollo era null (vacío), calcular desde el costo total deducido
+            // Si el costo por pollo era null (vac�o), calcular desde el costo total deducido
             result.processingCostPerChicken = processingCostPerChicken != null
                 ? processingCostPerChicken
                 : (chickenCount > 0 ? result.processingCost / chickenCount : 0);
             
             const record = await MermaModule.saveMermaRecord(result, mermaDate);
-            // Guardar precio de venta del día si se ingresó
+            // Guardar precio de venta del d�a si se ingres�
             if (salePrice !== null && salePrice > 0) {
                 await MermaModule.saveDailyPrice(result.realCostPerLb, mermaDate, salePrice);
             }
@@ -4532,10 +4545,10 @@ async cleanDuplicatePayments() {
             
             Utils.showNotification(mensaje, 'success', 5000);
             
-            // Notificación push
+            // Notificaci�n push
             if (NotificationsModule) {
-                NotificationsModule.show('📊 Merma Calculada', `Merma del día: ${result.merma}%`).catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                NotificationsModule.show('?? Merma Calculada', `Merma del d�a: ${result.merma}%`).catch(err => {
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             }
             
@@ -4559,7 +4572,7 @@ async cleanDuplicatePayments() {
     getMermaHistoryHTML() {
         const records = MermaModule.mermaRecords
             .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 10); // Ášltimos 10 registros
+            .slice(0, 10); // ��ltimos 10 registros
 
         if (records.length === 0) {
             return `
@@ -4587,11 +4600,11 @@ async cleanDuplicatePayments() {
                             <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(record.realCostPerLb)}/lb
                         </p>
                         <p class="sale-details">
-                            <i class="fas fa-weight"></i> ${record.liveWeight} lb vivo â†’ ${record.processedWeight} lb pelado
+                            <i class="fas fa-weight"></i> ${record.liveWeight} lb vivo → ${record.processedWeight} lb pelado
                         </p>
                         ${chickenInfo}
                         <p class="sale-details">
-                            <i class="fas fa-chart-line"></i> Pérdida: ${Utils.formatCurrency(record.lossAmount)}
+                            <i class="fas fa-chart-line"></i> P�rdida: ${Utils.formatCurrency(record.lossAmount)}
                         </p>
                     </div>
                     <div style="text-align: right;">
@@ -4624,7 +4637,7 @@ async cleanDuplicatePayments() {
         const expenseDate = document.getElementById('expense-date')?.value || this.currentDate;
 
         if (!description || !amount || amount <= 0) {
-            Utils.showNotification('Ingrese datos válidos', 'error', 5000);
+            Utils.showNotification('Ingrese datos v�lidos', 'error', 5000);
             return;
         }
 
@@ -4632,7 +4645,7 @@ async cleanDuplicatePayments() {
         AccountingModule.updateExpensesList(this.currentDate);
         AccountingModule.updateAccounting(this.currentDate);
         
-        // NUEVO: Limpiar formulario después de guardar exitosamente
+        // NUEVO: Limpiar formulario despu�s de guardar exitosamente
         document.getElementById('expense-form').reset();
         // Restaurar la fecha
         if (document.getElementById('expense-date')) {
@@ -4641,7 +4654,7 @@ async cleanDuplicatePayments() {
         
         Utils.showNotification('Gasto registrado correctamente', 'success', 5000);
         
-        // NUEVO: Actualizar diezmos automáticamente si estamos en esa página
+        // NUEVO: Actualizar diezmos autom�ticamente si estamos en esa p�gina
         if (this.currentPage === 'diezmos') {
             this.updateDiezmosPreview();
         }
@@ -4664,7 +4677,7 @@ async cleanDuplicatePayments() {
                 <div class="modal-body">
                     <form id="edit-expense-form">
                         <div class="form-group">
-                            <label class="form-label">Descripción</label>
+                            <label class="form-label">Descripci�n</label>
                             <input type="text" class="form-input" id="edit-expense-description" 
                                    value="${expense.description}" required>
                         </div>
@@ -4674,7 +4687,7 @@ async cleanDuplicatePayments() {
                                    id="edit-expense-amount" value="${expense.amount}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Categoría</label>
+                            <label class="form-label">Categor�a</label>
                             <select class="form-input" id="edit-expense-category" required>
                                 <option value="insumos" ${expense.category === 'insumos' ? 'selected' : ''}>Insumos</option>
                                 <option value="mano_obra" ${expense.category === 'mano_obra' ? 'selected' : ''}>Mano de Obra</option>
@@ -4727,7 +4740,7 @@ async cleanDuplicatePayments() {
         if (!expense) return;
 
         const confirmed = await Utils.showDangerConfirm(
-            `¿Eliminar el gasto "${expense.description}" por ${Utils.formatCurrency(expense.amount)}?`,
+            `�Eliminar el gasto "${expense.description}" por ${Utils.formatCurrency(expense.amount)}?`,
             'Eliminar Gasto',
             'Eliminar'
         );
@@ -4754,24 +4767,24 @@ async cleanDuplicatePayments() {
             // En desktop: colapsar/expandir sin overlay
             if (sidebar) sidebar.classList.toggle('collapsed');
         } else {
-            // En móvil: comportamiento original con overlay
+            // En m�vil: comportamiento original con overlay
             if (sidebar) sidebar.classList.toggle('active');
             if (overlay) overlay.classList.toggle('active');
         }
     },
 
-    // Sincronización y exportación
+    // Sincronizaci�n y exportaci�n
     async syncData() {
         if (window.SyncEngine && window.AuthManager?.isAuthenticated()) {
             Utils.showNotification('Sincronizando con la nube...', 'info', 2000);
             try {
                 await window.SyncEngine.forceFullSync();
-                Utils.showNotification('✅ Sincronización completada', 'success', 3000);
+                Utils.showNotification('? Sincronizaci�n completada', 'success', 3000);
             } catch (e) {
                 Utils.showNotification('Error al sincronizar', 'error', 3000);
             }
         } else {
-            Utils.showNotification('Inicia sesión para sincronizar', 'warning', 3000);
+            Utils.showNotification('Inicia sesi�n para sincronizar', 'warning', 3000);
         }
     },
 
@@ -4814,8 +4827,8 @@ async cleanDuplicatePayments() {
             setTimeout(async () => {
                 if (deferredPrompt) {
                     const install = await Utils.showConfirm(
-                        '¿Deseas instalar GallOli en tu dispositivo para uso sin conexión?',
-                        '📱 Instalar Aplicación',
+                        '�Deseas instalar GallOli en tu dispositivo para uso sin conexi�n?',
+                        '?? Instalar Aplicaci�n',
                         'Instalar',
                         'Ahora No'
                     );
@@ -4881,12 +4894,12 @@ async cleanDuplicatePayments() {
         const ofrendaPercent = parseFloat(document.getElementById('ofrenda-percent')?.value) || 5;
         
         DiezmosModule.updateConfig(diezmoPercent, ofrendaPercent);
-        Utils.showNotification('Configuración guardada correctamente', 'success', 3000);
+        Utils.showNotification('Configuraci�n guardada correctamente', 'success', 3000);
         // Actualizar vista previa inmediatamente
         this.updateDiezmosPreview();
     },
 
-    // NUEVO: Auto-guardar configuración sin notificación
+    // NUEVO: Auto-guardar configuraci�n sin notificaci�n
     autoSaveDiezmosConfig() {
         const diezmoPercent = parseFloat(document.getElementById('diezmo-percent')?.value) || 10;
         const ofrendaPercent = parseFloat(document.getElementById('ofrenda-percent')?.value) || 5;
@@ -4906,8 +4919,8 @@ async cleanDuplicatePayments() {
             return `
                 <div class="empty-state">
                     <i class="fas fa-hand-holding-heart empty-state-icon"></i>
-                    <p>No hay registros automáticos aún</p>
-                    <p style="font-size: 0.9rem; color: var(--gray);">Los diezmos se guardan automáticamente cada día</p>
+                    <p>No hay registros autom�ticos a�n</p>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Los diezmos se guardan autom�ticamente cada d�a</p>
                 </div>
             `;
         }
@@ -4934,7 +4947,7 @@ async cleanDuplicatePayments() {
         return html;
     },
 
-    // === NUEVOS MÁ‰TODOS DE BACKUP Y REPORTES ===
+    // === NUEVOS M��TODOS DE BACKUP Y REPORTES ===
     async createBackup() {
         try {
             Utils.showLoading(true);
@@ -4951,15 +4964,15 @@ async cleanDuplicatePayments() {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            // Guardar fecha del último backup
+            // Guardar fecha del �ltimo backup
             localStorage.setItem('lastBackup', new Date().toISOString());
             
             Utils.showNotification(`Backup creado: ${backup.filename}`, 'success', 5000);
             
-            // Notificación push
+            // Notificaci�n push
             if (NotificationsModule) {
-                NotificationsModule.show('💾 Backup Creado', 'Backup creado exitosamente').catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                NotificationsModule.show('?? Backup Creado', 'Backup creado exitosamente').catch(err => {
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             }
             
@@ -4976,7 +4989,7 @@ async cleanDuplicatePayments() {
         try {
             const success = await BackupModule.importFromFile(file);
             if (success) {
-                // IMPORTANTE: Recargar TODOS los módulos después de importar
+                // IMPORTANTE: Recargar TODOS los m�dulos despu�s de importar
                 await this.loadAllData();
                 
                 // Actualizar todas las vistas
@@ -4986,7 +4999,7 @@ async cleanDuplicatePayments() {
                 OrdersModule.updateOrderBadges();
                 CreditosModule.updateCreditBadges();
                 
-                // Recargar página actual
+                // Recargar p�gina actual
                 this.loadPage(this.currentPage || 'dashboard');
             }
         } catch (error) {
@@ -4996,7 +5009,7 @@ async cleanDuplicatePayments() {
 
     async clearAllData() {
         const confirmed = await Utils.showDangerConfirm(
-            ' Esto eliminará TODOS los datos de la aplicación. Esta acción NO se puede deshacer.',
+            ' Esto eliminar� TODOS los datos de la aplicaci�n. Esta acci�n NO se puede deshacer.',
             ' Eliminar Todos los Datos',
             'Continuar'
         );
@@ -5005,7 +5018,7 @@ async cleanDuplicatePayments() {
         
         const confirmation = await Utils.showPrompt(
             'Para confirmar, escribe exactamente: ELIMINAR',
-            ' Confirmación Final',
+            ' Confirmaci�n Final',
             '',
             'ELIMINAR'
         );
@@ -5041,15 +5054,15 @@ async cleanDuplicatePayments() {
         Utils.showNotification('Datos exportados como JSON', 'success', 5000);
     },
 
-    // Método para generar reportes
+    // M�todo para generar reportes
     async generateReport() {
         const today = new Date();
         const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 7); // Últimos 7 días por defecto
+        yesterday.setDate(yesterday.getDate() - 7); // �ltimos 7 d�as por defecto
         
         const startDate = await Utils.showPrompt(
             'Ingresa la fecha de inicio:',
-            '📅 Fecha Inicio',
+            '?? Fecha Inicio',
             Utils.formatDate(yesterday),
             'YYYY-MM-DD'
         );
@@ -5058,7 +5071,7 @@ async cleanDuplicatePayments() {
         
         const endDate = await Utils.showPrompt(
             'Ingresa la fecha de fin:',
-            '📅 Fecha Fin',
+            '?? Fecha Fin',
             Utils.formatDate(today),
             'YYYY-MM-DD'
         );
@@ -5073,7 +5086,7 @@ async cleanDuplicatePayments() {
                 const filename = ReportsModule.generatePDFReport(report, 'Reporte de Ventas');
                 Utils.showNotification(`Reporte generado: ${filename}`, 'success', 5000);
             } else {
-                Utils.showNotification('No hay datos para el período seleccionado', 'warning', 5000);
+                Utils.showNotification('No hay datos para el per�odo seleccionado', 'warning', 5000);
             }
         } catch (error) {
             Utils.showNotification('Error al generar reporte: ' + error.message, 'error', 5000);
@@ -5082,7 +5095,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Método para enviar backup a Telegram
+    // M�todo para enviar backup a Telegram
     async sendBackupToTelegram() {
         try {
             Utils.showLoading(true);
@@ -5099,28 +5112,28 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NUEVO: Probar backup automático (ejecuta el mismo método que se ejecutará a las 10 PM)
+    // NUEVO: Probar backup autom�tico (ejecuta el mismo m�todo que se ejecutar� a las 10 PM)
     async testAutoBackup() {
         try {
             Utils.showLoading(true);
-            Utils.showNotification('🤖 Ejecutando backup automático de prueba...', 'info', 3000);
+            Utils.showNotification('?? Ejecutando backup autom�tico de prueba...', 'info', 3000);
             
-            // Ejecutar el mismo método que se ejecuta a las 10 PM
+            // Ejecutar el mismo m�todo que se ejecuta a las 10 PM
             const result = await AutoBackup.forceBackup();
             
             if (result !== false) {
-                Utils.showNotification('✅ Backup automático enviado correctamente. Revisa tu Telegram.', 'success', 5000);
+                Utils.showNotification('? Backup autom�tico enviado correctamente. Revisa tu Telegram.', 'success', 5000);
             } else {
-                Utils.showNotification('⚠️ No se pudo enviar el backup. Verifica las credenciales.', 'warning', 5000);
+                Utils.showNotification('?? No se pudo enviar el backup. Verifica las credenciales.', 'warning', 5000);
             }
         } catch (error) {
-            Utils.showNotification('❌ Error en backup automático: ' + error.message, 'error', 5000);
+            Utils.showNotification('? Error en backup autom�tico: ' + error.message, 'error', 5000);
         } finally {
             Utils.showLoading(false);
         }
     },
 
-    // NUEVO: Guardar configuración de Telegram
+    // NUEVO: Guardar configuraci�n de Telegram
     saveTelegramConfig() {
         const token = document.getElementById('telegram-token').value.trim();
         const chatId = document.getElementById('telegram-chatid').value.trim();
@@ -5132,47 +5145,47 @@ async cleanDuplicatePayments() {
         
         BackupModule.saveTelegramConfig(token, chatId);
         
-        // Recargar la página de backups para mostrar la nueva configuración
+        // Recargar la p�gina de backups para mostrar la nueva configuraci�n
         setTimeout(() => {
             this.loadBackupPage();
         }, 1000);
     },
 
-    // NUEVO: Probar conexión con Telegram
+    // NUEVO: Probar conexi�n con Telegram
     async testTelegramConnection() {
         try {
             Utils.showLoading(true);
             const result = await BackupModule.testTelegramConnection();
             
             if (result.ok) {
-                Utils.showNotification('✅ ¡Conexión exitosa! Revisa tu Telegram', 'success', 5000);
+                Utils.showNotification('? �Conexi�n exitosa! Revisa tu Telegram', 'success', 5000);
             }
         } catch (error) {
-            Utils.showNotification('❌ ' + error.message, 'error', 5000);
+            Utils.showNotification('? ' + error.message, 'error', 5000);
         } finally {
             Utils.showLoading(false);
         }
     },
     
-    // NUEVO: Limpiar configuración de Telegram
+    // NUEVO: Limpiar configuraci�n de Telegram
     async clearTelegramConfig() {
         const confirmed = await Utils.showDangerConfirm(
-            'Se eliminará la configuración de Telegram. Podrás volver a configurarla cuando quieras.',
-            'Eliminar Configuración de Telegram',
+            'Se eliminar� la configuraci�n de Telegram. Podr�s volver a configurarla cuando quieras.',
+            'Eliminar Configuraci�n de Telegram',
             'Eliminar'
         );
         
         if (confirmed) {
             BackupModule.clearTelegramConfig();
             
-            // Recargar la página de backups
+            // Recargar la p�gina de backups
             setTimeout(() => {
                 this.loadBackupPage();
             }, 500);
         }
     },
 
-    // ===== MÁ‰TODOS DE DIEZMOS Y OFRENDAS =====
+    // ===== M��TODOS DE DIEZMOS Y OFRENDAS =====
     loadDiezmosPage() {
         const preview = DiezmosModule.getPreview();
         
@@ -5192,7 +5205,7 @@ async cleanDuplicatePayments() {
         const html = `
             <div class="page active" id="diezmos-page">
                 <h2><i class="fas fa-hand-holding-heart"></i> Diezmos y Ofrendas</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Sistema automático de diezmos basado en ventas diarias</p>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Sistema autom�tico de diezmos basado en ventas diarias</p>
                 
                 <div class="card" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white;">
                     <h3 style="color: white;"><i class="fas fa-calendar-day"></i> Vista Previa de Hoy</h3>
@@ -5217,7 +5230,7 @@ async cleanDuplicatePayments() {
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-cog"></i> Configuración de Porcentajes</h3>
+                    <h3><i class="fas fa-cog"></i> Configuraci�n de Porcentajes</h3>
                     <p style="margin-bottom: 15px; color: var(--gray); font-size: 0.9rem;">
                         <i class="fas fa-info-circle"></i> Los cambios se reflejan en tiempo real
                     </p>
@@ -5236,12 +5249,12 @@ async cleanDuplicatePayments() {
                         </div>
                     </div>
                     <button class="btn btn-primary" onclick="App.saveDiezmosConfig()" style="width: 100%; margin-top: 10px;">
-                        <i class="fas fa-save"></i> Guardar Configuración
+                        <i class="fas fa-save"></i> Guardar Configuraci�n
                     </button>
                 </div>
 
                 <div class="card">
-                    <h3><i class="fas fa-save"></i> Guardar Diezmos del Día</h3>
+                    <h3><i class="fas fa-save"></i> Guardar Diezmos del D�a</h3>
                     <p style="color: var(--gray); margin-bottom: 15px;">Guarda o actualiza el registro de diezmos para hoy</p>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <button class="btn btn-success" onclick="App.saveDailyDiezmos()">
@@ -5252,7 +5265,7 @@ async cleanDuplicatePayments() {
                         </button>
                     </div>
                     <p style="color: var(--gray); font-size: 0.85rem; margin-top: 10px; text-align: center;">
-                        <i class="fas fa-info-circle"></i> "Recalcular Todo" procesa automáticamente todos los días con ganancias
+                        <i class="fas fa-info-circle"></i> "Recalcular Todo" procesa autom�ticamente todos los d�as con ganancias
                     </p>
                 </div>
 
@@ -5272,7 +5285,7 @@ async cleanDuplicatePayments() {
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-history"></i> Historial Automático (Últimos 30 días)</h3>
+                    <h3><i class="fas fa-history"></i> Historial Autom�tico (�ltimos 30 d�as)</h3>
                     <ul class="sales-list">
                         ${this.getDiezmosHistoryHTML()}
                     </ul>
@@ -5288,22 +5301,22 @@ async cleanDuplicatePayments() {
 
 
     
-    // NUEVO: Método para actualizar todos los mapas automáticamente
+    // NUEVO: M�todo para actualizar todos los mapas autom�ticamente
     actualizarMapasAutomaticamente() {
-        // Actualizar mapa del dashboard si estamos en esa página
+        // Actualizar mapa del dashboard si estamos en esa p�gina
         if (this.currentPage === 'dashboard' && this.mapaDashboardInicializado) {
             this.actualizarMapaDashboard();
         }
         
-        // Actualizar mapa de rutas si estamos en esa página
+        // Actualizar mapa de rutas si estamos en esa p�gina
         if (this.currentPage === 'rutas' && RutasModule.mapaRuta) {
             RutasModule.actualizarMapa();
         }
         
-        // También actualizar el contador de pedidos pendientes
+        // Tambi�n actualizar el contador de pedidos pendientes
         const pedidosPendientes = OrdersModule.getPendingOrders().length;
         if (pedidosPendientes > 0) {
-            // Notificar al módulo de rutas que hay nuevos pedidos
+            // Notificar al m�dulo de rutas que hay nuevos pedidos
             RutasModule.actualizarRutaAutomatica();
         }
     },
@@ -5320,7 +5333,7 @@ async cleanDuplicatePayments() {
             });
         }
         
-        // Escuchar cuando el Service Worker esté listo
+        // Escuchar cuando el Service Worker est� listo
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(registration => {
                 if (registration.active) {
@@ -5351,20 +5364,20 @@ async cleanDuplicatePayments() {
             });
         }
         
-        // Mostrar notificación
+        // Mostrar notificaci�n
         const mensaje = devMode ? 
-            'Modo Desarrollo activado. Recarga para ver cambios instantáneos.' : 
-            'Modo Producción activado. App funcionará 100% offline.';
+            'Modo Desarrollo activado. Recarga para ver cambios instant�neos.' : 
+            'Modo Producci�n activado. App funcionar� 100% offline.';
         
         Utils.showNotification(mensaje, devMode ? 'warning' : 'success', 5000);
         
         // Sugerir recarga
         setTimeout(async () => {
             const shouldReload = await Utils.showConfirm(
-                'Se recomienda recargar la aplicación para aplicar los cambios.',
-                'Recargar Aplicación',
+                'Se recomienda recargar la aplicaci�n para aplicar los cambios.',
+                'Recargar Aplicaci�n',
                 'Recargar',
-                'Más Tarde'
+                'M�s Tarde'
             );
             
             if (shouldReload) {
@@ -5388,10 +5401,10 @@ async cleanDuplicatePayments() {
         [statusText, statusTextMobile].forEach(element => {
             if (element) {
                 if (devMode) {
-                    element.textContent = 'âš ï¸ Modo Desarrollo: Cache desactivado';
+                    element.textContent = '⚠️ Modo Desarrollo: Cache desactivado';
                     element.style.color = 'rgba(255, 193, 7, 0.8)';
                 } else {
-                    element.textContent = 'âœ… Modo Producción: Offline completo';
+                    element.textContent = '✅ Modo Producci�n: Offline completo';
                     element.style.color = 'rgba(76, 175, 80, 0.8)';
                 }
             }
@@ -5424,7 +5437,7 @@ async cleanDuplicatePayments() {
             devModeSwitch.checked = savedMode;
         }
         
-        // Verificar periódicamente que el estado se mantenga sincronizado
+        // Verificar peri�dicamente que el estado se mantenga sincronizado
         if (this.devModeCheckInterval) {
             clearInterval(this.devModeCheckInterval);
         }
@@ -5440,7 +5453,7 @@ async cleanDuplicatePayments() {
         }, 1000); // Verificar cada segundo
     },
 
-    // NUEVO: Forzar actualización del cache
+    // NUEVO: Forzar actualizaci�n del cache
     forceUpdateCache() {
         // Recarga forzada sin cache
         window.location.reload(true);
@@ -5461,24 +5474,24 @@ async cleanDuplicatePayments() {
     },
 
     
-    // Probar backup automático (mantener solo esta función)
+    // Probar backup autom�tico (mantener solo esta funci�n)
     async testAutoBackup() {
         if (typeof AutoBackup === 'undefined') {
-            Utils.showNotification('Sistema de backup automático no disponible', 'error', 3000);
+            Utils.showNotification('Sistema de backup autom�tico no disponible', 'error', 3000);
             return;
         }
         
         const hasCredentials = await AutoBackup.hasCredentials();
         
         if (!hasCredentials) {
-            Utils.showNotification('⚠️ Configura tus credenciales de Telegram primero en la página de Backups', 'warning', 5000);
+            Utils.showNotification('?? Configura tus credenciales de Telegram primero en la p�gina de Backups', 'warning', 5000);
             return;
         }
         
         const confirmed = await Utils.showConfirm(
-            '¿Forzar backup automático ahora? Esto creará y enviará un backup a Telegram.',
-            'Probar Backup Automático',
-            'Sí, crear backup',
+            '�Forzar backup autom�tico ahora? Esto crear� y enviar� un backup a Telegram.',
+            'Probar Backup Autom�tico',
+            'S�, crear backup',
             'Cancelar'
         );
         
@@ -5489,50 +5502,50 @@ async cleanDuplicatePayments() {
         try {
             await AutoBackup.forceBackup();
             Utils.showLoading(false);
-            Utils.showNotification('✅ Backup automático enviado correctamente', 'success', 5000);
+            Utils.showNotification('? Backup autom�tico enviado correctamente', 'success', 5000);
         } catch (error) {
             Utils.showLoading(false);
-            Utils.showNotification(`❌ Error: ${error.message}`, 'error', 5000);
+            Utils.showNotification(`? Error: ${error.message}`, 'error', 5000);
         }
     },
 
     // Manejar acciones de notificaciones
     async handleNotificationAction(action, data) {
         console.log('========================================');
-        console.log('🔔 PROCESANDO ACCIÓN DE NOTIFICACIÓN');
-        console.log('Acción:', action);
+        console.log('?? PROCESANDO ACCI�N DE NOTIFICACI�N');
+        console.log('Acci�n:', action);
         console.log('Datos:', data);
         console.log('========================================');
         
-        // Si no hay acción o es 'open', solo abrir la app
+        // Si no hay acci�n o es 'open', solo abrir la app
         if (!action || action === 'open' || action === 'dismiss') {
-            console.log('ℹ️ Acción básica, no requiere procesamiento');
+            console.log('?? Acci�n b�sica, no requiere procesamiento');
             return;
         }
         
         switch(action) {
             case 'calculate':
-                // Ir a página de merma
-                console.log('📊 Navegando a página de merma');
+                // Ir a p�gina de merma
+                console.log('?? Navegando a p�gina de merma');
                 this.loadPage('merma');
-                Utils.showNotification('📊 Calcula la merma del día', 'info', 3000);
+                Utils.showNotification('?? Calcula la merma del d�a', 'info', 3000);
                 break;
                 
             case 'pay-full':
                 // Pagar deuda completa del cliente
-                console.log('💵 Pago completo para cliente:', data.clientId);
+                console.log('?? Pago completo para cliente:', data.clientId);
                 if (data.clientId) {
                     this.loadPage('creditos');
                     setTimeout(async () => {
                         const confirmed = await Utils.showConfirm(
-                            `¿Pagar toda la deuda de ${data.clientName}?\nTotal: ${Utils.formatCurrency(data.totalDebt)}`,
+                            `�Pagar toda la deuda de ${data.clientName}?\nTotal: ${Utils.formatCurrency(data.totalDebt)}`,
                             'Confirmar Pago Completo',
                             'Pagar',
                             'Cancelar'
                         );
                         if (confirmed) {
-                            Utils.showNotification(`💵 Procesando pago de ${data.clientName}`, 'info', 3000);
-                            // Aquí iría la lógica de pago completo
+                            Utils.showNotification(`?? Procesando pago de ${data.clientName}`, 'info', 3000);
+                            // Aqu� ir�a la l�gica de pago completo
                         }
                     }, 1000);
                 }
@@ -5540,32 +5553,32 @@ async cleanDuplicatePayments() {
                 
             case 'pay-partial':
                 // Hacer abono parcial
-                console.log('💰 Abono parcial para cliente:', data.clientId);
+                console.log('?? Abono parcial para cliente:', data.clientId);
                 if (data.clientId) {
                     this.loadPage('creditos');
                     setTimeout(() => {
-                        Utils.showNotification(`💰 Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
+                        Utils.showNotification(`?? Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
                     }, 1000);
                 }
                 break;
                 
             case 'view':
-                // Ver detalles de créditos
-                console.log('�️ Ver detalles de créditos');
+                // Ver detalles de cr�ditos
+                console.log('?? Ver detalles de cr�ditos');
                 this.loadPage('creditos');
                 break;
                 
             case 'backup-now':
                 // Crear backup
-                console.log('💾 Crear backup');
+                console.log('?? Crear backup');
                 this.loadPage('backup');
                 setTimeout(() => {
-                    Utils.showNotification('💾 Crea tu backup desde esta página', 'info', 3000);
+                    Utils.showNotification('?? Crea tu backup desde esta p�gina', 'info', 3000);
                 }, 1000);
                 break;
                 
             default:
-                console.log('⚠️ Acción no manejada:', action);
+                console.log('?? Acci�n no manejada:', action);
         }
     }
 };
@@ -5577,7 +5590,7 @@ window.addEventListener('unhandledrejection', (e) => {
     }
 });
 
-// Inicializar la aplicación
+// Inicializar la aplicaci�n
 document.addEventListener('DOMContentLoaded', () => {
     // Prevenir zoom en inputs
     document.addEventListener('touchstart', (event) => {
@@ -5595,16 +5608,16 @@ document.addEventListener('DOMContentLoaded', () => {
         lastTouchEnd = now;
     }, false);
 
-    // NOTA: App.init() se llama desde index.html cuando el DOM está listo
-    // No llamar aquí para evitar doble inicialización
+    // NOTA: App.init() se llama desde index.html cuando el DOM est� listo
+    // No llamar aqu� para evitar doble inicializaci�n
 });
 
-// Limpiar recursos al cerrar/recargar la página
+// Limpiar recursos al cerrar/recargar la p�gina
 window.addEventListener('beforeunload', () => {
     App.cleanupDevMode();
 });
 
-// También limpiar cuando la página se oculta (móviles)
+// Tambi�n limpiar cuando la p�gina se oculta (m�viles)
 window.addEventListener('pagehide', () => {
     App.cleanupDevMode();
 });
@@ -5621,7 +5634,7 @@ App.startChainWeighing = function() {
     const hasScale = BluetoothScale.isConnected;
 
     if (!todaySalePrice) {
-        Utils.showNotification('Configura el precio de venta del día en Merma primero', 'warning', 4000);
+        Utils.showNotification('Configura el precio de venta del d�a en Merma primero', 'warning', 4000);
         App.loadPage('merma');
         return;
     }
@@ -5667,7 +5680,7 @@ App.startChainWeighing = function() {
                     </button>`}
                 </div>
 
-                <!-- Precio del día -->
+                <!-- Precio del d�a -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
                     <div style="background:#e8f5e9;padding:12px;border-radius:8px;text-align:center;">
                         <div style="font-size:0.75rem;color:var(--gray);">PRECIO VENTA/lb</div>
@@ -5686,7 +5699,7 @@ App.startChainWeighing = function() {
                     <div id="chain-profit-amount" style="font-size:0.9rem;opacity:0.85;">Ganancia: $0.00</div>
                 </div>
 
-                <!-- Selección de cliente -->
+                <!-- Selecci�n de cliente -->
                 <div id="chain-client-section" style="display:none;">
                     <div class="form-group">
                         <label class="form-label"><i class="fas fa-user"></i> Cliente</label>
@@ -5709,7 +5722,7 @@ App.startChainWeighing = function() {
                         <label class="form-label"><i class="fas fa-credit-card"></i> Pago</label>
                         <select class="form-input" id="chain-payment">
                             <option value="cash">Efectivo</option>
-                            <option value="credit">Crédito</option>
+                            <option value="credit">Cr�dito</option>
                         </select>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -5722,7 +5735,7 @@ App.startChainWeighing = function() {
                     </div>
                 </div>
 
-                <!-- Resumen del día -->
+                <!-- Resumen del d�a -->
                 <div style="margin-top:15px;padding:12px;background:var(--light);border-radius:8px;">
                     <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
                         <span style="color:var(--gray);">Ventas hoy:</span>
@@ -5765,7 +5778,7 @@ App.startChainWeighing = function() {
                     stableTimer = setTimeout(() => {
                         capturedWeight = raw;
                         App._chainWeighingWeight = raw;
-                        if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:var(--success);"></i> Estable — selecciona cliente';
+                        if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:var(--success);"></i> Estable � selecciona cliente';
                         App._showChainClientSection(raw, todaySalePrice, todayCostPrice);
                     }, 1500);
                 } else {
@@ -5855,19 +5868,19 @@ App.filterChainClients = function(query) {
         clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q)))
                .map(c => `<option value="${c.id}">${c.name}</option>`)
                .join('');
-    // Si solo hay un resultado, seleccionarlo automáticamente
+    // Si solo hay un resultado, seleccionarlo autom�ticamente
     if (select.options.length === 2) select.selectedIndex = 1;
 };
 
 App.confirmChainSale = function() {
     const clientIdRaw = document.getElementById('chain-client-select')?.value;
-    const clientId = parseInt(clientIdRaw) || clientIdRaw; // convertir a número
+    const clientId = parseInt(clientIdRaw) || clientIdRaw; // convertir a n�mero
     const quantity = parseInt(document.getElementById('chain-quantity')?.value) || 1;
     const payment = document.getElementById('chain-payment')?.value;
     const weight = App._chainWeighingWeight || 0;
 
     if (!clientId) { Utils.showNotification('Selecciona un cliente', 'warning', 2000); return; }
-    if (weight <= 0) { Utils.showNotification('Peso inválido', 'warning', 2000); return; }
+    if (weight <= 0) { Utils.showNotification('Peso inv�lido', 'warning', 2000); return; }
 
     const salePrice = MermaModule.getTodaySalePrice();
     const isPaid = payment === 'cash';
@@ -5886,10 +5899,10 @@ App.confirmChainSale = function() {
     App.cancelChainCapture();
 
     const client = ClientsModule.getClientById(clientId);
-    Utils.showNotification(`✅ ${client?.name} — ${weight.toFixed(3)} lb — ${Utils.formatCurrency(sale.total)}`, 'success', 3000);
+    Utils.showNotification(`? ${client?.name} � ${weight.toFixed(3)} lb � ${Utils.formatCurrency(sale.total)}`, 'success', 3000);
 };
 
-// Métodos para la balanza BLE
+// M�todos para la balanza BLE
 App.toggleScaleFromSidebar = function() {    const sw = document.getElementById('scale-switch');
     if (sw && !sw.disabled) {
         sw.checked = !sw.checked;
@@ -5912,7 +5925,7 @@ App.showScaleCapture = function() {
         Utils.showNotification('Esperando lectura de la balanza...', 'info', 2000);
         return;
     }
-    // Detectar qué formulario está activo y capturar el peso
+    // Detectar qu� formulario est� activo y capturar el peso
     const fields = ['sale-weight', 'live-weight', 'processed-weight', 'order-weight', 'delivery-weight'];
     for (const id of fields) {
         const el = document.getElementById(id);
@@ -5925,12 +5938,12 @@ App.showScaleCapture = function() {
     Utils.showNotification(`Peso actual: ${w.toFixed(2)} lb`, 'info', 3000);
 };
 
-// Métodos para el toggle de notificaciones en el sidebar
+// M�todos para el toggle de notificaciones en el sidebar
 App.initNotifToggle = async function() {
     const sw = document.getElementById('notif-switch');
     const status = document.getElementById('notif-status-sidebar');
     if (!sw || !status) {
-        console.warn('🔔 Toggle notif: elementos no encontrados en DOM');
+        console.warn('?? Toggle notif: elementos no encontrados en DOM');
         return;
     }
 
@@ -5948,26 +5961,26 @@ App.initNotifToggle = async function() {
     }
 
     if (Notification.permission === 'granted') {
-        console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');        try {
+        console.log('?? initNotifToggle: permiso granted, verificando suscripcion...');        try {
             // Usar la registration guardada, o esperar con ready
             const reg = App._swRegistration || await navigator.serviceWorker.ready;
             if (!reg) {
-                console.warn('🔔 No hay SW registrado aun');
+                console.warn('?? No hay SW registrado aun');
                 sw.checked = false;
                 sw.disabled = false;
                 status.textContent = 'Toca para activar';
                 return;
             }
             let sub = await reg.pushManager.getSubscription();
-            console.log('🔔 Suscripcion existente:', !!sub);
+            console.log('?? Suscripcion existente:', !!sub);
 
             if (!sub) {
-                // Re-suscribir automáticamente
-                console.log('🔔 Re-suscribiendo automaticamente...');
+                // Re-suscribir autom�ticamente
+                console.log('?? Re-suscribiendo automaticamente...');
                 await PushNotifications._setupSubscription();
                 sub = await reg.pushManager.getSubscription();
             } else {
-                // Ya existe — asegurar registro en servidor
+                // Ya existe � asegurar registro en servidor
                 await PushNotifications._saveSubscriptionToServer(sub, 1);
             }
 
@@ -5975,9 +5988,9 @@ App.initNotifToggle = async function() {
             sw.disabled = false;
             status.textContent = sub ? 'Activas' : 'Toca para activar';
             status.style.color = sub ? 'rgba(76, 175, 80, 0.9)' : '';
-            console.log('🔔 Toggle notif estado final:', sw.checked ? 'activo' : 'inactivo');
+            console.log('?? Toggle notif estado final:', sw.checked ? 'activo' : 'inactivo');
         } catch(e) {
-            console.error('🔔 Error en initNotifToggle:', e.message);
+            console.error('?? Error en initNotifToggle:', e.message);
             sw.checked = false;
             sw.disabled = false;
             status.textContent = 'Toca para activar';
@@ -6001,7 +6014,7 @@ App.onNotifSwitchChange = async function(checked) {
             status.textContent = 'Activas';
             status.style.color = 'rgba(76, 175, 80, 0.9)';
             sw.checked = true;
-            Utils.showNotification('🔔 Notificaciones activadas', 'success', 3000);
+            Utils.showNotification('?? Notificaciones activadas', 'success', 3000);
         } else {
             sw.checked = false;
             if (Notification.permission === 'denied') {
@@ -6033,7 +6046,7 @@ App.onNotifSwitchChange = async function(checked) {
         } catch (e) { /* silencioso */ }
         status.textContent = 'Toca para activar';
         status.style.color = '';
-        Utils.showNotification('🔕 Notificaciones desactivadas', 'info', 2000);
+        Utils.showNotification('?? Notificaciones desactivadas', 'info', 2000);
     }
 };
 

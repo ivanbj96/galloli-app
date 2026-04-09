@@ -1,4 +1,4 @@
-﻿// Módulo de Clientes
+// M�dulo de Clientes
 const ClientsModule = {
     clients: [],
 
@@ -31,11 +31,11 @@ const ClientsModule = {
         this.clients.push(client);
         this.saveClients();
         
-        // Notificar creación de cliente (sin bloquear si falla)
+        // Notificar creaci�n de cliente (sin bloquear si falla)
         if (typeof NotificationsModule !== 'undefined') {
             try {
                 NotificationsModule.notifyClientCreated(client.name).catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -50,15 +50,15 @@ const ClientsModule = {
     },
     
     /**
-     * Busca clientes duplicados basándose en nombre, teléfono o dirección
+     * Busca clientes duplicados bas�ndose en nombre, tel�fono o direcci�n
      * @param {string} name - Nombre del cliente
-     * @param {string} phone - Teléfono del cliente
-     * @param {string} address - Dirección del cliente
+     * @param {string} phone - Tel�fono del cliente
+     * @param {string} address - Direcci�n del cliente
      * @returns {object|null} - Cliente duplicado o null si no existe
      */
     findDuplicate(name, phone, address) {
         const nameLower = name.toLowerCase().trim();
-        const phoneCleaned = phone.replace(/\D/g, ''); // Eliminar caracteres no numéricos
+        const phoneCleaned = phone.replace(/\D/g, ''); // Eliminar caracteres no num�ricos
         const addressLower = address.toLowerCase().trim();
         
         return this.clients.find(client => {
@@ -71,13 +71,13 @@ const ClientsModule = {
             // Coincidencia exacta de nombre
             const nameMatch = clientNameLower === nameLower;
             
-            // Coincidencia exacta de teléfono (sin formato)
+            // Coincidencia exacta de tel�fono (sin formato)
             const phoneMatch = phoneCleaned && clientPhoneCleaned === phoneCleaned;
             
-            // Coincidencia de dirección (similar)
+            // Coincidencia de direcci�n (similar)
             const addressMatch = clientAddressLower === addressLower;
             
-            // Es duplicado si coincide nombre Y teléfono, o nombre Y dirección, o teléfono Y dirección
+            // Es duplicado si coincide nombre Y tel�fono, o nombre Y direcci�n, o tel�fono Y direcci�n
             return (nameMatch && phoneMatch) || (nameMatch && addressMatch) || (phoneMatch && addressMatch);
         });
     },
@@ -108,14 +108,14 @@ const ClientsModule = {
         const li = document.createElement('li');
         li.className = 'client-item';
         
-        // Crear enlace de teléfono
+        // Crear enlace de tel�fono
         const phoneLink = client.phone ? 
             `<a href="tel:${client.phone}" class="client-phone">
                 <i class="fas fa-phone"></i> ${client.phone}
             </a>` : 
             `<span class="client-phone"><i class="fas fa-phone"></i> ${client.phone}</span>`;
         
-        // Crear enlace de ubicación si tiene coordenadas
+        // Crear enlace de ubicaci�n si tiene coordenadas
         let locationLink = '';
         if (client.coordinates && client.coordinates.lat && client.coordinates.lng) {
             const mapsUrl = `https://www.google.com/maps?q=${client.coordinates.lat},${client.coordinates.lng}`;
@@ -136,7 +136,7 @@ const ClientsModule = {
                 <p>${phoneLink}</p>
                 ${locationLink}
                 ${client.coordinates ? 
-                    `<p class="client-location"><i class="fas fa-map-pin"></i> ${client.location || 'Ubicación seleccionada'}</p>` : ''}
+                    `<p class="client-location"><i class="fas fa-map-pin"></i> ${client.location || 'Ubicaci�n seleccionada'}</p>` : ''}
                 ${client.coordinates ? 
                     `<p class="client-location"><i class="fas fa-clock"></i> ${new Date(client.timestamp).toLocaleTimeString('es-ES')}</p>` : ''}
                 <p class="client-location"><i class="fas fa-shopping-cart"></i> ${client.totalSales} ventas | ${client.totalOrders} pedidos</p>
@@ -211,17 +211,17 @@ const ClientsModule = {
                 <div class="modal-body">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <i class="fas fa-archive" style="font-size: 3rem; color: var(--warning); margin-bottom: 15px;"></i>
-                        <h3 style="margin-bottom: 10px;">¿Archivar "${client.name}"?</h3>
-                        <p style="color: var(--gray); margin-bottom: 20px;">El cliente se ocultará pero mantendrá su historial</p>
+                        <h3 style="margin-bottom: 10px;">�Archivar "${client.name}"?</h3>
+                        <p style="color: var(--gray); margin-bottom: 20px;">El cliente se ocultar� pero mantendr� su historial</p>
                     </div>
                     
                     <div style="background: var(--light); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                         <p style="margin: 5px 0;"><strong><i class="fas fa-user"></i> Cliente:</strong> ${client.name}</p>
-                        <p style="margin: 5px 0;"><strong><i class="fas fa-phone"></i> Teléfono:</strong> ${client.phone}</p>
+                        <p style="margin: 5px 0;"><strong><i class="fas fa-phone"></i> Tel�fono:</strong> ${client.phone}</p>
                         ${hasData ? `
                             <p style="margin: 5px 0;"><strong><i class="fas fa-receipt"></i> Ventas:</strong> ${associatedData.totalSales} registros</p>
                             <p style="margin: 5px 0;"><strong><i class="fas fa-clipboard-list"></i> Pedidos:</strong> ${associatedData.totalOrders} registros</p>
-                            <p style="margin: 5px 0;"><strong><i class="fas fa-credit-card"></i> Créditos:</strong> ${associatedData.totalCredits} pendientes</p>
+                            <p style="margin: 5px 0;"><strong><i class="fas fa-credit-card"></i> Cr�ditos:</strong> ${associatedData.totalCredits} pendientes</p>
                         ` : '<p style="color: var(--gray);">Sin historial de datos</p>'}
                     </div>
                     
@@ -230,10 +230,10 @@ const ClientsModule = {
                             <i class="fas fa-info-circle"></i> <strong>Al archivar:</strong>
                         </p>
                         <ul style="margin: 10px 0 0 20px; color: #856404; font-size: 0.85rem;">
-                            <li>No aparecerá en la lista de clientes activos</li>
-                            <li>No estará disponible para nuevas ventas/pedidos</li>
-                            <li>Su historial se mantendrá intacto</li>
-                            <li>Podrás reactivarlo cuando quieras</li>
+                            <li>No aparecer� en la lista de clientes activos</li>
+                            <li>No estar� disponible para nuevas ventas/pedidos</li>
+                            <li>Su historial se mantendr� intacto</li>
+                            <li>Podr�s reactivarlo cuando quieras</li>
                         </ul>
                     </div>
                     
@@ -259,7 +259,7 @@ const ClientsModule = {
             this.updateClientList();
             this.updateClientSelect();
             modal.remove();
-            Utils.showNotification('📦 Cliente archivado correctamente', 'success', 3000);
+            Utils.showNotification('?? Cliente archivado correctamente', 'success', 3000);
         });
         
         return true;
@@ -274,7 +274,7 @@ const ClientsModule = {
             this.saveClients();
             this.updateClientList();
             this.updateClientSelect();
-            Utils.showNotification('✅ Cliente reactivado correctamente', 'success', 3000);
+            Utils.showNotification('? Cliente reactivado correctamente', 'success', 3000);
         }
     },
 
@@ -359,7 +359,7 @@ const ClientsModule = {
         };
     },
 
-    // Editar cliente existente - NUEVA IMPLEMENTACIÓN LIMPIA
+    // Editar cliente existente - NUEVA IMPLEMENTACI�N LIMPIA
     editClient(clientId) {
         const client = this.getClientById(clientId);
         if (!client) {
@@ -386,19 +386,19 @@ const ClientsModule = {
                                    value="${client.name || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Teléfono</label>
+                            <label class="form-label">Tel�fono</label>
                             <input type="tel" class="form-input" id="edit-client-phone" 
                                    value="${client.phone || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Dirección</label>
+                            <label class="form-label">Direcci�n</label>
                             <input type="text" class="form-input" id="edit-client-address" 
                                    value="${client.address || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Ubicación (Descripción)</label>
+                            <label class="form-label">Ubicaci�n (Descripci�n)</label>
                             <input type="text" class="form-input" id="edit-client-location" 
-                                   value="${client.location || ''}" placeholder="Descripción de la ubicación">
+                                   value="${client.location || ''}" placeholder="Descripci�n de la ubicaci�n">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Coordenadas</label>
@@ -430,7 +430,7 @@ const ClientsModule = {
         });
     },
 
-    // Guardar cambios del cliente - NUEVA IMPLEMENTACIÓN
+    // Guardar cambios del cliente - NUEVA IMPLEMENTACI�N
     saveClientChanges(clientId, modal) {
         const client = this.getClientById(clientId);
         if (!client) return;
@@ -447,14 +447,14 @@ const ClientsModule = {
             return;
         }
 
-        // Actualizar datos básicos
+        // Actualizar datos b�sicos
         client.name = name;
         client.phone = phone;
         client.address = address;
         client.location = location;
         client.lastModified = Date.now();
 
-        // Actualizar coordenadas si están presentes
+        // Actualizar coordenadas si est�n presentes
         if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
             client.coordinates = {
                 lat: parseFloat(lat),
@@ -470,7 +470,7 @@ const ClientsModule = {
         Utils.showNotification('Cliente actualizado correctamente', 'success', 3000);
     },
 
-    // Abrir mapa para editar ubicación - NUEVA IMPLEMENTACIÓN
+    // Abrir mapa para editar ubicaci�n - NUEVA IMPLEMENTACI�N
     openMapForEdit(clientId) {
         const client = this.getClientById(clientId);
         if (!client) return;
@@ -491,7 +491,7 @@ const ClientsModule = {
         mapModal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-map-marker-alt"></i> Seleccionar Ubicación</h3>
+                    <h3><i class="fas fa-map-marker-alt"></i> Seleccionar Ubicaci�n</h3>
                     <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -513,7 +513,7 @@ const ClientsModule = {
                             <i class="fas fa-times"></i> Cancelar
                         </button>
                         <button class="btn btn-success" onclick="ClientsModule.saveMapLocation(${clientId})" style="flex: 1;">
-                            <i class="fas fa-check"></i> Usar Esta Ubicación
+                            <i class="fas fa-check"></i> Usar Esta Ubicaci�n
                         </button>
                     </div>
                 </div>
@@ -522,7 +522,7 @@ const ClientsModule = {
         
         document.body.appendChild(mapModal);
         
-        // Inicializar mapa después de un breve delay
+        // Inicializar mapa despu�s de un breve delay
         setTimeout(() => {
             if (typeof L !== 'undefined') {
                 const map = L.map('edit-location-map').setView([lat, lng], 13);
@@ -554,17 +554,17 @@ const ClientsModule = {
         }, 200);
     },
 
-    // Guardar ubicación del mapa - NUEVA IMPLEMENTACIÓN
+    // Guardar ubicaci�n del mapa - NUEVA IMPLEMENTACI�N
     saveMapLocation(clientId) {
         const lat = document.getElementById('map-edit-lat').value;
         const lng = document.getElementById('map-edit-lng').value;
         
         if (!lat || !lng) {
-            Utils.showNotification('Selecciona una ubicación en el mapa', 'error', 3000);
+            Utils.showNotification('Selecciona una ubicaci�n en el mapa', 'error', 3000);
             return;
         }
         
-        // Actualizar los campos en el formulario de edición
+        // Actualizar los campos en el formulario de edici�n
         const editLatInput = document.getElementById('edit-client-lat');
         const editLngInput = document.getElementById('edit-client-lng');
         
@@ -575,29 +575,29 @@ const ClientsModule = {
         const mapModal = document.querySelector('.modal[style*="10001"]');
         if (mapModal) mapModal.remove();
         
-        Utils.showNotification('Ubicación seleccionada correctamente', 'success', 3000);
+        Utils.showNotification('Ubicaci�n seleccionada correctamente', 'success', 3000);
     },
 
-    // Crear cliente rápido con ubicación automática - CON GEOCODIFICACIÓN
-    async createQuickClient(name, phone, address = 'Sin dirección') {
+    // Crear cliente r�pido con ubicaci�n autom�tica - CON GEOCODIFICACI�N
+    async createQuickClient(name, phone, address = 'Sin direcci�n') {
         try {
             const position = await this.getCurrentPosition();
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             
-            // Intentar obtener dirección real de las coordenadas
+            // Intentar obtener direcci�n real de las coordenadas
             let realAddress = address;
-            let locationDescription = 'Ubicación automática';
+            let locationDescription = 'Ubicaci�n autom�tica';
             
             try {
                 const addressData = await this.getAddressFromCoordinates(lat, lng);
                 if (addressData) {
                     realAddress = addressData.display_name || addressData.address || address;
-                    locationDescription = addressData.display_name || 'Ubicación automática';
+                    locationDescription = addressData.display_name || 'Ubicaci�n autom�tica';
                 }
             } catch (geoError) {
-                console.log('No se pudo obtener dirección:', geoError);
-                // Continuar con coordenadas sin dirección
+                console.log('No se pudo obtener direcci�n:', geoError);
+                // Continuar con coordenadas sin direcci�n
             }
             
             const client = {
@@ -623,18 +623,18 @@ const ClientsModule = {
             this.clients.push(client);
             this.saveClients();
             
-            // Notificar creación de cliente (sin bloquear si falla)
+            // Notificar creaci�n de cliente (sin bloquear si falla)
             if (typeof NotificationsModule !== 'undefined') {
                 try {
                     NotificationsModule.notifyClientCreated(client.name).catch(err => {
-                        console.warn('No se pudo enviar notificación:', err);
+                        console.warn('No se pudo enviar notificaci�n:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar:', err);
                 }
             }
             
-            Utils.showNotification('✅ Cliente creado con ubicación automática', 'success', 3000);
+            Utils.showNotification('? Cliente creado con ubicaci�n autom�tica', 'success', 3000);
             return client;
         } catch (error) {
             const client = {
@@ -642,7 +642,7 @@ const ClientsModule = {
                 name: name,
                 phone: phone,
                 address: address,
-                location: 'Sin ubicación',
+                location: 'Sin ubicaci�n',
                 isActive: true, // NUEVO: Activo por defecto
                 coordinates: null,
                 timestamp: new Date().toISOString(),
@@ -657,23 +657,23 @@ const ClientsModule = {
             this.clients.push(client);
             this.saveClients();
             
-            // Notificar creación de cliente (sin bloquear si falla)
+            // Notificar creaci�n de cliente (sin bloquear si falla)
             if (typeof NotificationsModule !== 'undefined') {
                 try {
                     NotificationsModule.notifyClientCreated(client.name).catch(err => {
-                        console.warn('No se pudo enviar notificación:', err);
+                        console.warn('No se pudo enviar notificaci�n:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar:', err);
                 }
             }
             
-            Utils.showNotification('⚠️ Cliente creado sin ubicación (GPS no disponible)', 'warning', 3000);
+            Utils.showNotification('?? Cliente creado sin ubicaci�n (GPS no disponible)', 'warning', 3000);
             return client;
         }
     },
 
-    // Obtener dirección desde coordenadas usando Nominatim (OpenStreetMap)
+    // Obtener direcci�n desde coordenadas usando Nominatim (OpenStreetMap)
     async getAddressFromCoordinates(lat, lng) {
         try {
             const response = await fetch(
@@ -685,21 +685,21 @@ const ClientsModule = {
                 }
             );
             
-            if (!response.ok) throw new Error('Error en geocodificación');
+            if (!response.ok) throw new Error('Error en geocodificaci�n');
             
             const data = await response.json();
             return data;
         } catch (error) {
-            console.warn('Error obteniendo dirección:', error);
+            console.warn('Error obteniendo direcci�n:', error);
             return null;
         }
     },
 
-    // Obtener posición actual
+    // Obtener posici�n actual
     getCurrentPosition() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
-                reject(new Error('Geolocalización no soportada'));
+                reject(new Error('Geolocalizaci�n no soportada'));
                 return;
             }
 
@@ -735,7 +735,7 @@ const ClientsModule = {
     }
 };
 
-// Módulo de Pedidos
+// M�dulo de Pedidos
 const OrdersModule = {
     orders: [],
 
@@ -774,7 +774,7 @@ const OrdersModule = {
         this.saveOrders();
         ClientsModule.updateClientOrderStats(clientId);
         
-        // NUEVO: Notificar al módulo de rutas sobre nuevo pedido
+        // NUEVO: Notificar al m�dulo de rutas sobre nuevo pedido
         if (RutasModule.actualizarRutaAutomatica) {
             RutasModule.actualizarRutaAutomatica();
         }
@@ -806,7 +806,7 @@ const OrdersModule = {
             }
             this.saveOrders();
             
-            // NUEVO: Notificar al módulo de rutas sobre el cambio de estado
+            // NUEVO: Notificar al m�dulo de rutas sobre el cambio de estado
             if (estadoAnterior !== status && RutasModule.actualizarRutaPorCambioPedido) {
                 RutasModule.actualizarRutaPorCambioPedido(orderId, status);
             }
@@ -856,12 +856,12 @@ const OrdersModule = {
                         <span class="order-status ${order.status}">${this.getStatusText(order.status)}</span>
                     </h3>
                     <p class="order-details">
-                        <i class="fas fa-weight"></i> ${order.weight.toFixed(2)} lb Á— 
+                        <i class="fas fa-weight"></i> ${order.weight.toFixed(2)} lb �� 
                         <i class="fas fa-egg"></i> ${order.quantity} pollos
                     </p>
                     <p class="order-details">
-                        <i class="fas fa-balance-scale"></i> ${order.averageWeight} lb/pollo Á— 
-                        $${order.price.toFixed(2)}/lb
+                        <i class="fas fa-balance-scale"></i> ${order.averageWeight} lb/pollo �� 
+                        $${(order.price || 0).toFixed(2)}/lb
                     </p>
                     ${order.notes ? `<p class="order-details"><i class="fas fa-sticky-note"></i> ${order.notes}</p>` : ''}
                     ${order.deliveryDate ? 
@@ -978,7 +978,7 @@ const OrdersModule = {
         // Registrar como venta
         const sale = SalesModule.addSale(order.clientId, weight, quantity, price);
         
-        // Actualizar estadísticas del cliente
+        // Actualizar estad�sticas del cliente
         ClientsModule.updateClientStats(order.clientId, weight, quantity, sale.total);
         
         // Marcar pedido como entregado
@@ -997,7 +997,7 @@ const OrdersModule = {
                 const client = ClientsModule.getClientById(order.clientId);
                 const clientName = client ? client.name : 'Cliente';
                 NotificationsModule.notifyOrderDelivered(clientName).catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -1013,7 +1013,7 @@ const OrdersModule = {
             RutasModule.actualizarRutaPorCambioPedido(orderId, 'delivered');
         }
         
-        // Actualizar estadísticas y contabilidad
+        // Actualizar estad�sticas y contabilidad
         StatsModule.updateStats(Utils.getTodayDate());
         AccountingModule.updateAccounting(Utils.getTodayDate());
         
@@ -1051,17 +1051,17 @@ const OrdersModule = {
             <div class="order-details-modal">
                 <h3><i class="fas fa-clipboard-list"></i> Detalles del Pedido #${orderId}</h3>
                 <p><strong>Cliente:</strong> ${client.name}</p>
-                <p><strong>Teléfono:</strong> ${client.phone}</p>
-                <p><strong>Dirección:</strong> ${client.address}</p>
-                <p><strong>Ubicación:</strong> ${client.location || 'No especificada'}</p>
+                <p><strong>Tel�fono:</strong> ${client.phone}</p>
+                <p><strong>Direcci�n:</strong> ${client.address}</p>
+                <p><strong>Ubicaci�n:</strong> ${client.location || 'No especificada'}</p>
                 <hr>
                 <p><strong>Peso Total:</strong> ${order.weight.toFixed(2)} lb</p>
                 <p><strong>Cantidad de Pollos:</strong> ${order.quantity}</p>
                 <p><strong>Peso Promedio:</strong> ${order.averageWeight} lb/pollo</p>
-                <p><strong>Precio por lb:</strong> $${order.price.toFixed(2)}</p>
+                <p><strong>Precio por lb:</strong> $${(order.price || 0).toFixed(2)}</p>
                 <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
                 <p><strong>Estado:</strong> <span class="order-status ${order.status}">${this.getStatusText(order.status)}</span></p>
-                <p><strong>Fecha de creación:</strong> ${order.createdDate} ${order.createdTime}</p>
+                <p><strong>Fecha de creaci�n:</strong> ${order.createdDate} ${order.createdTime}</p>
                 ${order.deliveryDate ? `<p><strong>Fecha de entrega:</strong> ${order.deliveryDate} ${order.deliveryTime || ''}</p>` : ''}
                 ${order.notes ? `<p><strong>Notas:</strong> ${order.notes}</p>` : ''}
                 ${order.actualWeight ? `<p><strong>Peso real entregado:</strong> ${order.actualWeight.toFixed(2)} lb</p>` : ''}
@@ -1130,7 +1130,7 @@ const OrdersModule = {
     }
 };
 
-// Módulo de Ventas
+// M�dulo de Ventas
 const SalesModule = {
     sales: [],
 
@@ -1188,7 +1188,7 @@ const SalesModule = {
                 const client = ClientsModule.getClientById(clientId);
                 const clientName = client ? client.name : 'Cliente';
                 NotificationsModule.notifySaleCompleted(total, clientName).catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -1199,7 +1199,7 @@ const SalesModule = {
     },
 
     getSalesByDate(date) {
-        // Normalizar formato de fecha para comparación
+        // Normalizar formato de fecha para comparaci�n
         const targetDate = date.includes('/') ? this.convertDateFormat(date) : date;
         return this.sales.filter(sale => {
             // FILTRAR VENTAS ELIMINADAS
@@ -1213,7 +1213,7 @@ const SalesModule = {
     // Convertir fecha de DD/MM/YYYY a YYYY-MM-DD
     convertDateFormat(date) {
         if (date.includes('-') && date.split('-')[0].length === 4) {
-            return date; // Ya está en formato correcto
+            return date; // Ya est� en formato correcto
         }
         const parts = date.split('/');
         if (parts.length === 3) {
@@ -1288,7 +1288,7 @@ const SalesModule = {
                 const client = ClientsModule.getClientById(sale.clientId);
                 const clientName = client ? client.name : 'Cliente no encontrado';
 
-                // Determinar si tiene costo directo basándose en hasCustomCost
+                // Determinar si tiene costo directo bas�ndose en hasCustomCost
                 const hasCustomCost = sale.hasCustomCost === true;
                 const costBadge = hasCustomCost ? 
                     '<span style="background: #007bff; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; margin-left: 8px; font-weight: 600;"><i class="fas fa-drumstick-bite"></i> Pelado (Costo Directo)</span>' : 
@@ -1300,15 +1300,15 @@ const SalesModule = {
                     <div class="sale-info">
                         <h3><i class="fas fa-user"></i> ${clientName} ${costBadge}</h3>
                         <p class="sale-details">
-                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb × 
+                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb � 
                             <i class="fas fa-egg"></i> ${sale.quantity} pollos
                         </p>
                         <p class="sale-details">
-                            <i class="fas fa-balance-scale"></i> ${sale.averageWeight} lb/pollo × 
+                            <i class="fas fa-balance-scale"></i> ${sale.averageWeight} lb/pollo � 
                             ${sale.price.toFixed(2)}/lb
                         </p>
                         <p class="sale-details">
-                            <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(sale.costPerLb)}/lb × 
+                            <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(sale.costPerLb)}/lb � 
                             <i class="fas fa-chart-line"></i> Ganancia: ${Utils.formatCurrency(sale.profitPerLb)}/lb
                         </p>
                         <p class="sale-details"><i class="fas fa-clock"></i> ${sale.time}</p>
@@ -1383,7 +1383,7 @@ const SalesModule = {
                             </label>
                             <input type="number" step="0.01" min="0" class="form-input" 
                                    id="edit-sale-cost" value="${sale.costPerLb || ''}" 
-                                   placeholder="Dejar vacío para usar costo de merma">
+                                   placeholder="Dejar vac�o para usar costo de merma">
                             <small style="color: var(--gray); display: block; margin-top: 5px;">
                                 <i class="fas fa-drumstick-bite"></i> Usa este campo solo para pollos pelados con costo directo
                             </small>
@@ -1392,7 +1392,7 @@ const SalesModule = {
                             <label class="form-label">Tipo de Pago</label>
                             <select class="form-input" id="edit-sale-payment" required>
                                 <option value="paid" ${sale.isPaid ? 'selected' : ''}>Efectivo (Pagado)</option>
-                                <option value="credit" ${!sale.isPaid ? 'selected' : ''}>Crédito (A deber)</option>
+                                <option value="credit" ${!sale.isPaid ? 'selected' : ''}>Cr�dito (A deber)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1488,17 +1488,17 @@ const SalesModule = {
         await this.saveSales();
         await ClientsModule.saveClients();
         
-        // CR�TICO: Notificar al sistema de sincronización sobre la actualización
+        // CR?TICO: Notificar al sistema de sincronizaci�n sobre la actualizaci�n
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', saleId, 'update');
-            // Si cambió de cliente, notificar también los clientes
+            // Si cambi� de cliente, notificar tambi�n los clientes
             if (oldClientId !== sale.clientId) {
                 await SyncEngine.notifyChange('clients', oldClientId, 'update');
                 await SyncEngine.notifyChange('clients', sale.clientId, 'update');
             }
         }
         
-        // Actualizar contabilidad de ambas fechas si cambió la fecha
+        // Actualizar contabilidad de ambas fechas si cambi� la fecha
         if (typeof AccountingModule !== 'undefined') {
             AccountingModule.updateAccounting(oldDate);
             if (oldDate !== sale.date) {
@@ -1506,7 +1506,7 @@ const SalesModule = {
             }
         }
         
-        // Actualizar badges de créditos si cambió el estado de pago
+        // Actualizar badges de cr�ditos si cambi� el estado de pago
         if (oldIsPaid !== sale.isPaid && typeof CreditosModule !== 'undefined') {
             CreditosModule.updateCreditBadges();
         }
@@ -1532,24 +1532,24 @@ const SalesModule = {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3><i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Confirmar Eliminación</h3>
+                    <h3><i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Confirmar Eliminaci�n</h3>
                     <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <p><strong>¿Estás seguro de que deseas eliminar esta venta?</strong></p>
+                        <p><strong>�Est�s seguro de que deseas eliminar esta venta?</strong></p>
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
                             <p><strong>Cliente:</strong> ${clientName}</p>
                             <p><strong>Peso:</strong> ${sale.weight.toFixed(2)} lb</p>
                             <p><strong>Cantidad:</strong> ${sale.quantity} pollos</p>
                             <p><strong>Total:</strong> ${Utils.formatCurrency(sale.total)}</p>
                             <p><strong>Fecha:</strong> ${sale.date}</p>
-                            <p><strong>Estado:</strong> ${sale.isPaid ? 'Pagado' : 'Crédito'}</p>
+                            <p><strong>Estado:</strong> ${sale.isPaid ? 'Pagado' : 'Cr�dito'}</p>
                         </div>
                         <p style="color: #ff6b6b; font-size: 0.9rem;">
-                            <i class="fas fa-warning"></i> Esta acción no se puede deshacer y se sincronizará en todos los dispositivos.
+                            <i class="fas fa-warning"></i> Esta acci�n no se puede deshacer y se sincronizar� en todos los dispositivos.
                         </p>
                     </div>
                     <div style="display: flex; gap: 10px; justify-content: center;">
@@ -1575,7 +1575,7 @@ const SalesModule = {
         }
 
         try {
-            console.log('🗑️ Eliminando venta:', saleId);
+            console.log('??? Eliminando venta:', saleId);
             
             // 1. MARCAR LA VENTA COMO ELIMINADA (igual que editar)
             // En lugar de eliminar inmediatamente, marcamos como eliminada
@@ -1583,7 +1583,7 @@ const SalesModule = {
             sale.deletedAt = Date.now();
             sale.lastModified = Date.now();
             
-            // 2. ACTUALIZAR ESTAD�STICAS DEL CLIENTE
+            // 2. ACTUALIZAR ESTAD?STICAS DEL CLIENTE
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
                 client.totalSales -= 1;
@@ -1594,7 +1594,7 @@ const SalesModule = {
             }
             
             // 3. GUARDAR LA VENTA MARCADA COMO ELIMINADA
-            // Esto activará los interceptores automáticos igual que la edición
+            // Esto activar� los interceptores autom�ticos igual que la edici�n
             await this.saveSales();
             
             // 4. ACTUALIZAR CONTABILIDAD
@@ -1602,7 +1602,7 @@ const SalesModule = {
                 AccountingModule.updateAccounting(sale.date);
             }
             
-            // 5. ACTUALIZAR BADGES DE CRÉDITOS
+            // 5. ACTUALIZAR BADGES DE CR�DITOS
             if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
                 CreditosModule.updateCreditBadges();
             }
@@ -1610,12 +1610,12 @@ const SalesModule = {
             // 6. ACTUALIZAR LA LISTA DE VENTAS
             this.updateSalesList(sale.date);
             
-            console.log('✅ Venta marcada como eliminada');
+            console.log('? Venta marcada como eliminada');
             Utils.showNotification('Venta eliminada correctamente', 'success', 3000);
             return true;
 
         } catch (error) {
-            console.error('❌ Error al eliminar venta:', error);
+            console.error('? Error al eliminar venta:', error);
             Utils.showNotification('Error al eliminar la venta', 'error', 3000);
             return false;
         }
@@ -1642,7 +1642,7 @@ const SalesModule = {
         const paymentTime = new Date().toLocaleTimeString('es-ES');
         const paymentAmount = parseFloat(amount);
 
-        // Redondear a 2 decimales para evitar problemas de precisión
+        // Redondear a 2 decimales para evitar problemas de precisi�n
         const roundedAmount = Math.round(paymentAmount * 100) / 100;
         const roundedDebt = Math.round(sale.remainingDebt * 100) / 100;
 
@@ -1651,7 +1651,7 @@ const SalesModule = {
         sale.paidAmount += paymentAmount;
         sale.remainingDebt -= paymentAmount;
         
-        // CR�TICO: Actualizar timestamp de última modificación para sincronización
+        // CR?TICO: Actualizar timestamp de �ltima modificaci�n para sincronizaci�n
         sale.lastModified = Date.now();
         
         if (!sale.paymentHistory) sale.paymentHistory = [];
@@ -1662,7 +1662,7 @@ const SalesModule = {
             timestamp: Date.now()
         });
 
-        // YA NO registrar en PaymentHistoryModule - se construye dinámicamente desde sale.paymentHistory
+        // YA NO registrar en PaymentHistoryModule - se construye din�micamente desde sale.paymentHistory
 
         if (sale.remainingDebt <= 0.01) {
             sale.isPaid = true;
@@ -1674,7 +1674,7 @@ const SalesModule = {
                     const client = ClientsModule.getClientById(sale.clientId);
                     const clientName = client ? client.name : 'Cliente';
                     NotificationsModule.notifyPaymentReceived(paymentAmount, clientName).catch(err => {
-                        console.warn('No se pudo enviar notificación de pago:', err);
+                        console.warn('No se pudo enviar notificaci�n de pago:', err);
                     });
                 } catch (err) {
                     console.warn('Error al intentar notificar pago:', err);
@@ -1684,7 +1684,7 @@ const SalesModule = {
 
         await this.saveSales();
         
-        // CR�TICO: Notificar al sistema de sincronización si no es silencioso
+        // CR?TICO: Notificar al sistema de sincronizaci�n si no es silencioso
         if (!silent && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', sale.id, 'update');
         }
@@ -1742,17 +1742,17 @@ const SalesModule = {
             }));
     },
 
-    // Función para agregar eliminaciones pendientes
+    // Funci�n para agregar eliminaciones pendientes
     addPendingDeletion(saleId) {
         const pendingDeletions = JSON.parse(localStorage.getItem('pendingSalesDeletions') || '[]');
         if (!pendingDeletions.includes(saleId)) {
             pendingDeletions.push(saleId);
             localStorage.setItem('pendingSalesDeletions', JSON.stringify(pendingDeletions));
-            console.log(`📝 Eliminación pendiente guardada: ${saleId}`);
+            console.log(`?? Eliminaci�n pendiente guardada: ${saleId}`);
         }
     },
 
-    // Función para sincronizar eliminaciones pendientes cuando SyncEngine esté disponible
+    // Funci�n para sincronizar eliminaciones pendientes cuando SyncEngine est� disponible
     async syncPendingDeletions() {
         if (typeof window.SyncEngine !== 'undefined' && 
             window.SyncEngine && 
@@ -1762,29 +1762,29 @@ const SalesModule = {
             const pendingDeletions = JSON.parse(localStorage.getItem('pendingSalesDeletions') || '[]');
             
             if (pendingDeletions.length > 0) {
-                console.log(`🔄 Sincronizando ${pendingDeletions.length} eliminaciones pendientes...`);
+                console.log(`?? Sincronizando ${pendingDeletions.length} eliminaciones pendientes...`);
                 
                 for (const saleId of pendingDeletions) {
                     try {
                         await window.SyncEngine.notifyChange('sales', saleId, 'delete');
-                        console.log(`✅ Eliminación sincronizada: ${saleId}`);
+                        console.log(`? Eliminaci�n sincronizada: ${saleId}`);
                     } catch (error) {
-                        console.error(`❌ Error sincronizando eliminación ${saleId}:`, error);
+                        console.error(`? Error sincronizando eliminaci�n ${saleId}:`, error);
                     }
                 }
                 
                 // Limpiar eliminaciones pendientes
                 localStorage.removeItem('pendingSalesDeletions');
-                console.log('✅ Todas las eliminaciones pendientes sincronizadas');
+                console.log('? Todas las eliminaciones pendientes sincronizadas');
             }
         }
     }
 };
 
-// Módulo de Merma
+// M�dulo de Merma
 const MermaModule = {
     dailyPrices: [],
-    mermaRecords: [], // NUEVO: Historial completo de cálculos de merma
+    mermaRecords: [], // NUEVO: Historial completo de c�lculos de merma
 
     async init() {
         await this.loadDailyPrices();
@@ -1792,11 +1792,11 @@ const MermaModule = {
     },
 
     calculateMerma(liveWeight, liveCost, processedWeight, processingCost, realCostPerLb = null) {
-        // null = campo vacío (a deducir), 0 = ingresado explícitamente como cero
+        // null = campo vac�o (a deducir), 0 = ingresado expl�citamente como cero
         const hasLiveWeight = liveWeight != null && liveWeight > 0;
         const hasLiveCost = liveCost != null && liveCost > 0;
         const hasProcessedWeight = processedWeight != null && processedWeight > 0;
-        const hasProcessingCost = processingCost != null; // null = vacío, 0 = válido
+        const hasProcessingCost = processingCost != null; // null = vac�o, 0 = v�lido
         const hasRealCost = realCostPerLb != null && realCostPerLb > 0;
         
         const missingCount = [hasLiveWeight, hasLiveCost, hasProcessedWeight, hasProcessingCost, hasRealCost].filter(v => !v).length;
@@ -1815,22 +1815,22 @@ const MermaModule = {
         // Calcular el valor faltante
         if (!hasLiveWeight) {
             finalLiveWeight = (finalRealCost * finalProcessedWeight - finalProcessingCost) / finalLiveCost;
-            if (finalLiveWeight <= 0) throw new Error('Peso vivo calculado inválido');
+            if (finalLiveWeight <= 0) throw new Error('Peso vivo calculado inv�lido');
             deducedValue = 'liveWeight';
         } else if (!hasLiveCost) {
             finalLiveCost = (finalRealCost * finalProcessedWeight - finalProcessingCost) / finalLiveWeight;
-            if (finalLiveCost <= 0) throw new Error('Costo por lb vivo calculado inválido');
+            if (finalLiveCost <= 0) throw new Error('Costo por lb vivo calculado inv�lido');
             deducedValue = 'liveCost';
         } else if (!hasProcessedWeight) {
             finalProcessedWeight = (finalLiveWeight * finalLiveCost + finalProcessingCost) / finalRealCost;
-            if (finalProcessedWeight <= 0) throw new Error('Peso pelado calculado inválido');
+            if (finalProcessedWeight <= 0) throw new Error('Peso pelado calculado inv�lido');
             deducedValue = 'processedWeight';
         } else if (!hasProcessingCost) {
             finalProcessingCost = finalRealCost * finalProcessedWeight - finalLiveWeight * finalLiveCost;
             deducedValue = 'processingCost';
         } else if (!hasRealCost) {
             finalRealCost = (finalLiveWeight * finalLiveCost + finalProcessingCost) / finalProcessedWeight;
-            if (finalRealCost <= 0) throw new Error('Costo real calculado inválido');
+            if (finalRealCost <= 0) throw new Error('Costo real calculado inv�lido');
             deducedValue = 'realCostPerLb';
         }
         
@@ -1871,7 +1871,7 @@ const MermaModule = {
 
         await this.saveMermaRecords();
         
-        // Guardar también el precio
+        // Guardar tambi�n el precio
         await this.saveDailyPrice(mermaData.realCostPerLb, date);
         
         // CRITICO: Notificar al sistema de sincronizacion
@@ -1913,7 +1913,7 @@ const MermaModule = {
                 AccountingModule.updateAccounting(date);
             }
             
-            // Recalcular estadísticas
+            // Recalcular estad�sticas
             if (typeof StatsModule !== 'undefined') {
                 StatsModule.updateStats(date);
             }
@@ -1952,7 +1952,7 @@ const MermaModule = {
         
         await this.saveDailyPrices();
         
-        // CR�TICO: Notificar al sistema de sincronización
+        // CR?TICO: Notificar al sistema de sincronizaci�n
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('prices', priceRecord.id, 'update');
         }
@@ -2035,7 +2035,7 @@ const MermaModule = {
     }
 };
 
-// Módulo de Estadísticas
+// M�dulo de Estad�sticas
 const StatsModule = {
     updateStats(date = null) {
         const targetDate = date || Utils.getTodayDate();
@@ -2047,7 +2047,7 @@ const StatsModule = {
         const salesWithMerma = sales.filter(sale => !sale.hasCustomCost);
         const salesWithCustomCost = sales.filter(sale => sale.hasCustomCost);
         
-        // Actualizar estadísticas del día - SOLO si los elementos existen
+        // Actualizar estad�sticas del d�a - SOLO si los elementos existen
         const salesTodayElement = document.getElementById('sales-today');
         const incomeTodayElement = document.getElementById('income-today');
         const weightTodayElement = document.getElementById('weight-today');
@@ -2089,7 +2089,7 @@ const StatsModule = {
             totalQuantityElement.textContent = totalQuantity;
         }
         
-        // Precio de merma del día
+        // Precio de merma del d�a
         if (mermaPriceElement) {
             mermaPriceElement.textContent = mermaPrice ? 
                 Utils.formatCurrency(mermaPrice.price) + '/lb' : 'No definido';
@@ -2113,7 +2113,7 @@ const StatsModule = {
                             <i class="fas fa-feather" style="font-size: 2rem; margin-right: 15px;"></i>
                             <div>
                                 <h4 style="margin: 0; font-size: 1.2rem;">Pollos en Pluma</h4>
-                                <p style="margin: 5px 0 0; opacity: 0.95; font-size: 0.9rem;">Con cálculo de merma</p>
+                                <p style="margin: 5px 0 0; opacity: 0.95; font-size: 0.9rem;">Con c�lculo de merma</p>
                             </div>
                         </div>
                         <div style="background: rgba(255,255,255,0.25); padding: 15px; border-radius: 8px;">
@@ -2149,7 +2149,7 @@ const StatsModule = {
             chickenTypeBreakdownElement.innerHTML = breakdownHTML;
         }
         
-        // Actualizar estadísticas por cliente
+        // Actualizar estad�sticas por cliente
         this.updateClientStats(sales);
     },
 
@@ -2228,7 +2228,7 @@ const StatsModule = {
         const currentDate = new Date(start);
         const endDate = new Date(end);
         
-        // Inicializar todos los días
+        // Inicializar todos los d�as
         while (currentDate <= endDate) {
             const dateKey = Utils.formatDate(currentDate);
             statsByDay[dateKey] = {
@@ -2266,7 +2266,7 @@ const StatsModule = {
 };
 
 
-// Módulo de Contabilidad
+// M�dulo de Contabilidad
 const AccountingModule = {
     expenses: [],
 
@@ -2551,7 +2551,7 @@ const AccountingModule = {
         const sales = SalesModule.getSalesByDate(date);
         const expenses = this.getExpensesByDate(date);
         
-        // Calcular ganancia bruta: (PVP - Costo Merma) × Libras
+        // Calcular ganancia bruta: (PVP - Costo Merma) � Libras
         let grossProfit = 0;
         sales.forEach(sale => {
             const costPerLb = sale.costPerLb || 0;
@@ -2577,7 +2577,7 @@ const DiezmosModule = {
         await this.forzarRecalculoCompleto();
     },
 
-    // NUEVO: Calcular automáticamente diezmos de días anteriores
+    // NUEVO: Calcular autom�ticamente diezmos de d�as anteriores
     async calcularDiezmosPendientes() {
         // Obtener todas las fechas con ventas
         const fechasConVentas = [...new Set(SalesModule.sales.map(s => s.date))];
@@ -2606,7 +2606,7 @@ const DiezmosModule = {
                         diezmoPercent: this.config.diezmoPercent,
                         ofrendaPercent: this.config.ofrendaPercent,
                         timestamp: Date.now(),
-                        autoCalculated: true // Marcar como calculado automáticamente
+                        autoCalculated: true // Marcar como calculado autom�ticamente
                     };
                     
                     this.records.push(record);
@@ -2617,12 +2617,12 @@ const DiezmosModule = {
         
         if (registrosCreados > 0) {
             await this.saveRecords();
-            console.log(`✅ Se calcularon automáticamente ${registrosCreados} registros de diezmos pendientes`);
+            console.log(`? Se calcularon autom�ticamente ${registrosCreados} registros de diezmos pendientes`);
         }
     },
 
     getPreview(date = Utils.getTodayDate()) {
-        // Prevenir recursión infinita
+        // Prevenir recursi�n infinita
         if (this._calculatingPreview) {
             return {
                 netProfit: 0,
@@ -2683,11 +2683,11 @@ const DiezmosModule = {
 
         await this.saveRecords();
         
-        // Notificar cálculo de diezmos (sin bloquear si falla)
+        // Notificar c�lculo de diezmos (sin bloquear si falla)
         if (typeof NotificationsModule !== 'undefined') {
             try {
                 NotificationsModule.notifyDiezmosCalculated(record.total).catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -2737,7 +2737,7 @@ const DiezmosModule = {
         
         if (registrosActualizados > 0) {
             await this.saveRecords();
-            Utils.showNotification(`✅ Se recalcularon ${registrosActualizados} registros con los nuevos porcentajes`, 'success', 3000);
+            Utils.showNotification(`? Se recalcularon ${registrosActualizados} registros con los nuevos porcentajes`, 'success', 3000);
         }
     },
 
@@ -2773,7 +2773,7 @@ const DiezmosModule = {
         if (savedLocal) this.records = JSON.parse(savedLocal);
     },
 
-    // NUEVO: Función para forzar recálculo de todos los diezmos pendientes
+    // NUEVO: Funci�n para forzar rec�lculo de todos los diezmos pendientes
     async forzarRecalculoCompleto() {
         const fechasConVentas = [...new Set(SalesModule.sales.map(s => s.date))];
         let registrosCreados = 0;
@@ -2814,7 +2814,7 @@ const DiezmosModule = {
         
         if (registrosCreados > 0 || registrosActualizados > 0) {
             await this.saveRecords();
-            const mensaje = `✅ Recálculo completo: ${registrosCreados} nuevos registros, ${registrosActualizados} actualizados`;
+            const mensaje = `? Rec�lculo completo: ${registrosCreados} nuevos registros, ${registrosActualizados} actualizados`;
             Utils.showNotification(mensaje, 'success', 4000);
             return { creados: registrosCreados, actualizados: registrosActualizados };
         }
@@ -2829,7 +2829,7 @@ const ConfigModule = {
         appShortName: 'GallOli',
         theme: 'default',
         logoType: 'emoji',
-        logoEmoji: '🐔',
+        logoEmoji: '??',
         logoImage: null,
         colors: {
             primary: '#4CAF50',
@@ -2845,12 +2845,12 @@ const ConfigModule = {
         }
     },
     themes: {
-        default: { name: 'Verde Clásico', colors: { primary: '#4CAF50', secondary: '#FF9800', light: '#f5f5f5' } },
+        default: { name: 'Verde Cl�sico', colors: { primary: '#4CAF50', secondary: '#FF9800', light: '#f5f5f5' } },
         blue: { name: 'Azul Profesional', colors: { primary: '#2196F3', secondary: '#FF5722', light: '#E3F2FD' } },
         purple: { name: 'Morado Moderno', colors: { primary: '#9C27B0', secondary: '#FFC107', light: '#F3E5F5' } },
         red: { name: 'Rojo Intenso', colors: { primary: '#F44336', secondary: '#4CAF50', light: '#FFEBEE' } }
     },
-    emojis: ['🐔', '���', '🐓', '🥚', '���', '🦃', '🐥', '���'],
+    emojis: ['\uD83D\uDC14', '\uD83D\uDC13', '\uD83D\uDC23', '\uD83D\uDC24', '\uD83E\uDD9A', '\uD83D\uDC26', '\uD83E\uDD43', '\uD83D\uDC3A'],
 
     async init() {
         await this.loadConfig();
@@ -2913,7 +2913,7 @@ const ConfigModule = {
     },
 
     saveConfig() {
-        // Guardar en localStorage (rápido)
+        // Guardar en localStorage (r�pido)
         localStorage.setItem('polloConfig', JSON.stringify(this.currentConfig));
         
         // Guardar en IndexedDB (persistente)
@@ -2924,12 +2924,12 @@ const ConfigModule = {
         this.applyConfig();
         this.updateDynamicManifest();
         if (typeof Utils !== 'undefined') {
-            Utils.showNotification('✅ Configuración guardada correctamente', 'success', 3000);
+            Utils.showNotification('? Configuraci�n guardada correctamente', 'success', 3000);
         }
     },
 
     async loadConfig() {
-        // Intentar cargar desde IndexedDB primero (más confiable)
+        // Intentar cargar desde IndexedDB primero (m�s confiable)
         if (DB.db) {
             try {
                 const saved = await DB.get('config', 'app-config');
@@ -2949,7 +2949,7 @@ const ConfigModule = {
         if (saved) {
             try {
                 this.currentConfig = { ...this.currentConfig, ...JSON.parse(saved) };
-                // Guardar en IndexedDB para próxima vez
+                // Guardar en IndexedDB para pr�xima vez
                 if (DB.db) {
                     DB.set('config', { key: 'app-config', value: this.currentConfig });
                 }
@@ -2961,8 +2961,8 @@ const ConfigModule = {
 
     async resetToDefault() {
         const confirmed = await Utils.showDangerConfirm(
-            'Se restaurará la configuración por defecto y se recargará la aplicación.',
-            '¿Restaurar Configuración?',
+            'Se restaurar� la configuraci�n por defecto y se recargar� la aplicaci�n.',
+            '�Restaurar Configuraci�n?',
             'Restaurar'
         );
         
@@ -2992,11 +2992,11 @@ const ConfigModule = {
     }
 };
 
-// Módulo de Historial de Pagos - Registro permanente de todos los pagos
+// M�dulo de Historial de Pagos - Registro permanente de todos los pagos
 const PaymentHistoryModule = {
-    // YA NO se usa payments[] - se construye dinámicamente desde SalesModule.sales
+    // YA NO se usa payments[] - se construye din�micamente desde SalesModule.sales
     
-    // Obtener todos los pagos (construido dinámicamente desde sale.paymentHistory)
+    // Obtener todos los pagos (construido din�micamente desde sale.paymentHistory)
     getAllPayments() {
         const allPayments = [];
         
@@ -3056,7 +3056,7 @@ const PaymentHistoryModule = {
             .reduce((sum, p) => sum + p.amount, 0);
     },
 
-    // Obtener estadísticas de pagos
+    // Obtener estad�sticas de pagos
     getStats() {
         const allPayments = this.getAllPayments();
         const totalPayments = allPayments.length;
@@ -3074,8 +3074,8 @@ const PaymentHistoryModule = {
     
     // YA NO se necesitan estas funciones - los datos vienen de sale.paymentHistory
     async init() {
-        // No hacer nada - los datos se construyen dinámicamente
-        console.log('✅ PaymentHistoryModule inicializado (modo dinámico desde ventas)');
+        // No hacer nada - los datos se construyen din�micamente
+        console.log('? PaymentHistoryModule inicializado (modo din�mico desde ventas)');
     },
 
     exportPayments(clientId = null) {
@@ -3132,16 +3132,16 @@ const BackupModule = {
             // Historial de pagos permanente
             paymentHistory: PaymentHistoryModule.payments || [],
             
-            // Créditos (incluido en sales pero separado para claridad)
+            // Cr�ditos (incluido en sales pero separado para claridad)
             creditosData: {
                 creditSales: SalesModule.sales.filter(s => !s.isPaid) || [],
                 paymentHistory: SalesModule.sales.filter(s => s.paymentHistory && s.paymentHistory.length > 0) || []
             },
             
-            // Configuración completa de la app
+            // Configuraci�n completa de la app
             config: ConfigModule.currentConfig || {},
             
-            // Configuración de Telegram
+            // Configuraci�n de Telegram
             telegramConfig: {
                 botToken: BackupModule.telegramBotToken || null,
                 chatId: BackupModule.telegramChatId || null
@@ -3169,7 +3169,7 @@ const BackupModule = {
         if (typeof PushNotifications !== 'undefined') {
             try {
                 PushNotifications.notifyBackupSuccess('backup').catch(err => {
-                    console.warn('No se pudo enviar notificación:', err);
+                    console.warn('No se pudo enviar notificaci�n:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -3292,14 +3292,14 @@ const BackupModule = {
         localStorage.setItem('telegramBotToken', token);
         localStorage.setItem('telegramChatId', chatId);
         
-        // Guardar también en AutoBackup para backups automáticos (IndexedDB seguro)
+        // Guardar tambi�n en AutoBackup para backups autom�ticos (IndexedDB seguro)
         if (typeof AutoBackup !== 'undefined') {
             AutoBackup.saveCredentials(token, chatId);
         }
     },
 
     async loadTelegramConfig() {
-        // Intentar cargar desde versión encriptada primero
+        // Intentar cargar desde versi�n encriptada primero
         const encryptedToken = localStorage.getItem('tg_bt');
         const encryptedChatId = localStorage.getItem('tg_ci');
         
@@ -3318,21 +3318,21 @@ const BackupModule = {
             this.telegramChatId = localStorage.getItem('telegramChatId');
         }
         
-        // Si aún no hay, intentar cargar desde IndexedDB (AutoBackup)
+        // Si a�n no hay, intentar cargar desde IndexedDB (AutoBackup)
         if ((!this.telegramBotToken || !this.telegramChatId) && typeof AutoBackup !== 'undefined') {
             try {
                 const credentials = await AutoBackup.getCredentials();
                 if (credentials.botToken && credentials.chatId) {
                     this.telegramBotToken = credentials.botToken;
                     this.telegramChatId = credentials.chatId;
-                    console.log('✅ Credenciales cargadas desde IndexedDB');
+                    console.log('? Credenciales cargadas desde IndexedDB');
                 }
             } catch (error) {
                 console.error('Error cargando desde IndexedDB:', error);
             }
         }
         
-        console.log('📱 Credenciales de Telegram cargadas:', {
+        console.log('?? Credenciales de Telegram cargadas:', {
             hasToken: !!this.telegramBotToken,
             hasChatId: !!this.telegramChatId
         });
@@ -3343,7 +3343,7 @@ const BackupModule = {
         this.lastAutoBackup = localStorage.getItem('lastAutoBackup');
     },
 
-    // Encriptación simple (ofuscación)
+    // Encriptaci�n simple (ofuscaci�n)
     encrypt(text) {
         if (!text) return null;
         return btoa(encodeURIComponent(text).split('').reverse().join(''));
@@ -3362,20 +3362,20 @@ const BackupModule = {
         if (token) {
             this.telegramBotToken = token;
             localStorage.setItem('tg_bt', this.encrypt(token));
-            localStorage.setItem('telegramBotToken', token); // También sin encriptar para compatibilidad
+            localStorage.setItem('telegramBotToken', token); // Tambi�n sin encriptar para compatibilidad
         }
         if (chatId) {
             this.telegramChatId = chatId;
             localStorage.setItem('tg_ci', this.encrypt(chatId));
-            localStorage.setItem('telegramChatId', chatId); // También sin encriptar para compatibilidad
+            localStorage.setItem('telegramChatId', chatId); // Tambi�n sin encriptar para compatibilidad
         }
         
-        // Guardar también en AutoBackup para backups automáticos (IndexedDB seguro)
+        // Guardar tambi�n en AutoBackup para backups autom�ticos (IndexedDB seguro)
         if (typeof AutoBackup !== 'undefined' && token && chatId) {
             AutoBackup.saveCredentials(token, chatId);
         }
         
-        Utils.showNotification('✅ Configuración de Telegram guardada de forma segura', 'success', 3000);
+        Utils.showNotification('? Configuraci�n de Telegram guardada de forma segura', 'success', 3000);
     },
 
     clearTelegramConfig() {
@@ -3383,7 +3383,7 @@ const BackupModule = {
         this.telegramChatId = null;
         localStorage.removeItem('tg_bt');
         localStorage.removeItem('tg_ci');
-        Utils.showNotification('🗑️ Configuración de Telegram eliminada', 'info', 3000);
+        Utils.showNotification('??? Configuraci�n de Telegram eliminada', 'info', 3000);
     },
 
     async testTelegramConnection() {
@@ -3397,7 +3397,7 @@ const BackupModule = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     chat_id: this.telegramChatId,
-                    text: '✅ Conexión exitosa con GallOli\n\n🐔 Tu bot está configurado correctamente y listo para recibir backups automáticos.'
+                    text: '? Conexi�n exitosa con GallOli\n\n?? Tu bot est� configurado correctamente y listo para recibir backups autom�ticos.'
                 })
             });
 
@@ -3409,7 +3409,7 @@ const BackupModule = {
 
             return result;
         } catch (error) {
-            throw new Error(`Error de conexión: ${error.message}`);
+            throw new Error(`Error de conexi�n: ${error.message}`);
         }
     },
 
@@ -3426,14 +3426,14 @@ const BackupModule = {
             formData.append('chat_id', this.telegramChatId);
             formData.append('document', blob, backup.filename);
             formData.append('caption', 
-                `📦 Backup Automático GallOli\n` +
-                `📅 ${Utils.formatDateTime()}\n\n` +
-                `📊 Estadísticas:\n` +
-                `👥 Clientes: ${stats.totalClients}\n` +
-                `💰 Ventas: ${stats.totalSales}\n` +
-                `📋 Pedidos: ${stats.totalOrders}\n` +
-                `💸 Gastos: ${stats.totalExpenses}\n` +
-                `📦 Tamaño: ${stats.totalSize}`
+                `?? Backup Autom�tico GallOli\n` +
+                `?? ${Utils.formatDateTime()}\n\n` +
+                `?? Estad�sticas:\n` +
+                `?? Clientes: ${stats.totalClients}\n` +
+                `?? Ventas: ${stats.totalSales}\n` +
+                `?? Pedidos: ${stats.totalOrders}\n` +
+                `?? Gastos: ${stats.totalExpenses}\n` +
+                `?? Tama�o: ${stats.totalSize}`
             );
 
             const response = await fetch(
@@ -3452,11 +3452,11 @@ const BackupModule = {
 
             localStorage.setItem('lastTelegramBackup', new Date().toISOString());
             
-            // Notificación de éxito
+            // Notificaci�n de �xito
             if (typeof PushNotifications !== 'undefined') {
                 try {
                     PushNotifications.notifyBackupSuccess(backup.filename).catch(err => {
-                        console.warn('No se pudo enviar notificación:', err);
+                        console.warn('No se pudo enviar notificaci�n:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar:', err);
@@ -3465,11 +3465,11 @@ const BackupModule = {
             
             return result;
         } catch (error) {
-            // Notificación de error
+            // Notificaci�n de error
             if (typeof PushNotifications !== 'undefined') {
                 try {
                     PushNotifications.notifyBackupError(error.message).catch(err => {
-                        console.warn('No se pudo enviar notificación de error:', err);
+                        console.warn('No se pudo enviar notificaci�n de error:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar error:', err);
@@ -3487,12 +3487,12 @@ const BackupModule = {
             const result = await this.sendToTelegram(backup);
             
             if (result.ok) {
-                Utils.showNotification('✅ Backup enviado a Telegram correctamente', 'success', 5000);
+                Utils.showNotification('? Backup enviado a Telegram correctamente', 'success', 5000);
                 return true;
             }
             return false;
         } catch (error) {
-            Utils.showNotification(`❌ ${error.message}`, 'error', 5000);
+            Utils.showNotification(`? ${error.message}`, 'error', 5000);
             return false;
         } finally {
             Utils.showLoading(false);
@@ -3505,16 +3505,16 @@ const BackupModule = {
         
         if (enabled) {
             this.scheduleAutoBackup();
-            Utils.showNotification('✅ Backup automático activado', 'success', 3000);
+            Utils.showNotification('? Backup autom�tico activado', 'success', 3000);
         } else {
-            Utils.showNotification('⏸️ Backup automático desactivado', 'info', 3000);
+            Utils.showNotification('?? Backup autom�tico desactivado', 'info', 3000);
         }
     },
 
     scheduleAutoBackup() {
         if (!this.autoBackupEnabled) return;
         
-        // Backup automático cada 24 horas
+        // Backup autom�tico cada 24 horas
         const lastBackup = localStorage.getItem('lastTelegramBackup');
         const now = new Date().getTime();
         const dayInMs = 24 * 60 * 60 * 1000;
@@ -3547,7 +3547,7 @@ const ReportsModule = {
     },
 
     generatePDFReport(report, title) {
-        Utils.showNotification('Generación de PDF no implementada aún', 'info', 3000);
+        Utils.showNotification('Generaci�n de PDF no implementada a�n', 'info', 3000);
         return `reporte_${Utils.formatDate()}.pdf`;
     }
 };
@@ -3567,7 +3567,7 @@ const MapModule = {
 
         this.map = L.map('location-map').setView([lat, lng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
+            attribution: '� OpenStreetMap'
         }).addTo(this.map);
 
         this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
@@ -3617,7 +3617,7 @@ const MapModule = {
 
 
 // ============================================
-// MÓDULO: SINCRONIZACIÓN EN LA NUBE
+// M�DULO: SINCRONIZACI�N EN LA NUBE
 // ============================================
 const CloudSyncModule = {
     name: 'cloud-sync',
@@ -3635,7 +3635,7 @@ const CloudSyncModule = {
     renderLoginPage() {
         return `
             <div class="page-header">
-                <h1><i class="fas fa-cloud"></i> Sincronización en la Nube</h1>
+                <h1><i class="fas fa-cloud"></i> Sincronizaci�n en la Nube</h1>
                 <p>Accede a tus datos desde cualquier dispositivo</p>
             </div>
             
@@ -3662,15 +3662,15 @@ const CloudSyncModule = {
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Tu ID de Telegram</label>
                         <input type="text" id="telegram-id" placeholder="Ej: 123456789" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">
-                            <i class="fas fa-info-circle"></i> Envía /start a @userinfobot para obtener tu ID
+                            <i class="fas fa-info-circle"></i> Env�a /start a @userinfobot para obtener tu ID
                         </small>
                     </div>
                     
                     <div id="telegram-code-section" style="display: none; margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Código de Verificación</label>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">C�digo de Verificaci�n</label>
                         <input type="text" id="telegram-code" placeholder="123456" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">
-                            <i class="fas fa-info-circle"></i> Revisa tu Telegram, te enviamos un código
+                            <i class="fas fa-info-circle"></i> Revisa tu Telegram, te enviamos un c�digo
                         </small>
                     </div>
                     
@@ -3687,12 +3687,12 @@ const CloudSyncModule = {
                     </div>
                     
                     <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contraseña</label>
-                        <input type="password" id="password-input" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contrase�a</label>
+                        <input type="password" id="password-input" placeholder="��������" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <button onclick="CloudSyncModule.handleEmailLogin()" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;">
-                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesi�n
                     </button>
                     
                     <button onclick="CloudSyncModule.handleEmailRegister()" style="width: 100%; padding: 1rem; background: white; color: #4CAF50; border: 2px solid #4CAF50; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer;">
@@ -3712,12 +3712,12 @@ const CloudSyncModule = {
         
         return `
             <div class="page-header">
-                <h1><i class="fas fa-cloud"></i> Sincronización en la Nube</h1>
+                <h1><i class="fas fa-cloud"></i> Sincronizaci�n en la Nube</h1>
                 <p>Conectado como ${user.name}</p>
             </div>
             
             <div style="max-width: 1000px; margin: 2rem auto;">
-                <!-- Tabs de navegación -->
+                <!-- Tabs de navegaci�n -->
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid #eee; background: white; padding: 1rem; border-radius: 12px 12px 0 0;">
                     <button class="sync-tab active" onclick="CloudSyncModule.switchSyncTab('account')" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2196F3; color: #2196F3; font-weight: bold;">
                         <i class="fas fa-user"></i> Mi Cuenta
@@ -3738,7 +3738,7 @@ const CloudSyncModule = {
                         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #388E3C); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
                             <i class="fas fa-check" style="font-size: 2.5rem; color: white;"></i>
                         </div>
-                        <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">¡Conectado!</h2>
+                        <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">�Conectado!</h2>
                         <p style="color: #666; margin: 0;">${business.name}</p>
                     </div>
                     
@@ -3757,7 +3757,7 @@ const CloudSyncModule = {
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <i class="fas fa-sync" style="font-size: 2rem; color: #4CAF50;"></i>
                                 <div style="flex: 1;">
-                                    <div style="font-weight: bold;">Sincronización Automática</div>
+                                    <div style="font-weight: bold;">Sincronizaci�n Autom�tica</div>
                                     <div style="color: #666; font-size: 0.9rem;">Activa - Tiempo real</div>
                                 </div>
                             </div>
@@ -3770,7 +3770,7 @@ const CloudSyncModule = {
                         </button>
                         
                         <button onclick="CloudSyncModule.logout()" style="padding: 1rem; background: white; color: #f44336; border: 2px solid #f44336; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesi�n
                         </button>
                     </div>
                 </div>
@@ -3795,14 +3795,14 @@ const CloudSyncModule = {
                 <!-- Tab: Invitaciones -->
                 <div class="sync-tab-content" id="invitations-tab" style="display: none; background: white; padding: 2rem; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                        <h2 style="margin: 0;"><i class="fas fa-ticket-alt"></i> Códigos de Invitación</h2>
+                        <h2 style="margin: 0;"><i class="fas fa-ticket-alt"></i> C�digos de Invitaci�n</h2>
                         <button onclick="CloudSyncModule.showCreateInvitation()" style="padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                            <i class="fas fa-plus"></i> Crear Código
+                            <i class="fas fa-plus"></i> Crear C�digo
                         </button>
                     </div>
                     <div id="invitations-list">
                         <div style="text-align: center; padding: 2rem; color: #666;">
-                            <p>Crea códigos de invitación para agregar nuevos usuarios</p>
+                            <p>Crea c�digos de invitaci�n para agregar nuevos usuarios</p>
                         </div>
                     </div>
                 </div>
@@ -3812,12 +3812,12 @@ const CloudSyncModule = {
     },
     
     async init() {
-        // AuthManager y SyncEngine ya están inicializados globalmente en App.init()
+        // AuthManager y SyncEngine ya est�n inicializados globalmente en App.init()
         // Solo verificar estado
         if (window.AuthManager.isAuthenticated()) {
-            console.log('✅ Sesión activa en CloudSync');
+            console.log('? Sesi�n activa en CloudSync');
         } else {
-            console.log('⚠️ No hay sesión en CloudSync');
+            console.log('?? No hay sesi�n en CloudSync');
         }
     },
     
@@ -3858,11 +3858,11 @@ const CloudSyncModule = {
             return;
         }
         
-        // Si ya se mostró el código, verificar
+        // Si ya se mostr� el c�digo, verificar
         if (codeSection.style.display !== 'none') {
             const code = codeInput.value.trim();
             if (!code || code.length !== 6) {
-                this.showMessage('Ingresa el código de 6 dígitos', 'error');
+                this.showMessage('Ingresa el c�digo de 6 d�gitos', 'error');
                 return;
             }
             
@@ -3873,30 +3873,30 @@ const CloudSyncModule = {
                 const result = await window.AuthManager.verifyTelegramCode(telegramId, code);
                 
                 if (result.success) {
-                    this.showMessage('¡Login exitoso! Recargando...', 'success');
+                    this.showMessage('�Login exitoso! Recargando...', 'success');
                     setTimeout(() => App.loadPage('cloud-sync'), 1000);
                 }
             } catch (error) {
                 this.showMessage(error.message, 'error');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Código';
+                btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar C�digo';
             }
             return;
         }
         
-        // Solicitar código
+        // Solicitar c�digo
         try {
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando código...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando c�digo...';
             
             await window.AuthManager.loginWithTelegram(telegramId);
             
             codeSection.style.display = 'block';
-            btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Código';
+            btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar C�digo';
             btn.disabled = false;
             codeInput.focus();
             
-            this.showMessage('Código enviado a tu Telegram', 'success');
+            this.showMessage('C�digo enviado a tu Telegram', 'success');
         } catch (error) {
             this.showMessage(error.message, 'error');
             btn.disabled = false;
@@ -3916,7 +3916,7 @@ const CloudSyncModule = {
         try {
             const result = await window.AuthManager.loginWithEmail(email, password);
             if (result.success) {
-                this.showMessage('¡Login exitoso! Recargando...', 'success');
+                this.showMessage('�Login exitoso! Recargando...', 'success');
                 setTimeout(() => App.loadPage('cloud-sync'), 1000);
             }
         } catch (error) {
@@ -3933,13 +3933,13 @@ const CloudSyncModule = {
             return;
         }
         
-        const name = prompt('¿Cómo te llamas?');
+        const name = prompt('�C�mo te llamas?');
         if (!name) return;
         
         try {
             const result = await window.AuthManager.registerWithEmail(email, password, name);
             if (result.success) {
-                this.showMessage('¡Registro exitoso! Recargando...', 'success');
+                this.showMessage('�Registro exitoso! Recargando...', 'success');
                 setTimeout(() => App.loadPage('cloud-sync'), 1000);
             }
         } catch (error) {
@@ -3952,10 +3952,10 @@ const CloudSyncModule = {
             Utils.showLoading(true);
             await window.SyncEngine.smartSync();
             Utils.showLoading(false);
-            Utils.showNotification('✅ Sincronización completada', 'success', 3000);
+            Utils.showNotification('? Sincronizaci�n completada', 'success', 3000);
         } catch (error) {
             Utils.showLoading(false);
-            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4027,7 +4027,7 @@ const CloudSyncModule = {
                                 ${u.telegram_username ? `<i class="fab fa-telegram"></i> @${u.telegram_username}` : ''}
                             </div>
                             <div style="font-size: 0.85rem; color: #999; margin-top: 0.25rem;">
-                                <i class="fas fa-clock"></i> Última actividad: ${u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES') : 'Nunca'}
+                                <i class="fas fa-clock"></i> �ltima actividad: ${u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES') : 'Nunca'}
                             </div>
                         </div>
                         ${u.id !== window.AuthManager.user.id && u.role !== 'super_admin' ? `
@@ -4104,15 +4104,15 @@ const CloudSyncModule = {
             if (!response.ok) throw new Error('Error actualizando rol');
             
             document.querySelector('.modal').remove();
-            Utils.showNotification('✅ Rol actualizado correctamente', 'success', 3000);
+            Utils.showNotification('? Rol actualizado correctamente', 'success', 3000);
             this.loadUsers();
         } catch (error) {
-            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
         }
     },
     
     async deactivateUser(userId, userName) {
-        if (!confirm(`¿Desactivar a ${userName}?\n\nNo podrá acceder al sistema hasta que lo reactives.`)) return;
+        if (!confirm(`�Desactivar a ${userName}?\n\nNo podr� acceder al sistema hasta que lo reactives.`)) return;
         
         try {
             const response = await fetch(`https://galloli-sync.ivanbj-96.workers.dev/api/users/${userId}`, {
@@ -4122,10 +4122,10 @@ const CloudSyncModule = {
             
             if (!response.ok) throw new Error('Error desactivando usuario');
             
-            Utils.showNotification('✅ Usuario desactivado', 'success', 3000);
+            Utils.showNotification('? Usuario desactivado', 'success', 3000);
             this.loadUsers();
         } catch (error) {
-            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4139,10 +4139,10 @@ const CloudSyncModule = {
             
             if (!response.ok) throw new Error('Error activando usuario');
             
-            Utils.showNotification('✅ Usuario activado', 'success', 3000);
+            Utils.showNotification('? Usuario activado', 'success', 3000);
             this.loadUsers();
         } catch (error) {
-            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4162,7 +4162,7 @@ const CloudSyncModule = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-ticket-alt"></i> Crear Código de Invitación</h3>
+                    <h3><i class="fas fa-ticket-alt"></i> Crear C�digo de Invitaci�n</h3>
                     <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -4176,18 +4176,18 @@ const CloudSyncModule = {
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos Máximos:</label>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos M�ximos:</label>
                         <input type="number" id="invitation-max-uses" value="1" min="1" max="100" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Expira en (horas):</label>
                         <input type="number" id="invitation-expires" value="24" min="1" max="720" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
-                        <small style="color: #666; display: block; margin-top: 0.5rem;">Dejar vacío para que no expire</small>
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">Dejar vac�o para que no expire</small>
                     </div>
                     
                     <button onclick="CloudSyncModule.createInvitation()" style="width: 100%; padding: 1rem; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                        <i class="fas fa-plus"></i> Generar Código
+                        <i class="fas fa-plus"></i> Generar C�digo
                     </button>
                 </div>
             </div>
@@ -4211,35 +4211,35 @@ const CloudSyncModule = {
                 })
             });
             
-            if (!response.ok) throw new Error('Error creando código');
+            if (!response.ok) throw new Error('Error creando c�digo');
             
             const data = await response.json();
             
             document.querySelector('.modal').remove();
             
-            // Mostrar código generado
+            // Mostrar c�digo generado
             const codeModal = document.createElement('div');
             codeModal.className = 'modal active';
             codeModal.innerHTML = `
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header" style="background: #4CAF50; color: white;">
-                        <h3><i class="fas fa-check-circle"></i> Código Generado</h3>
+                        <h3><i class="fas fa-check-circle"></i> C�digo Generado</h3>
                         <button class="close-modal" onclick="this.closest('.modal').remove()" style="color: white;">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="modal-body" style="text-align: center;">
-                        <p style="margin-bottom: 1rem;">Comparte este código con el nuevo usuario:</p>
+                        <p style="margin-bottom: 1rem;">Comparte este c�digo con el nuevo usuario:</p>
                         <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px; margin-bottom: 1rem;">
                             <div style="font-size: 2rem; font-weight: bold; letter-spacing: 0.5rem; color: #4CAF50;">${data.code}</div>
                         </div>
                         <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
                             Rol: <strong>${this.getRoleLabel(data.role)}</strong><br>
                             Usos: <strong>${data.max_uses}</strong><br>
-                            ${data.expires_at ? `Expira: <strong>${new Date(data.expires_at).toLocaleString('es-ES')}</strong>` : 'Sin expiración'}
+                            ${data.expires_at ? `Expira: <strong>${new Date(data.expires_at).toLocaleString('es-ES')}</strong>` : 'Sin expiraci�n'}
                         </p>
-                        <button onclick="navigator.clipboard.writeText('${data.code}'); alert('Código copiado')" style="padding: 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
-                            <i class="fas fa-copy"></i> Copiar Código
+                        <button onclick="navigator.clipboard.writeText('${data.code}'); alert('C�digo copiado')" style="padding: 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                            <i class="fas fa-copy"></i> Copiar C�digo
                         </button>
                     </div>
                 </div>
@@ -4247,18 +4247,18 @@ const CloudSyncModule = {
             document.body.appendChild(codeModal);
             
         } catch (error) {
-            Utils.showNotification('❌ Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
         }
     },
     
     getRoleLabel(role) {
         const labels = {
-            'super_admin': '👑 Super Administrador',
-            'admin': '⚙️ Administrador',
-            'vendedor': '💼 Vendedor',
-            'repartidor': '🚚 Repartidor',
-            'contador': '📊 Contador',
-            'viewer': '👁️ Visor'
+            'super_admin': '?? Super Administrador',
+            'admin': '?? Administrador',
+            'vendedor': '?? Vendedor',
+            'repartidor': '?? Repartidor',
+            'contador': '?? Contador',
+            'viewer': '??? Visor'
         };
         return labels[role] || role;
     },
@@ -4268,7 +4268,7 @@ const CloudSyncModule = {
     },
     
     async logout() {
-        if (confirm('¿Cerrar sesión?')) {
+        if (confirm('�Cerrar sesi�n?')) {
             await window.AuthManager.logout();
             App.loadPage('cloud-sync');
         }
@@ -4285,7 +4285,7 @@ const CloudSyncModule = {
 };
 
 
-// Exportar módulos a window para que SyncEngine pueda interceptarlos
+// Exportar m�dulos a window para que SyncEngine pueda interceptarlos
 window.ClientsModule = ClientsModule;
 window.SalesModule = SalesModule;
 window.OrdersModule = OrdersModule;
@@ -4299,3 +4299,4 @@ window.RutasModule = RutasModule;
 window.ReportsModule = ReportsModule;
 window.MapModule = MapModule;
 window.CloudSyncModule = CloudSyncModule;
+

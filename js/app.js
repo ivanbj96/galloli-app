@@ -1,4 +1,4 @@
-﻿// app.js - COMPLETO Y FUNCIONAL
+// app.js - COMPLETO Y FUNCIONAL
 const App = {
     currentPage: 'dashboard',
     currentDate: Utils.getTodayDate(),
@@ -84,7 +84,7 @@ const App = {
         // INICIALIZAR NOTIFICACIONES PUSH — sin await, no debe bloquear el arranque
         this.initPushNotifications();
         
-        // INICIALIZAR BACKUP AUTOMÁTICO
+        // INICIALIZAR BACKUP AUTOMxTICO
         await AutoBackup.init();
         
         // Configurar recordatorio diario
@@ -135,14 +135,14 @@ const App = {
                 
                 console.log('👁️ App visible - Tiempo desde último cambio:', timeSinceLastChange, 'ms');
                 
-                // Si pasaron más de 2 segundos desde el último cambio, recargar datos
+                // Si pasaron mxs de 2 segundos desde el último cambio, recargar datos
                 if (timeSinceLastChange > 2000) {
                     console.log('🔄 Recargando datos...');
                     
                     // Recargar todos los datos
                     await this.loadAllData();
                     
-                    // Recargar la página actual para reflejar cambios
+                    // Recargar la pxgina actual para reflejar cambios
                     this.loadPage(this.currentPage);
                     
                     console.log('✅ Datos actualizados');
@@ -206,7 +206,7 @@ const App = {
                     });
                     item.classList.add('active');
                     
-                    // Cerrar recibo al cambiar de página
+                    // Cerrar recibo al cambiar de pxgina
                     this.closeReceipt();
                 });
             }
@@ -265,7 +265,7 @@ const App = {
         
         if (action) {
             console.log('🔔 Acción de notificación desde URL:', action);
-            console.log('📋 Parámetros:', { clientId, clientName, totalDebt });
+            console.log('📋 Parxmetros:', { clientId, clientName, totalDebt });
             
             // Limpiar la URL
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -344,7 +344,7 @@ const App = {
         }
     },
 
-    // Cargar página
+    // Cargar pxgina
     async loadPage(page) {
         this.currentPage = page;
         const mainContent = document.getElementById('main-content');
@@ -404,7 +404,7 @@ const App = {
                 break;
         }
         
-        // REINICIALIZAR TOGGLE DE MODO DESARROLLO DESPUÁ‰S DE CARGAR PÁGINA
+        // REINICIALIZAR TOGGLE DE MODO DESARROLLO DESPUx‰S DE CARGAR PxGINA
         setTimeout(() => {
             this.initDevModeToggle();
         }, 100);
@@ -418,7 +418,7 @@ const App = {
         }
     },
     
-    // Página de Diezmos y Ofrendas
+    // Pxgina de Diezmos y Ofrendas
     loadDiezmosPage() {
         const preview = DiezmosModule.getPreview(this.currentDate);
         const sales = SalesModule.getSalesByDate(this.currentDate);
@@ -427,7 +427,7 @@ const App = {
         const html = `
             <div class="page active" id="diezmos-page">
                 <h2><i class="fas fa-hand-holding-heart"></i> Diezmos y Ofrendas</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Cálculo automático basado en ganancia neta</p>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Cxlculo automxtico basado en ganancia neta</p>
                 
                 <div class="date-filter">
                     <input type="date" class="date-input" id="diezmos-date-filter" value="${this.currentDate}">
@@ -481,7 +481,7 @@ const App = {
                 
                 <div class="card">
                     <h3><i class="fas fa-save"></i> Guardar Registro del Día</h3>
-                    <p style="color: var(--gray); margin-bottom: 15px;">Guarda el cálculo de diezmos y ofrendas para ${this.currentDate}</p>
+                    <p style="color: var(--gray); margin-bottom: 15px;">Guarda el cxlculo de diezmos y ofrendas para ${this.currentDate}</p>
                     <button class="btn btn-success" onclick="App.saveDiezmosRecord()" style="width: 100%;" ${sales.length === 0 ? 'disabled' : ''}>
                         <i class="fas fa-check"></i> Guardar Registro de Hoy
                     </button>
@@ -509,7 +509,7 @@ const App = {
                     </div>
                     
                     <ul class="sales-list" id="diezmos-records-list">
-                        <!-- Los registros se agregarán aquí -->
+                        <!-- Los registros se agregarxn aquí -->
                     </ul>
                 </div>
             </div>
@@ -599,7 +599,7 @@ const App = {
             const resultado = await DiezmosModule.forzarRecalculoCompleto();
             
             if (resultado.creados > 0 || resultado.actualizados > 0) {
-                // Recargar la página para mostrar los nuevos registros
+                // Recargar la pxgina para mostrar los nuevos registros
                 this.loadDiezmosPage();
             } else {
                 Utils.showNotification('No se encontraron días con ganancias pendientes de calcular', 'info', 3000);
@@ -828,7 +828,7 @@ const App = {
                             <label class="form-label">Monto a Pagar</label>
                             <input type="number" step="0.01" min="0.01" 
                                    class="form-input" id="payment-amount" required 
-                                   placeholder="Máximo: ${sale.remainingDebt.toFixed(2)}">
+                                   placeholder="Mxximo: ${sale.remainingDebt.toFixed(2)}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Fecha del Pago</label>
@@ -869,7 +869,7 @@ const App = {
         const clientSales = SalesModule.getCreditSales().filter(s => s.clientId === clientId);
         const totalDebt = clientSales.reduce((sum, sale) => sum + sale.remainingDebt, 0);
 
-        // Ordenar ventas por fecha (más antiguas primero - FIFO)
+        // Ordenar ventas por fecha (mxs antiguas primero - FIFO)
         clientSales.sort((a, b) => {
             const dateA = new Date(a.date + ' ' + a.time);
             const dateB = new Date(b.date + ' ' + b.time);
@@ -900,7 +900,7 @@ const App = {
                             <i class="fas fa-info-circle"></i> <strong>¿Cómo funciona?</strong>
                         </p>
                         <p style="margin: 5px 0 0 0; color: #856404; font-size: 0.85rem;">
-                            El pago se distribuirá automáticamente entre los créditos más antiguos primero (FIFO).
+                            El pago se distribuirx automxticamente entre los créditos mxs antiguos primero (FIFO).
                         </p>
                     </div>
 
@@ -909,7 +909,7 @@ const App = {
                             <label class="form-label">Monto a Pagar</label>
                             <input type="number" step="0.01" min="0.01" max="${totalDebt.toFixed(2)}"
                                    class="form-input" id="smart-payment-amount" required 
-                                   placeholder="Máximo: ${totalDebt.toFixed(2)}">
+                                   placeholder="Mxximo: ${totalDebt.toFixed(2)}">
                             <div style="display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap;">
                                 <button type="button" class="btn btn-outline" onclick="document.getElementById('smart-payment-amount').value = ${(totalDebt / 4).toFixed(2)}" style="flex: 1; min-width: 60px; padding: 8px; font-size: 0.85rem;">
                                     25%
@@ -1067,7 +1067,7 @@ const App = {
         return false;
     },
 
-    // Página de Historial de Pagos
+    // Pxgina de Historial de Pagos
     loadPaymentHistoryPage() {
         const allPayments = PaymentHistoryModule.getAllPayments();
         const stats = PaymentHistoryModule.getStats();
@@ -1323,7 +1323,7 @@ const App = {
         Utils.showNotification('✅ Historial exportado correctamente', 'success', 3000);
     },
 
-    // Página de Configuración (NUEVA)
+    // Pxgina de Configuración (NUEVA)
 loadConfigPage() {
     ConfigModule.init();
     
@@ -1501,7 +1501,7 @@ loadConfigPage() {
             <div class="config-group" style="border: 2px solid var(--danger); border-radius: 12px; padding: 20px;">
                 <h4 style="color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> Zona de Peligro</h4>
                 <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">
-                    Estas acciones son irreversibles. Todos tus datos serán eliminados permanentemente.
+                    Estas acciones son irreversibles. Todos tus datos serxn eliminados permanentemente.
                 </p>
                 ${window.AuthManager && window.AuthManager.isAuthenticated() ? `
                 <button class="btn btn-danger" onclick="App.confirmDeleteAccount()" style="width: 100%;">
@@ -1617,7 +1617,7 @@ async confirmDeleteAccount() {
                     <h3><i class="fas fa-exclamation-triangle"></i> Eliminar cuenta</h3>
                 </div>
                 <div class="modal-body">
-                    <p style="margin-bottom: 15px;">Esta acción es <strong>irreversible</strong>. Se eliminarán:</p>
+                    <p style="margin-bottom: 15px;">Esta acción es <strong>irreversible</strong>. Se eliminarxn:</p>
                     <ul style="margin: 0 0 20px 20px; color: var(--gray); font-size: 0.9rem;">
                         <li>Tu cuenta de usuario</li>
                         <li>Todos tus clientes, ventas, pedidos y gastos</li>
@@ -1670,12 +1670,12 @@ handleLogoUpload(file) {
     
     const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-        Utils.showNotification('Formato no válido. Usa JPG, PNG, SVG o GIF', 'error', 5000);
+        Utils.showNotification('Formato no vxlido. Usa JPG, PNG, SVG o GIF', 'error', 5000);
         return;
     }
     
     if (file.size > 2 * 1024 * 1024) {
-        Utils.showNotification('La imagen es muy grande. Máximo 2MB', 'error', 5000);
+        Utils.showNotification('La imagen es muy grande. Mxximo 2MB', 'error', 5000);
         return;
     }
     
@@ -1813,7 +1813,7 @@ async cleanDuplicatePayments() {
             
             Utils.showLoading(false);
             
-            // Recargar la página actual para reflejar los cambios
+            // Recargar la pxgina actual para reflejar los cambios
             if (this.currentPage === 'payment-history') {
                 this.loadPaymentHistoryPage();
             } else {
@@ -1830,7 +1830,7 @@ async cleanDuplicatePayments() {
     }
 },
 
-    // Página Dashboard (ACTUALIZADA con mapa)
+    // Pxgina Dashboard (ACTUALIZADA con mapa)
     loadDashboardPage() {
         const todaySales = SalesModule.getTodaySales();
         const todayIncome = todaySales.reduce((sum, sale) => sum + sale.total, 0);
@@ -2290,7 +2290,7 @@ async cleanDuplicatePayments() {
         allActivity.forEach(activity => {
             // Verificar que ClientsModule esté disponible
             if (typeof ClientsModule === 'undefined' || !ClientsModule.getClientById) {
-                return; // Saltar si el módulo no está listo
+                return; // Saltar si el módulo no estx listo
             }
             
             const client = ClientsModule.getClientById(activity.clientId);
@@ -2336,7 +2336,7 @@ async cleanDuplicatePayments() {
         return html || '<p class="empty-state">No hay actividad reciente</p>';
     },
 
-    // Página de Ventas
+    // Pxgina de Ventas
     loadSalesPage() {
         const html = `
             <div class="page active" id="sales-page">
@@ -2354,7 +2354,7 @@ async cleanDuplicatePayments() {
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
                     <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
                         <i class="fas fa-weight"></i> Modo Pesaje en Cadena
-                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automática' : 'Ingresa pesos manualmente uno por uno'}</small>
+                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automxtica' : 'Ingresa pesos manualmente uno por uno'}</small>
                     </button>
                     <form id="sale-form">
                         <div class="form-group">
@@ -2374,10 +2374,10 @@ async cleanDuplicatePayments() {
                             </div>
                         </div>
                         
-                        <!-- Formulario rápido de cliente (oculto por defecto) -->
+                        <!-- Formulario rxpido de cliente (oculto por defecto) -->
                         <div id="quick-client-form" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
                             <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                                <i class="fas fa-user-plus"></i> Agregar Cliente Rápido
+                                <i class="fas fa-user-plus"></i> Agregar Cliente Rxpido
                             </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
                                 <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre">
@@ -2492,7 +2492,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-list"></i> Ventas del ${this.currentDate}</h3>
                     <ul class="sales-list" id="sales-list">
-                        <!-- Las ventas se agregarán aquí dinámicamente -->
+                        <!-- Las ventas se agregarxn aquí dinxmicamente -->
                     </ul>
                 </div>
             </div>
@@ -2536,8 +2536,12 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Pedidos
+    // Pxgina de Pedidos
     loadOrdersPage() {
+        // Limpiar cualquier modal huérfano antes de cargar
+        document.querySelectorAll('.modal.active').forEach(m => {
+            if (!m.querySelector('.modal-content')) m.remove();
+        });
         const html = `
             <div class="page active" id="orders-page">
                 <h2><i class="fas fa-clipboard-list"></i> Gestión de Pedidos</h2>
@@ -2566,10 +2570,10 @@ async cleanDuplicatePayments() {
                             </div>
                         </div>
                         
-                        <!-- Formulario rápido de cliente -->
+                        <!-- Formulario rxpido de cliente -->
                         <div id="quick-client-form-order" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
                             <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                                <i class="fas fa-user-plus"></i> Agregar Cliente Rápido
+                                <i class="fas fa-user-plus"></i> Agregar Cliente Rxpido
                             </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
                                 <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre">
@@ -2622,7 +2626,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-list"></i> Lista de Pedidos</h3>
                     <ul class="orders-list" id="orders-list">
-                        <!-- Los pedidos se agregarán aquí dinámicamente -->
+                        <!-- Los pedidos se agregarxn aquí dinxmicamente -->
                     </ul>
                 </div>
             </div>
@@ -2655,7 +2659,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Clientes
+    // Pxgina de Clientes
     loadClientsPage() {
         const html = `
             <div class="page active" id="clients-page">
@@ -2710,7 +2714,7 @@ async cleanDuplicatePayments() {
                     </div>
                     
                     <ul class="client-list" id="client-list">
-                        <!-- Los clientes se agregarán aquí dinámicamente -->
+                        <!-- Los clientes se agregarxn aquí dinxmicamente -->
                     </ul>
                 </div>
             </div>
@@ -2743,14 +2747,14 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Merma
+    // Pxgina de Merma
     loadMermaPage() {
         const todayMermaPrice = MermaModule.getTodayMermaPrice();
         const selectedMermaRecord = MermaModule.getMermaRecordByDate(this.currentDate);
         
         const html = `
             <div class="page active" id="merma-page">
-                <h2><i class="fas fa-calculator"></i> Cálculo de Merma</h2>
+                <h2><i class="fas fa-calculator"></i> Cxlculo de Merma</h2>
                 <p style="margin: 10px 0 20px; color: var(--gray);">Calcula el costo real por lb de pollo pelado</p>
 
                 <!-- Días pendientes del mes -->
@@ -2770,7 +2774,7 @@ async cleanDuplicatePayments() {
                     <h3><i class="fas fa-chart-line"></i> Datos de Producción</h3>
                     <form id="merma-form">
                         <div class="form-group">
-                            <label class="form-label" for="merma-date">Fecha del Cálculo</label>
+                            <label class="form-label" for="merma-date">Fecha del Cxlculo</label>
                             <input type="date" class="form-input" id="merma-date" value="${this.currentDate}" required>
                             <small style="color: var(--gray); display: block; margin-top: 5px;">
                                 <i class="fas fa-info-circle"></i> Puedes calcular merma de días anteriores
@@ -2839,7 +2843,7 @@ async cleanDuplicatePayments() {
                                        value="${MermaModule.getTodaySalePrice() || (selectedMermaRecord ? selectedMermaRecord.salePrice || '' : '')}"
                                        style="font-size:1.2rem;font-weight:bold;">
                                 <small style="color:var(--primary);display:block;margin-top:5px;">
-                                    <i class="fas fa-bolt"></i> Este precio se usará automáticamente en todas las ventas del día
+                                    <i class="fas fa-bolt"></i> Este precio se usarx automxticamente en todas las ventas del día
                                 </small>
                             </div>
                         </div>
@@ -2847,7 +2851,7 @@ async cleanDuplicatePayments() {
                         <!-- VISTA PREVIA EN TIEMPO REAL -->
                         <div id="merma-preview" style="background: linear-gradient(135deg, var(--light) 0%, #e8f5e9 100%); padding: 20px; border-radius: 12px; margin: 20px 0; display: none; border: 2px solid var(--primary);">
                             <h4 style="margin: 0 0 15px 0; color: var(--primary); text-align: center;">
-                                <i class="fas fa-eye"></i> Vista Previa del Cálculo
+                                <i class="fas fa-eye"></i> Vista Previa del Cxlculo
                             </h4>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
                                 <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -2886,7 +2890,7 @@ async cleanDuplicatePayments() {
                         </button>
                         ${selectedMermaRecord ? `
                             <p style="text-align: center; margin-top: 10px; color: var(--success);">
-                                <i class="fas fa-check-circle"></i> Ya existe cálculo para ${this.currentDate}
+                                <i class="fas fa-check-circle"></i> Ya existe cxlculo para ${this.currentDate}
                             </p>
                         ` : ''}
                     </form>
@@ -2919,7 +2923,7 @@ async cleanDuplicatePayments() {
             if (dateInput) {
                 dateInput.addEventListener('change', (e) => {
                     this.currentDate = e.target.value;
-                    // Recargar página para mostrar datos de la nueva fecha
+                    // Recargar pxgina para mostrar datos de la nueva fecha
                     this.loadMermaPage();
                 });
             }
@@ -2962,7 +2966,7 @@ async cleanDuplicatePayments() {
 
         const pending = days.filter(function(d) { return !d.record; }).length;
         const done = days.filter(function(d) { return d.record; }).length;
-        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sxb'];
 
         let html = '<div style="display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap;">'
             + '<span style="display:flex; align-items:center; gap:6px; font-size:0.85rem;"><span style="width:12px; height:12px; border-radius:50%; background:var(--success); display:inline-block;"></span>Calculada (' + done + ')</span>'
@@ -3075,13 +3079,13 @@ async cleanDuplicatePayments() {
                 };
                 deducedMessage = `<div style="background: #E3F2FD; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
                     <i class="fas fa-calculator" style="color: var(--primary);"></i> 
-                    <strong style="color: var(--primary);">${labels[result.deducedValue]}</strong> calculado automáticamente
+                    <strong style="color: var(--primary);">${labels[result.deducedValue]}</strong> calculado automxticamente
                 </div>`;
             }
             
             preview.innerHTML = `
                 <h4 style="margin: 0 0 15px 0; color: var(--primary); text-align: center;">
-                    <i class="fas fa-eye"></i> Vista Previa del Cálculo
+                    <i class="fas fa-eye"></i> Vista Previa del Cxlculo
                 </h4>
                 ${deducedMessage}
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
@@ -3134,7 +3138,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Estadísticas
+    // Pxgina de Estadísticas
     loadStatsPage() {
         const html = `
             <div class="page active" id="stats-page">
@@ -3178,7 +3182,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-layer-group"></i> Desglose por Tipo de Pollo</h3>
                     <div id="chicken-type-breakdown" style="padding: 15px; background: var(--light); border-radius: 8px;">
-                        <!-- Desglose se agregará aquí -->
+                        <!-- Desglose se agregarx aquí -->
                     </div>
                 </div>
                 
@@ -3192,7 +3196,7 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-user-chart"></i> Ventas por Cliente</h3>
                     <ul class="client-list" id="client-stats">
-                        <!-- Las estadísticas por cliente se agregarán aquí dinámicamente -->
+                        <!-- Las estadísticas por cliente se agregarxn aquí dinxmicamente -->
                     </ul>
                 </div>
             </div>
@@ -3213,7 +3217,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-     // Página de Contabilidad
+     // Pxgina de Contabilidad
      loadAccountingPage() {
         const html = `
             <div class="page active" id="accounting-page">
@@ -3270,7 +3274,7 @@ async cleanDuplicatePayments() {
                         <i class="fas fa-bug"></i> Debug: Ver Todos los Gastos
                     </button>
                     <ul class="sales-list" id="expenses-list">
-                        <!-- Los gastos se agregarán aquí dinámicamente -->
+                        <!-- Los gastos se agregarxn aquí dinxmicamente -->
                     </ul>
                 </div>
             </div>
@@ -3310,7 +3314,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Backup (NUEVA)
+    // Pxgina de Backup (NUEVA)
     async loadBackupPage() {
         // IMPORTANTE: Cargar credenciales de forma asíncrona ANTES de verificar
         await BackupModule.loadTelegramConfig();
@@ -3415,7 +3419,7 @@ async cleanDuplicatePayments() {
                         </div>
                     ` : `
                         <p style="margin-bottom: 15px; color: var(--gray);">
-                            <i class="fas fa-info-circle"></i> Configura tu bot de Telegram para enviar backups automáticos
+                            <i class="fas fa-info-circle"></i> Configura tu bot de Telegram para enviar backups automxticos
                         </p>
                         
                         <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
@@ -3454,23 +3458,23 @@ async cleanDuplicatePayments() {
                 
                 ${telegramConfigured ? `
                 <div class="card">
-                    <h3><i class="fas fa-robot"></i> Backup Automático</h3>
+                    <h3><i class="fas fa-robot"></i> Backup Automxtico</h3>
                     <p style="margin-bottom: 15px; color: var(--gray);">
-                        <i class="fas fa-clock"></i> El backup automático se ejecuta todos los días a las <strong>10:00 PM</strong>
+                        <i class="fas fa-clock"></i> El backup automxtico se ejecuta todos los días a las <strong>10:00 PM</strong>
                     </p>
                     <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--success);">
                         <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;">
-                            ✅ El sistema verifica automáticamente si hay cambios en los datos<br>
+                            ✅ El sistema verifica automxticamente si hay cambios en los datos<br>
                             ✅ Solo crea backup si detecta cambios (evita duplicados)<br>
                             ✅ Usa el mismo método que el backup manual<br>
                             ✅ Envía el backup a tu Telegram configurado
                         </p>
                     </div>
                     <button class="btn btn-success" onclick="App.testAutoBackup()" style="width: 100%;">
-                        <i class="fas fa-robot"></i> 🤖 Probar Backup Automático
+                        <i class="fas fa-robot"></i> 🤖 Probar Backup Automxtico
                     </button>
                     <p style="margin-top: 10px; text-align: center; color: var(--gray); font-size: 0.85rem;">
-                        Este botón ejecuta el mismo backup que se enviará a las 10 PM
+                        Este botón ejecuta el mismo backup que se enviarx a las 10 PM
                     </p>
                 </div>
                 ` : ''}
@@ -3483,7 +3487,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Sincronización en la Nube
+    // Pxgina de Sincronización en la Nube
     async loadCloudSyncPage() {
         const mainContent = document.getElementById('main-content');
         if (mainContent) {
@@ -3492,7 +3496,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Página de Rutas (MEJORADA)
+    // Pxgina de Rutas (MEJORADA)
     loadRutasPage() {
         const html = `
             <div class="page active" id="rutas-page">
@@ -3536,7 +3540,7 @@ async cleanDuplicatePayments() {
                 <div class="card" style="margin-bottom: 20px;">
                     <h3><i class="fas fa-directions"></i> Información de la Ruta</h3>
                     <div id="ruta-detalles">
-                        <!-- Los detalles de la ruta se mostrarán aquí dinámicamente -->
+                        <!-- Los detalles de la ruta se mostrarxn aquí dinxmicamente -->
                     </div>
                 </div>
                 
@@ -3553,7 +3557,7 @@ async cleanDuplicatePayments() {
         if (mainContent) {
             mainContent.innerHTML = html;
             
-            // Inicializar mapa automáticamente al cargar la página
+            // Inicializar mapa automxticamente al cargar la pxgina
             setTimeout(() => {
                 RutasModule.inicializarMapa();
                 RutasModule.actualizarMapa();
@@ -3701,12 +3705,12 @@ async cleanDuplicatePayments() {
         }
 
         if (!weight || weight <= 0) {
-            Utils.showNotification('Ingrese un peso válido en libras', 'error', 5000);
+            Utils.showNotification('Ingrese un peso vxlido en libras', 'error', 5000);
             return;
         }
 
         if (!quantity || quantity <= 0) {
-            Utils.showNotification('Ingrese una cantidad válida de pollos', 'error', 5000);
+            Utils.showNotification('Ingrese una cantidad vxlida de pollos', 'error', 5000);
             return;
         }
 
@@ -3725,7 +3729,7 @@ async cleanDuplicatePayments() {
         const isPaid = paymentMethod === 'cash';
         const sale = SalesModule.addSale(clientId, weight, quantity, price, saleDate, isPaid, initialPayment, customCost);
         
-        // NUEVO: Notificación automática ok
+        // NUEVO: Notificación automxtica ok
         const client = ClientsModule.getClientById(clientId);
         if (client) {
             this.notifyNewSale(sale, client);
@@ -3747,7 +3751,7 @@ async cleanDuplicatePayments() {
         StatsModule.updateStats(this.currentDate);
         AccountingModule.updateAccounting(this.currentDate);
         
-        // NUEVO: Actualizar diezmos automáticamente si estamos en esa página
+        // NUEVO: Actualizar diezmos automxticamente si estamos en esa pxgina
         if (this.currentPage === 'diezmos') {
             this.updateDiezmosPreview();
         }
@@ -3838,7 +3842,7 @@ async cleanDuplicatePayments() {
             totalProfitElement.textContent = Utils.formatCurrency(totalProfit);
             totalProfitElement.style.color = totalProfit >= 0 ? 'var(--primary)' : 'var(--danger)';
 
-            // Cambiar color del total según si es válido
+            // Cambiar color del total según si es vxlido
             const totalElement = document.getElementById('preview-total');
             if (total > 0 && weight > 0 && quantity > 0 && price > 0) {
                 totalElement.style.color = 'var(--success)';
@@ -3847,7 +3851,7 @@ async cleanDuplicatePayments() {
             }
         },
 
-    // NUEVO: Mostrar/ocultar formulario rápido de cliente
+    // NUEVO: Mostrar/ocultar formulario rxpido de cliente
     toggleQuickClientForm() {
         const form = document.getElementById('quick-client-form');
         if (!form) return;
@@ -3865,7 +3869,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NUEVO: Guardar cliente rápido con ubicación automática
+    // NUEVO: Guardar cliente rxpido con ubicación automxtica
     async saveQuickClient() {
         const name = document.getElementById('quick-client-name').value.trim();
         const phone = document.getElementById('quick-client-phone').value.trim();
@@ -3879,13 +3883,13 @@ async cleanDuplicatePayments() {
         Utils.showLoading(true);
         
         try {
-            // Intentar crear cliente con ubicación automática
+            // Intentar crear cliente con ubicación automxtica
             const client = await ClientsModule.createQuickClient(name, phone);
             
             // Actualizar select de clientes
             ClientsModule.updateClientSelect();
             
-            // Seleccionar el nuevo cliente automáticamente
+            // Seleccionar el nuevo cliente automxticamente
             const clientSelect = document.getElementById('sale-client');
             if (clientSelect) {
                 clientSelect.value = client.id;
@@ -3901,7 +3905,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NUEVO: Métodos para formulario rápido en pedidos
+    // NUEVO: Métodos para formulario rxpido en pedidos
     toggleQuickClientFormOrder() {
         const form = document.getElementById('quick-client-form-order');
         if (!form) return;
@@ -3931,7 +3935,7 @@ async cleanDuplicatePayments() {
         Utils.showLoading(true);
         
         try {
-            // Intentar crear cliente con ubicación automática
+            // Intentar crear cliente con ubicación automxtica
             const client = await ClientsModule.createQuickClient(name, phone);
             
             ClientsModule.updateClientSelect();
@@ -3965,18 +3969,18 @@ async cleanDuplicatePayments() {
         }
 
         if (!weight || weight <= 0) {
-            Utils.showNotification('Ingrese un peso válido en libras', 'error', 5000);
+            Utils.showNotification('Ingrese un peso vxlido en libras', 'error', 5000);
             return;
         }
 
         if (!quantity || quantity <= 0) {
-            Utils.showNotification('Ingrese una cantidad válida de pollos', 'error', 5000);
+            Utils.showNotification('Ingrese una cantidad vxlida de pollos', 'error', 5000);
             return;
         }
 
         const order = OrdersModule.addOrder(clientId, weight, quantity, price, deliveryDate, notes);
         
-        // NUEVO: Notificación automática
+        // NUEVO: Notificación automxtica
         const client = ClientsModule.getClientById(clientId);
         if (client) {
             this.notifyNewOrder(order, client);
@@ -3986,7 +3990,7 @@ async cleanDuplicatePayments() {
         document.getElementById('order-form').reset();
         OrdersModule.updateOrdersList();
         
-        // ACTUALIZACIÁ“N: Actualizar mapas automáticamente
+        // ACTUALIZACIx“N: Actualizar mapas automxticamente
         this.actualizarMapasAutomaticamente();
         
         Utils.showNotification(`Pedido registrado: ${Utils.formatCurrency(order.total)}`, 'success', 5000);
@@ -4035,7 +4039,7 @@ async cleanDuplicatePayments() {
         console.log('🔔 ========================================');
         
         if (typeof PushNotifications === 'undefined') {
-            console.error('❌ PushNotifications no está definido');
+            console.error('❌ PushNotifications no estx definido');
             console.log('💡 Verifica que js/notify-system.js esté cargado');
             return false;
         }
@@ -4093,7 +4097,7 @@ async cleanDuplicatePayments() {
                 setTimeout(() => {
                     this.showLocalNotification(
                         '🐔 GallOli - Notificaciones Activas',
-                        'Las notificaciones están funcionando correctamente'
+                        'Las notificaciones estxn funcionando correctamente'
                     );
                 }, 1000);
                 return true;
@@ -4111,7 +4115,7 @@ async cleanDuplicatePayments() {
     showLocalNotification(title, body, icon = '🐔') {
         console.log('🔔 Intentando mostrar notificación:', title, body);
         
-        // Verificar si Notification está disponible
+        // Verificar si Notification estx disponible
         if (typeof Notification === 'undefined') {
             console.log('❌ API de Notification no disponible en este navegador');
             return false;
@@ -4147,7 +4151,7 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // Notificaciones automáticas para eventos importantes - CORREGIDO
+    // Notificaciones automxticas para eventos importantes - CORREGIDO
     notifyNewSale(sale, client) {
         console.log('💰 Notificando nueva venta:', sale.id);
         this.showLocalNotification(
@@ -4220,7 +4224,7 @@ async cleanDuplicatePayments() {
         console.log('🧪 Probando notificación...');
         const success = this.showLocalNotification(
             '🐔 Notificación de Prueba',
-            'Las notificaciones están funcionando correctamente en GallOli'
+            'Las notificaciones estxn funcionando correctamente en GallOli'
         );
         
         if (!success) {
@@ -4572,7 +4576,7 @@ async cleanDuplicatePayments() {
     getMermaHistoryHTML() {
         const records = MermaModule.mermaRecords
             .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 10); // Ášltimos 10 registros
+            .slice(0, 10); // xšltimos 10 registros
 
         if (records.length === 0) {
             return `
@@ -4637,7 +4641,7 @@ async cleanDuplicatePayments() {
         const expenseDate = document.getElementById('expense-date')?.value || this.currentDate;
 
         if (!description || !amount || amount <= 0) {
-            Utils.showNotification('Ingrese datos válidos', 'error', 5000);
+            Utils.showNotification('Ingrese datos vxlidos', 'error', 5000);
             return;
         }
 
@@ -4654,7 +4658,7 @@ async cleanDuplicatePayments() {
         
         Utils.showNotification('Gasto registrado correctamente', 'success', 5000);
         
-        // NUEVO: Actualizar diezmos automáticamente si estamos en esa página
+        // NUEVO: Actualizar diezmos automxticamente si estamos en esa pxgina
         if (this.currentPage === 'diezmos') {
             this.updateDiezmosPreview();
         }
@@ -4919,8 +4923,8 @@ async cleanDuplicatePayments() {
             return `
                 <div class="empty-state">
                     <i class="fas fa-hand-holding-heart empty-state-icon"></i>
-                    <p>No hay registros automáticos aún</p>
-                    <p style="font-size: 0.9rem; color: var(--gray);">Los diezmos se guardan automáticamente cada día</p>
+                    <p>No hay registros automxticos aún</p>
+                    <p style="font-size: 0.9rem; color: var(--gray);">Los diezmos se guardan automxticamente cada día</p>
                 </div>
             `;
         }
@@ -4947,7 +4951,7 @@ async cleanDuplicatePayments() {
         return html;
     },
 
-    // === NUEVOS MÁ‰TODOS DE BACKUP Y REPORTES ===
+    // === NUEVOS Mx‰TODOS DE BACKUP Y REPORTES ===
     async createBackup() {
         try {
             Utils.showLoading(true);
@@ -4999,7 +5003,7 @@ async cleanDuplicatePayments() {
                 OrdersModule.updateOrderBadges();
                 CreditosModule.updateCreditBadges();
                 
-                // Recargar página actual
+                // Recargar pxgina actual
                 this.loadPage(this.currentPage || 'dashboard');
             }
         } catch (error) {
@@ -5009,7 +5013,7 @@ async cleanDuplicatePayments() {
 
     async clearAllData() {
         const confirmed = await Utils.showDangerConfirm(
-            ' Esto eliminará TODOS los datos de la aplicación. Esta acción NO se puede deshacer.',
+            ' Esto eliminarx TODOS los datos de la aplicación. Esta acción NO se puede deshacer.',
             ' Eliminar Todos los Datos',
             'Continuar'
         );
@@ -5112,22 +5116,22 @@ async cleanDuplicatePayments() {
         }
     },
 
-    // NUEVO: Probar backup automático (ejecuta el mismo método que se ejecutará a las 10 PM)
+    // NUEVO: Probar backup automxtico (ejecuta el mismo método que se ejecutarx a las 10 PM)
     async testAutoBackup() {
         try {
             Utils.showLoading(true);
-            Utils.showNotification('🤖 Ejecutando backup automático de prueba...', 'info', 3000);
+            Utils.showNotification('🤖 Ejecutando backup automxtico de prueba...', 'info', 3000);
             
             // Ejecutar el mismo método que se ejecuta a las 10 PM
             const result = await AutoBackup.forceBackup();
             
             if (result !== false) {
-                Utils.showNotification('✅ Backup automático enviado correctamente. Revisa tu Telegram.', 'success', 5000);
+                Utils.showNotification('✅ Backup automxtico enviado correctamente. Revisa tu Telegram.', 'success', 5000);
             } else {
                 Utils.showNotification('⚠️ No se pudo enviar el backup. Verifica las credenciales.', 'warning', 5000);
             }
         } catch (error) {
-            Utils.showNotification('❌ Error en backup automático: ' + error.message, 'error', 5000);
+            Utils.showNotification('❌ Error en backup automxtico: ' + error.message, 'error', 5000);
         } finally {
             Utils.showLoading(false);
         }
@@ -5145,7 +5149,7 @@ async cleanDuplicatePayments() {
         
         BackupModule.saveTelegramConfig(token, chatId);
         
-        // Recargar la página de backups para mostrar la nueva configuración
+        // Recargar la pxgina de backups para mostrar la nueva configuración
         setTimeout(() => {
             this.loadBackupPage();
         }, 1000);
@@ -5170,7 +5174,7 @@ async cleanDuplicatePayments() {
     // NUEVO: Limpiar configuración de Telegram
     async clearTelegramConfig() {
         const confirmed = await Utils.showDangerConfirm(
-            'Se eliminará la configuración de Telegram. Podrás volver a configurarla cuando quieras.',
+            'Se eliminarx la configuración de Telegram. Podrxs volver a configurarla cuando quieras.',
             'Eliminar Configuración de Telegram',
             'Eliminar'
         );
@@ -5178,14 +5182,14 @@ async cleanDuplicatePayments() {
         if (confirmed) {
             BackupModule.clearTelegramConfig();
             
-            // Recargar la página de backups
+            // Recargar la pxgina de backups
             setTimeout(() => {
                 this.loadBackupPage();
             }, 500);
         }
     },
 
-    // ===== MÁ‰TODOS DE DIEZMOS Y OFRENDAS =====
+    // ===== Mx‰TODOS DE DIEZMOS Y OFRENDAS =====
     loadDiezmosPage() {
         const preview = DiezmosModule.getPreview();
         
@@ -5205,7 +5209,7 @@ async cleanDuplicatePayments() {
         const html = `
             <div class="page active" id="diezmos-page">
                 <h2><i class="fas fa-hand-holding-heart"></i> Diezmos y Ofrendas</h2>
-                <p style="margin: 10px 0 20px; color: var(--gray);">Sistema automático de diezmos basado en ventas diarias</p>
+                <p style="margin: 10px 0 20px; color: var(--gray);">Sistema automxtico de diezmos basado en ventas diarias</p>
                 
                 <div class="card" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white;">
                     <h3 style="color: white;"><i class="fas fa-calendar-day"></i> Vista Previa de Hoy</h3>
@@ -5265,7 +5269,7 @@ async cleanDuplicatePayments() {
                         </button>
                     </div>
                     <p style="color: var(--gray); font-size: 0.85rem; margin-top: 10px; text-align: center;">
-                        <i class="fas fa-info-circle"></i> "Recalcular Todo" procesa automáticamente todos los días con ganancias
+                        <i class="fas fa-info-circle"></i> "Recalcular Todo" procesa automxticamente todos los días con ganancias
                     </p>
                 </div>
 
@@ -5285,7 +5289,7 @@ async cleanDuplicatePayments() {
                 </div>
                 
                 <div class="card">
-                    <h3><i class="fas fa-history"></i> Historial Automático (Últimos 30 días)</h3>
+                    <h3><i class="fas fa-history"></i> Historial Automxtico (Últimos 30 días)</h3>
                     <ul class="sales-list">
                         ${this.getDiezmosHistoryHTML()}
                     </ul>
@@ -5301,14 +5305,14 @@ async cleanDuplicatePayments() {
 
 
     
-    // NUEVO: Método para actualizar todos los mapas automáticamente
+    // NUEVO: Método para actualizar todos los mapas automxticamente
     actualizarMapasAutomaticamente() {
-        // Actualizar mapa del dashboard si estamos en esa página
+        // Actualizar mapa del dashboard si estamos en esa pxgina
         if (this.currentPage === 'dashboard' && this.mapaDashboardInicializado) {
             this.actualizarMapaDashboard();
         }
         
-        // Actualizar mapa de rutas si estamos en esa página
+        // Actualizar mapa de rutas si estamos en esa pxgina
         if (this.currentPage === 'rutas' && RutasModule.mapaRuta) {
             RutasModule.actualizarMapa();
         }
@@ -5366,8 +5370,8 @@ async cleanDuplicatePayments() {
         
         // Mostrar notificación
         const mensaje = devMode ? 
-            'Modo Desarrollo activado. Recarga para ver cambios instantáneos.' : 
-            'Modo Producción activado. App funcionará 100% offline.';
+            'Modo Desarrollo activado. Recarga para ver cambios instantxneos.' : 
+            'Modo Producción activado. App funcionarx 100% offline.';
         
         Utils.showNotification(mensaje, devMode ? 'warning' : 'success', 5000);
         
@@ -5377,7 +5381,7 @@ async cleanDuplicatePayments() {
                 'Se recomienda recargar la aplicación para aplicar los cambios.',
                 'Recargar Aplicación',
                 'Recargar',
-                'Más Tarde'
+                'Mxs Tarde'
             );
             
             if (shouldReload) {
@@ -5474,23 +5478,23 @@ async cleanDuplicatePayments() {
     },
 
     
-    // Probar backup automático (mantener solo esta función)
+    // Probar backup automxtico (mantener solo esta función)
     async testAutoBackup() {
         if (typeof AutoBackup === 'undefined') {
-            Utils.showNotification('Sistema de backup automático no disponible', 'error', 3000);
+            Utils.showNotification('Sistema de backup automxtico no disponible', 'error', 3000);
             return;
         }
         
         const hasCredentials = await AutoBackup.hasCredentials();
         
         if (!hasCredentials) {
-            Utils.showNotification('⚠️ Configura tus credenciales de Telegram primero en la página de Backups', 'warning', 5000);
+            Utils.showNotification('⚠️ Configura tus credenciales de Telegram primero en la pxgina de Backups', 'warning', 5000);
             return;
         }
         
         const confirmed = await Utils.showConfirm(
-            '¿Forzar backup automático ahora? Esto creará y enviará un backup a Telegram.',
-            'Probar Backup Automático',
+            '¿Forzar backup automxtico ahora? Esto crearx y enviarx un backup a Telegram.',
+            'Probar Backup Automxtico',
             'Sí, crear backup',
             'Cancelar'
         );
@@ -5502,7 +5506,7 @@ async cleanDuplicatePayments() {
         try {
             await AutoBackup.forceBackup();
             Utils.showLoading(false);
-            Utils.showNotification('✅ Backup automático enviado correctamente', 'success', 5000);
+            Utils.showNotification('✅ Backup automxtico enviado correctamente', 'success', 5000);
         } catch (error) {
             Utils.showLoading(false);
             Utils.showNotification(`❌ Error: ${error.message}`, 'error', 5000);
@@ -5519,14 +5523,14 @@ async cleanDuplicatePayments() {
         
         // Si no hay acción o es 'open', solo abrir la app
         if (!action || action === 'open' || action === 'dismiss') {
-            console.log('ℹ️ Acción básica, no requiere procesamiento');
+            console.log('ℹ️ Acción bxsica, no requiere procesamiento');
             return;
         }
         
         switch(action) {
             case 'calculate':
-                // Ir a página de merma
-                console.log('📊 Navegando a página de merma');
+                // Ir a pxgina de merma
+                console.log('📊 Navegando a pxgina de merma');
                 this.loadPage('merma');
                 Utils.showNotification('📊 Calcula la merma del día', 'info', 3000);
                 break;
@@ -5573,7 +5577,7 @@ async cleanDuplicatePayments() {
                 console.log('💾 Crear backup');
                 this.loadPage('backup');
                 setTimeout(() => {
-                    Utils.showNotification('💾 Crea tu backup desde esta página', 'info', 3000);
+                    Utils.showNotification('💾 Crea tu backup desde esta pxgina', 'info', 3000);
                 }, 1000);
                 break;
                 
@@ -5608,16 +5612,16 @@ document.addEventListener('DOMContentLoaded', () => {
         lastTouchEnd = now;
     }, false);
 
-    // NOTA: App.init() se llama desde index.html cuando el DOM está listo
+    // NOTA: App.init() se llama desde index.html cuando el DOM estx listo
     // No llamar aquí para evitar doble inicialización
 });
 
-// Limpiar recursos al cerrar/recargar la página
+// Limpiar recursos al cerrar/recargar la pxgina
 window.addEventListener('beforeunload', () => {
     App.cleanupDevMode();
 });
 
-// También limpiar cuando la página se oculta (móviles)
+// También limpiar cuando la pxgina se oculta (móviles)
 window.addEventListener('pagehide', () => {
     App.cleanupDevMode();
 });
@@ -5868,7 +5872,7 @@ App.filterChainClients = function(query) {
         clients.filter(c => !q || c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q)))
                .map(c => `<option value="${c.id}">${c.name}</option>`)
                .join('');
-    // Si solo hay un resultado, seleccionarlo automáticamente
+    // Si solo hay un resultado, seleccionarlo automxticamente
     if (select.options.length === 2) select.selectedIndex = 1;
 };
 
@@ -5880,7 +5884,7 @@ App.confirmChainSale = function() {
     const weight = App._chainWeighingWeight || 0;
 
     if (!clientId) { Utils.showNotification('Selecciona un cliente', 'warning', 2000); return; }
-    if (weight <= 0) { Utils.showNotification('Peso inválido', 'warning', 2000); return; }
+    if (weight <= 0) { Utils.showNotification('Peso invxlido', 'warning', 2000); return; }
 
     const salePrice = MermaModule.getTodaySalePrice();
     const isPaid = payment === 'cash';
@@ -5925,7 +5929,7 @@ App.showScaleCapture = function() {
         Utils.showNotification('Esperando lectura de la balanza...', 'info', 2000);
         return;
     }
-    // Detectar qué formulario está activo y capturar el peso
+    // Detectar qué formulario estx activo y capturar el peso
     const fields = ['sale-weight', 'live-weight', 'processed-weight', 'order-weight', 'delivery-weight'];
     for (const id of fields) {
         const el = document.getElementById(id);
@@ -5975,7 +5979,7 @@ App.initNotifToggle = async function() {
             console.log('🔔 Suscripcion existente:', !!sub);
 
             if (!sub) {
-                // Re-suscribir automáticamente
+                // Re-suscribir automxticamente
                 console.log('🔔 Re-suscribiendo automaticamente...');
                 await PushNotifications._setupSubscription();
                 sub = await reg.pushManager.getSubscription();

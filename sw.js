@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.56'; // Fix pedidos price null + colorPicker + emojis encoding
+const APP_VERSION = '7.14.57'; // Fix encoding app.js restaurado + colorPicker nativo
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

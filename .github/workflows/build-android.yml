@@ -1,7 +1,9 @@
-name: Build Android APK
+name: Build GallOli Android APK
 
 on:
-  workflow_dispatch:  # Solo manual, no en cada push
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,6 +21,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+
+      - name: Install Bluetooth LE plugin
+        run: npm install @capacitor-community/bluetooth-le --legacy-peer-deps
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -41,15 +46,42 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
       - name: Build Debug APK
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/GallOli.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: galloli-android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: GallOli-APK
+          path: android/app/build/outputs/apk/debug/GallOli.apk
           retention-days: 30
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Telethon
+        run: pip install telethon
+
+      - name: Get app version
+        id: version
+        run: echo "APP_VERSION=$(grep -o 'APP_VERSION.*=.*' sw.js | head -1 | grep -o \"'[^']*'\" | head -1 | tr -d \"'\")" >> $GITHUB_OUTPUT
+
+      - name: Send APK to Telegram
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+        run: python .github/scripts/send_apk.py

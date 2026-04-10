@@ -208,6 +208,7 @@ C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\a
 10. **AndroidManifest**: NUNCA usar `.json` como mimeType — causa `INSTALL_PARSE_FAILED_MANIFEST_MALFORMED`
 11. **gradle.properties**: siempre tener `android.overridePathCheck=true`
 12. **AuthManager**: acceder token con `window.AuthManager.token`, no con `.getToken()`
+13. **ENCODING CRÍTICO**: NUNCA usar PowerShell para reescribir archivos JS/HTML con caracteres especiales (ó, á, ú, ñ, ¿, emojis). PowerShell corrompe el encoding UTF-8. Usar SIEMPRE `strReplace` o `fsWrite` de Kiro. Si se necesita reemplazar texto con regex en un archivo grande, usar `git checkout HEAD~1 -- archivo.js` para restaurar y luego aplicar cambios con `strReplace`.
 
 ---
 

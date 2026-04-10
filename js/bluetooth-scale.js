@@ -1,27 +1,38 @@
 // Módulo de Balanza Bluetooth BLE — GallOli
 // Protocolo confirmado: servicio 0xFFE0, característica 0xFFE1, datos ASCII "050.60kg"
+// En Capacitor APK usa @capacitor-community/bluetooth-le (nativo, segundo plano)
+// En navegador/TWA usa Web Bluetooth API
 const BluetoothScale = {
     device: null,
     characteristic: null,
     isConnected: false,
     isConnecting: false,
-    currentWeight: 0,       // en libras para cálculos internos
-    currentRawWeight: 0,    // valor original de la balanza (sin convertir)
-    currentUnit: 'lb',      // unidad original de la balanza
+    currentWeight: 0,
+    currentRawWeight: 0,
+    currentUnit: 'lb',
     weightListeners: [],
     STORAGE_KEY: 'galloli_scales',
     ACTIVE_KEY: 'galloli_scale_active',
     savedScales: [],
     activeScaleId: null,
     _rawLog: [],
+    _nativeDeviceId: null, // ID del dispositivo en modo nativo Capacitor
 
-    // Servicios y características conocidos de balanzas BLE
-    KNOWN_SERVICES: [
-        '0000ffe0-0000-1000-8000-00805f9b34fb', // CAMRY, XS, mayoría balanzas chinas
-        '0000fff0-0000-1000-8000-00805f9b34fb', // Alternativo
-        '0000181d-0000-1000-8000-00805f9b34fb', // BLE Weight Scale estándar
-        '0000181b-0000-1000-8000-00805f9b34fb', // Body Composition
-    ],
+    // Detectar si estamos en Capacitor APK nativo
+    isNative() {
+        return typeof window !== 'undefined' &&
+               window.Capacitor &&
+               window.Capacitor.isNativePlatform &&
+               window.Capacitor.isNativePlatform();
+    },
+
+    // Obtener el plugin BLE nativo si está disponible
+    _getBlePlugin() {
+        if (this.isNative() && window.Capacitor?.Plugins?.BleClient) {
+            return window.Capacitor.Plugins.BleClient;
+        }
+        return null;
+    },
 
     async init() {
         if (!this.isSupported()) return;
@@ -42,7 +53,7 @@ const BluetoothScale = {
     },
 
     isSupported() {
-        return 'bluetooth' in navigator;
+        return this.isNative() || 'bluetooth' in navigator;
     },
 
     _loadSavedScales() {
@@ -97,14 +108,103 @@ const BluetoothScale = {
         this.updateUI();
 
         try {
-            this.device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: this.KNOWN_SERVICES
-            });
+            // Modo nativo Capacitor
+            if (this.isNative()) {
+                return await this._connectNative();
+            }
+            // Modo Web Bluetooth (navegador/TWA)
+            return await this._connectWeb();
+        } catch(e) {
+            if (e.name !== 'NotFoundError') {
+                Utils.showNotification('Error al conectar: ' + e.message, 'error', 4000);
+            }
+            this.isConnected = false;
+            return false;
+        } finally {
+            this.isConnecting = false;
+            this.updateUI();
+        }
+    },
 
-            await this._connectToDevice();
+    // Conexión nativa via @capacitor-community/bluetooth-le
+    async _connectNative() {
+        const BleClient = this._getBlePlugin();
+        if (!BleClient) throw new Error('Plugin BLE no disponible');
 
-            // Guardar en lista
+        await BleClient.initialize();
+
+        return new Promise((resolve, reject) => {
+            BleClient.requestDevice({
+                services: ['0000ffe0-0000-1000-8000-00805f9b34fb'],
+                optionalServices: [
+                    '0000fff0-0000-1000-8000-00805f9b34fb',
+                    '0000181d-0000-1000-8000-00805f9b34fb'
+                ]
+            }).then(async (device) => {
+                try {
+                    this._nativeDeviceId = device.deviceId;
+                    await BleClient.connect(device.deviceId, () => {
+                        // Callback de desconexión
+                        this.isConnected = false;
+                        this._nativeDeviceId = null;
+                        this.currentWeight = 0;
+                        this.updateUI();
+                        this._notifyListeners(null);
+                        // Reconectar en el próximo gesto
+                        const tryReconnect = async () => {
+                            document.removeEventListener('touchstart', tryReconnect);
+                            document.removeEventListener('click', tryReconnect);
+                            await this._tryAutoReconnect();
+                        };
+                        document.addEventListener('touchstart', tryReconnect, { once: true, passive: true });
+                        document.addEventListener('click', tryReconnect, { once: true });
+                    });
+
+                    // Suscribirse a notificaciones
+                    await BleClient.startNotifications(
+                        device.deviceId,
+                        '0000ffe0-0000-1000-8000-00805f9b34fb',
+                        '0000ffe1-0000-1000-8000-00805f9b34fb',
+                        (value) => {
+                            this._handleData(value);
+                        }
+                    );
+
+                    // Guardar en lista
+                    const entry = { id: device.deviceId, name: device.name || 'Balanza', lastSeen: Date.now() };
+                    const existing = this.savedScales.findIndex(s => s.id === device.deviceId);
+                    if (existing > -1) this.savedScales[existing] = entry;
+                    else this.savedScales.push(entry);
+                    this.activeScaleId = device.deviceId;
+                    this._saveSavedScales();
+
+                    this.isConnected = true;
+                    this.updateUI();
+                    Utils.showNotification(`Balanza "${device.name || 'Desconocida'}" conectada`, 'success', 3000);
+                    resolve(true);
+                } catch(e) {
+                    reject(e);
+                }
+            }).catch(reject);
+        });
+    },
+
+    // Conexión Web Bluetooth (navegador/TWA)
+    // Conexión Web Bluetooth (navegador/TWA)
+    async _connectWeb() {
+        this.device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [
+                '0000ffe0-0000-1000-8000-00805f9b34fb',
+                '0000fff0-0000-1000-8000-00805f9b34fb',
+                '0000181d-0000-1000-8000-00805f9b34fb',
+                '0000181b-0000-1000-8000-00805f9b34fb'
+            ]
+        });
+
+        await this._connectToDevice();
+
+        // Guardar en lista
             const existing = this.savedScales.findIndex(s => s.id === this.device.id);
             const entry = { id: this.device.id, name: this.device.name || 'Balanza', lastSeen: Date.now() };
             if (existing > -1) this.savedScales[existing] = entry;

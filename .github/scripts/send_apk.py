@@ -10,12 +10,12 @@ APK_PATH = "android/app/build/outputs/apk/debug/GallOli.apk"
 
 
 async def get_channel(client):
-    # Buscar el canal por nombre en los dialogos existentes
+    # Primero buscar en dialogos existentes
     async for dialog in client.iter_dialogs():
         if dialog.is_channel and dialog.name == CHANNEL_NAME:
             return await client.get_input_entity(dialog.id)
 
-    # Si no esta en dialogos, unirse via link de invitacion
+    # Intentar unirse via link (si ya es participante, ignorar el error)
     try:
         from telethon.tl.functions.messages import ImportChatInviteRequest
         hash_part = CHANNEL_INVITE.split("+")[1]
@@ -23,6 +23,13 @@ async def get_channel(client):
         channel = result.chats[0]
         return await client.get_input_entity(channel.id)
     except Exception as e:
+        err = str(e).lower()
+        if "already" in err or "participant" in err or "ya es" in err:
+            # Ya somos participantes, buscar de nuevo en dialogos
+            await client.get_dialogs()  # forzar refresh
+            async for dialog in client.iter_dialogs():
+                if dialog.is_channel:
+                    return await client.get_input_entity(dialog.id)
         print(f"No se pudo unir al canal: {e}", file=sys.stderr)
         sys.exit(1)
 

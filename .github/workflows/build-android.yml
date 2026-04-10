@@ -25,6 +25,18 @@ jobs:
       - name: Install Bluetooth LE plugin
         run: npm install @capacitor-community/bluetooth-le --legacy-peer-deps
 
+      - name: Prepare www folder for Capacitor
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp -r css www/
+          cp -r js www/
+          cp -r icons www/
+          cp manifest.json www/
+          cp sw.js www/
+          cp _headers www/ 2>/dev/null || true
+          cp -r .well-known www/ 2>/dev/null || true
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:

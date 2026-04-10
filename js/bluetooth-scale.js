@@ -1,7 +1,7 @@
-// Módulo de Balanza Bluetooth BLE — GallOli
-// Protocolo confirmado: servicio 0xFFE0, característica 0xFFE1, datos ASCII "050.60kg"
-// En Capacitor APK usa @capacitor-community/bluetooth-le (nativo, segundo plano)
-// En navegador/TWA usa Web Bluetooth API
+// Balanza Bluetooth BLE — GallOli
+// Protocolo CAMRY: servicio 0xFFE0, caracteristica 0xFFE1, datos ASCII "001.70kg"
+// En Capacitor APK: usa plugin nativo BleClient
+// En navegador/TWA: usa Web Bluetooth API
 const BluetoothScale = {
     device: null,
     characteristic: null,
@@ -16,9 +16,8 @@ const BluetoothScale = {
     savedScales: [],
     activeScaleId: null,
     _rawLog: [],
-    _nativeDeviceId: null, // ID del dispositivo en modo nativo Capacitor
+    _nativeDeviceId: null,
 
-    // Detectar si estamos en Capacitor APK nativo
     isNative() {
         return typeof window !== 'undefined' &&
                window.Capacitor &&
@@ -26,21 +25,21 @@ const BluetoothScale = {
                window.Capacitor.isNativePlatform();
     },
 
-    // Obtener el plugin BLE nativo si está disponible
     _getBlePlugin() {
-        if (this.isNative() && window.Capacitor?.Plugins?.BleClient) {
+        if (this.isNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleClient) {
             return window.Capacitor.Plugins.BleClient;
         }
         return null;
+    },
+
+    isSupported() {
+        return this.isNative() || ('bluetooth' in navigator);
     },
 
     async init() {
         if (!this.isSupported()) return;
         this._loadSavedScales();
         this.updateUI();
-
-        // Reconexión automática al primer gesto del usuario
-        // (el navegador requiere interacción antes de acceder a Bluetooth)
         if (this.activeScaleId) {
             const tryOnce = async () => {
                 document.removeEventListener('touchstart', tryOnce);
@@ -50,10 +49,6 @@ const BluetoothScale = {
             document.addEventListener('touchstart', tryOnce, { once: true, passive: true });
             document.addEventListener('click', tryOnce, { once: true });
         }
-    },
-
-    isSupported() {
-        return this.isNative() || 'bluetooth' in navigator;
     },
 
     _loadSavedScales() {
@@ -75,22 +70,39 @@ const BluetoothScale = {
     },
 
     async _tryAutoReconnect() {
-        if (!navigator.bluetooth.getDevices) return;
         if (this.isConnected || this.isConnecting) return;
+        if (this.isNative()) {
+            // En nativo intentar reconectar al dispositivo guardado
+            var saved = this.savedScales.find(function(s) { return s.id === this.activeScaleId; }.bind(this));
+            if (saved && saved.id) {
+                try {
+                    this.isConnecting = true;
+                    this.updateUI();
+                    this._nativeDeviceId = saved.id;
+                    await this._connectNativeById(saved.id, saved.name);
+                } catch(e) {
+                    // silencioso
+                } finally {
+                    this.isConnecting = false;
+                    this.updateUI();
+                }
+            }
+            return;
+        }
+        if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
         try {
-            const devices = await navigator.bluetooth.getDevices();
-            const saved = this.savedScales.find(s => s.id === this.activeScaleId);
-            if (!saved) return;
-            const device = devices.find(d => d.id === this.activeScaleId);
+            var devices = await navigator.bluetooth.getDevices();
+            var saved2 = this.savedScales.find(function(s) { return s.id === this.activeScaleId; }.bind(this));
+            if (!saved2) return;
+            var device = devices.find(function(d) { return d.id === this.activeScaleId; }.bind(this));
             if (device) {
                 this.isConnecting = true;
                 this.updateUI();
                 this.device = device;
                 await this._connectToDevice();
-                // Silencioso — no mostrar notificación para no molestar
             }
         } catch(e) {
-            // Silencioso
+            // silencioso
         } finally {
             this.isConnecting = false;
             this.updateUI();
@@ -99,20 +111,16 @@ const BluetoothScale = {
 
     async connect() {
         if (!this.isSupported()) {
-            Utils.showNotification('Bluetooth no soportado en este navegador', 'error', 4000);
+            Utils.showNotification('Bluetooth no soportado', 'error', 4000);
             return false;
         }
         if (this.isConnecting) return false;
-
         this.isConnecting = true;
         this.updateUI();
-
         try {
-            // Modo nativo Capacitor
             if (this.isNative()) {
                 return await this._connectNative();
             }
-            // Modo Web Bluetooth (navegador/TWA)
             return await this._connectWeb();
         } catch(e) {
             if (e.name !== 'NotFoundError') {
@@ -126,71 +134,54 @@ const BluetoothScale = {
         }
     },
 
-    // Conexión nativa via @capacitor-community/bluetooth-le
     async _connectNative() {
-        const BleClient = this._getBlePlugin();
+        var BleClient = this._getBlePlugin();
         if (!BleClient) throw new Error('Plugin BLE no disponible');
-
         await BleClient.initialize();
-
-        return new Promise((resolve, reject) => {
-            BleClient.requestDevice({
-                services: ['0000ffe0-0000-1000-8000-00805f9b34fb'],
-                optionalServices: [
-                    '0000fff0-0000-1000-8000-00805f9b34fb',
-                    '0000181d-0000-1000-8000-00805f9b34fb'
-                ]
-            }).then(async (device) => {
-                try {
-                    this._nativeDeviceId = device.deviceId;
-                    await BleClient.connect(device.deviceId, () => {
-                        // Callback de desconexión
-                        this.isConnected = false;
-                        this._nativeDeviceId = null;
-                        this.currentWeight = 0;
-                        this.updateUI();
-                        this._notifyListeners(null);
-                        // Reconectar en el próximo gesto
-                        const tryReconnect = async () => {
-                            document.removeEventListener('touchstart', tryReconnect);
-                            document.removeEventListener('click', tryReconnect);
-                            await this._tryAutoReconnect();
-                        };
-                        document.addEventListener('touchstart', tryReconnect, { once: true, passive: true });
-                        document.addEventListener('click', tryReconnect, { once: true });
-                    });
-
-                    // Suscribirse a notificaciones
-                    await BleClient.startNotifications(
-                        device.deviceId,
-                        '0000ffe0-0000-1000-8000-00805f9b34fb',
-                        '0000ffe1-0000-1000-8000-00805f9b34fb',
-                        (value) => {
-                            this._handleData(value);
-                        }
-                    );
-
-                    // Guardar en lista
-                    const entry = { id: device.deviceId, name: device.name || 'Balanza', lastSeen: Date.now() };
-                    const existing = this.savedScales.findIndex(s => s.id === device.deviceId);
-                    if (existing > -1) this.savedScales[existing] = entry;
-                    else this.savedScales.push(entry);
-                    this.activeScaleId = device.deviceId;
-                    this._saveSavedScales();
-
-                    this.isConnected = true;
-                    this.updateUI();
-                    Utils.showNotification(`Balanza "${device.name || 'Desconocida'}" conectada`, 'success', 3000);
-                    resolve(true);
-                } catch(e) {
-                    reject(e);
-                }
-            }).catch(reject);
+        var device = await BleClient.requestDevice({
+            services: ['0000ffe0-0000-1000-8000-00805f9b34fb'],
+            optionalServices: ['0000fff0-0000-1000-8000-00805f9b34fb']
         });
+        return await this._connectNativeById(device.deviceId, device.name);
     },
 
-    // Conexión Web Bluetooth (navegador/TWA)
-    // Conexión Web Bluetooth (navegador/TWA)
+    async _connectNativeById(deviceId, deviceName) {
+        var BleClient = this._getBlePlugin();
+        if (!BleClient) throw new Error('Plugin BLE no disponible');
+        var self = this;
+        await BleClient.connect(deviceId, function() {
+            self.isConnected = false;
+            self._nativeDeviceId = null;
+            self.currentWeight = 0;
+            self.updateUI();
+            self._notifyListeners(null);
+            var tryReconnect = async function() {
+                document.removeEventListener('touchstart', tryReconnect);
+                document.removeEventListener('click', tryReconnect);
+                await self._tryAutoReconnect();
+            };
+            document.addEventListener('touchstart', tryReconnect, { once: true, passive: true });
+            document.addEventListener('click', tryReconnect, { once: true });
+        });
+        await BleClient.startNotifications(
+            deviceId,
+            '0000ffe0-0000-1000-8000-00805f9b34fb',
+            '0000ffe1-0000-1000-8000-00805f9b34fb',
+            function(value) { self._handleData(value); }
+        );
+        this._nativeDeviceId = deviceId;
+        var entry = { id: deviceId, name: deviceName || 'Balanza', lastSeen: Date.now() };
+        var existing = this.savedScales.findIndex(function(s) { return s.id === deviceId; });
+        if (existing > -1) this.savedScales[existing] = entry;
+        else this.savedScales.push(entry);
+        this.activeScaleId = deviceId;
+        this._saveSavedScales();
+        this.isConnected = true;
+        this.updateUI();
+        Utils.showNotification('Balanza "' + (deviceName || 'Desconocida') + '" conectada', 'success', 3000);
+        return true;
+    },
+
     async _connectWeb() {
         this.device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -201,100 +192,80 @@ const BluetoothScale = {
                 '0000181b-0000-1000-8000-00805f9b34fb'
             ]
         });
-
         await this._connectToDevice();
-
-        // Guardar en lista
-            const existing = this.savedScales.findIndex(s => s.id === this.device.id);
-            const entry = { id: this.device.id, name: this.device.name || 'Balanza', lastSeen: Date.now() };
-            if (existing > -1) this.savedScales[existing] = entry;
-            else this.savedScales.push(entry);
-            this.activeScaleId = this.device.id;
-            this._saveSavedScales();
-
-            Utils.showNotification(`Balanza "${this.device.name || 'Desconocida'}" conectada`, 'success', 3000);
-            return true;
-
-        } catch(e) {
-            if (e.name !== 'NotFoundError') {
-                Utils.showNotification('Error al conectar: ' + e.message, 'error', 4000);
-            }
-            this.isConnected = false;
-            return false;
-        } finally {
-            this.isConnecting = false;
-            this.updateUI();
-        }
+        var entry = { id: this.device.id, name: this.device.name || 'Balanza', lastSeen: Date.now() };
+        var existing = this.savedScales.findIndex(function(s) { return s.id === this.device.id; }.bind(this));
+        if (existing > -1) this.savedScales[existing] = entry;
+        else this.savedScales.push(entry);
+        this.activeScaleId = this.device.id;
+        this._saveSavedScales();
+        Utils.showNotification('Balanza "' + (this.device.name || 'Desconocida') + '" conectada', 'success', 3000);
+        return true;
     },
 
     async _connectToDevice() {
-        const server = await this.device.gatt.connect();
-
-        this.device.addEventListener('gattserverdisconnected', () => {
-            this.isConnected = false;
-            this.characteristic = null;
-            this.currentWeight = 0;
-            this.updateUI();
-            this._notifyListeners(null);
-            const tryReconnect = async () => {
+        var server = await this.device.gatt.connect();
+        var self = this;
+        this.device.addEventListener('gattserverdisconnected', function() {
+            self.isConnected = false;
+            self.characteristic = null;
+            self.currentWeight = 0;
+            self.updateUI();
+            self._notifyListeners(null);
+            var tryReconnect = async function() {
                 document.removeEventListener('touchstart', tryReconnect);
                 document.removeEventListener('click', tryReconnect);
-                await this._tryAutoReconnect();
+                await self._tryAutoReconnect();
             };
             document.addEventListener('touchstart', tryReconnect, { once: true, passive: true });
             document.addEventListener('click', tryReconnect, { once: true });
         });
-
-        // Ir directo al servicio 0xFFE0 (CAMRY y mayoría de balanzas BLE)
+        // Ir directo al servicio 0xFFE0 (CAMRY)
         try {
-            const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-            const char = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+            var service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+            var char = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
             await char.startNotifications();
-            char.addEventListener('characteristicvaluechanged', (e) => {
-                this._handleData(e.target.value);
+            char.addEventListener('characteristicvaluechanged', function(e) {
+                self._handleData(e.target.value);
             });
-            this.characteristic = char;
-            this.isConnected = true;
-            this.updateUI();
+            self.characteristic = char;
+            self.isConnected = true;
+            self.updateUI();
             return;
         } catch(e) {
-            // No tiene 0xFFE0, intentar otros servicios conocidos
+            // No tiene 0xFFE0, probar fallback
         }
-
-        // Fallback: probar servicios alternativos uno por uno (sin descubrir todos)
-        const fallbackServices = [
+        // Fallback: servicios alternativos
+        var fallbacks = [
             { s: '0000fff0-0000-1000-8000-00805f9b34fb', c: '0000fff1-0000-1000-8000-00805f9b34fb' },
-            { s: '0000181d-0000-1000-8000-00805f9b34fb', c: '00002a9d-0000-1000-8000-00805f9b34fb' },
+            { s: '0000181d-0000-1000-8000-00805f9b34fb', c: '00002a9d-0000-1000-8000-00805f9b34fb' }
         ];
-
-        for (const pair of fallbackServices) {
+        for (var i = 0; i < fallbacks.length; i++) {
             try {
-                const service = await server.getPrimaryService(pair.s);
-                const char = await service.getCharacteristic(pair.c);
-                if (char.properties.notify || char.properties.indicate) {
-                    await char.startNotifications();
-                    char.addEventListener('characteristicvaluechanged', (e) => {
-                        this._handleData(e.target.value);
+                var svc = await server.getPrimaryService(fallbacks[i].s);
+                var ch = await svc.getCharacteristic(fallbacks[i].c);
+                if (ch.properties.notify || ch.properties.indicate) {
+                    await ch.startNotifications();
+                    ch.addEventListener('characteristicvaluechanged', function(e) {
+                        self._handleData(e.target.value);
                     });
-                    this.characteristic = char;
-                    this.isConnected = true;
-                    this.updateUI();
+                    self.characteristic = ch;
+                    self.isConnected = true;
+                    self.updateUI();
                     return;
                 }
-            } catch(e) { /* continuar */ }
+            } catch(e2) { /* continuar */ }
         }
-
-        throw new Error('No se pudo conectar a la balanza. Verifica que esté encendida y en rango.');
+        throw new Error('No se pudo conectar a la balanza');
     },
 
     _handleData(dataView) {
-        const bytes = Array.from(new Uint8Array(dataView.buffer));
-        this._rawLog.unshift({ bytes, ts: Date.now() });
+        var bytes = Array.from(new Uint8Array(dataView.buffer));
+        this._rawLog.unshift({ bytes: bytes, ts: Date.now() });
         if (this._rawLog.length > 20) this._rawLog.pop();
-
-        const result = this._parseWeight(dataView, bytes);
+        var result = this._parseWeight(dataView, bytes);
         if (result !== null && result.weight > 0 && result.weight < 2000) {
-            this.currentUnit = 'lb'; // siempre lb
+            this.currentUnit = 'lb';
             this.currentRawWeight = result.weight;
             this.currentWeight = result.weight;
             this._notifyListeners(this.currentWeight);
@@ -302,103 +273,76 @@ const BluetoothScale = {
         }
     },
 
-    // Parser — retorna { weight (valor a mostrar), unit } o null
     _parseWeight(dataView, bytes) {
-        // --- Formato 1: ASCII texto (CAMRY y mayoría) ---
-        // CAMRY SIEMPRE envía en kg por BLE aunque el display muestre lb
-        // Ejemplo: "ST NT 00001.70kg.." cuando display muestra 3.40 lb
+        // ASCII texto (CAMRY siempre envia kg aunque display muestre lb)
         try {
-            const text = new TextDecoder('utf-8', { fatal: false }).decode(dataView.buffer).trim();
+            var text = new TextDecoder('utf-8', { fatal: false }).decode(dataView.buffer).trim();
             if (text.length > 0) {
-                const match = text.match(/([+-]?\s*\d+\.?\d*)\s*(kg|lb|g|KG|LB|G)/i);
+                var match = text.match(/([+-]?\s*\d+\.?\d*)\s*(kg|lb|g|KG|LB|G)/i);
                 if (match) {
-                    const val = parseFloat(match[1].replace(/\s/g, ''));
-                    const unit = match[2].toLowerCase();
+                    var val = parseFloat(match[1].replace(/\s/g, ''));
+                    var unit = match[2].toLowerCase();
                     if (val > 0) {
-                        // CAMRY siempre envía kg por BLE aunque el display muestre lb
-                        // El display redondea a 2 decimales: 1.70 kg → display muestra 3.40 lb
-                        // La relación visual es kg × 2 (no la conversión matemática exacta)
-                        if (unit === 'kg') {
-                            return { weight: parseFloat((val * 2).toFixed(2)), unit: 'lb' };
-                        }
-                        if (unit === 'g') {
-                            return { weight: parseFloat((val / 453.592).toFixed(2)), unit: 'lb' };
-                        }
+                        // CAMRY envia kg, multiplicar x2 para obtener lb visual del display
+                        if (unit === 'kg') return { weight: parseFloat((val * 2).toFixed(2)), unit: 'lb' };
+                        if (unit === 'g') return { weight: parseFloat((val / 453.592).toFixed(2)), unit: 'lb' };
                         return { weight: val, unit: 'lb' };
                     }
                 }
             }
         } catch(e) {}
-
-        // --- Formato 2: BLE Weight Scale estándar (0x181D) ---
+        // BLE Weight Scale estandar
         if (bytes.length >= 3) {
-            const flags = bytes[0];
-            const raw = dataView.getUint16(1, true);
+            var flags = bytes[0];
+            var raw = dataView.getUint16(1, true);
             if (raw > 0) {
                 if (flags & 0x01) return { weight: raw * 0.01, unit: 'lb' };
                 else return { weight: parseFloat((raw * 0.005 * 2.20462).toFixed(3)), unit: 'lb' };
             }
         }
-
-        // --- Formato 3: 2 bytes big-endian en gramos ---
-        if (bytes.length >= 2) {
-            const grams = (bytes[0] << 8) | bytes[1];
-            if (grams > 0 && grams < 300000) return { weight: parseFloat((grams / 453.592).toFixed(3)), unit: 'lb' };
-        }
-
-        // --- Formato 4: 2 bytes little-endian en gramos ---
-        if (bytes.length >= 2) {
-            const grams = dataView.getUint16(0, true);
-            if (grams > 0 && grams < 300000) return { weight: parseFloat((grams / 453.592).toFixed(3)), unit: 'lb' };
-        }
-
         return null;
     },
 
-    // Convertir a libras (ya no necesario pero se mantiene por compatibilidad)
-    _toLbs(weight, unit) {
-        if (unit === 'kg') return weight * 2.20462;
-        if (unit === 'g')  return weight / 453.592;
-        return weight;
-    },
-
     _notifyListeners(weight) {
-        this.weightListeners.forEach(fn => { try { fn(weight); } catch(e) {} });
+        this.weightListeners.forEach(function(fn) { try { fn(weight); } catch(e) {} });
     },
 
     _updateWeightDisplays() {
-        const raw = this.currentRawWeight;  // valor tal cual de la balanza
-        const unit = this.currentUnit;
-        const lbs = this.currentWeight;     // en lb para cálculos
-
-        // Campos de peso — mostrar valor original de la balanza
-        const fields = ['sale-weight','live-weight','processed-weight','order-weight','delivery-weight','edit-sale-weight'];
-        fields.forEach(id => {
-            const el = document.getElementById(id);
+        var w = this.currentRawWeight;
+        var unit = this.currentUnit;
+        var fields = ['sale-weight','live-weight','processed-weight','order-weight','delivery-weight','edit-sale-weight'];
+        fields.forEach(function(id) {
+            var el = document.getElementById(id);
             if (el && document.activeElement !== el) {
-                const current = parseFloat(el.value) || 0;
-                if (Math.abs(current - raw) > 0.005) {
-                    el.value = raw.toFixed(3);
+                var current = parseFloat(el.value) || 0;
+                if (Math.abs(current - w) > 0.005) {
+                    el.value = w.toFixed(2);
                     el.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }
         });
-
-        // Indicador flotante — mostrar valor y unidad original
-        const valueEl = document.getElementById('scale-weight-value');
-        if (valueEl) valueEl.textContent = `${raw.toFixed(3)} ${unit}`;
-
-        const indicator = document.getElementById('scale-weight-indicator');
+        var valueEl = document.getElementById('scale-weight-value');
+        if (valueEl) valueEl.textContent = w.toFixed(2) + ' ' + unit;
+        var indicator = document.getElementById('scale-weight-indicator');
         if (indicator) indicator.style.display = 'flex';
     },
 
     onWeight(fn) {
         this.weightListeners.push(fn);
-        return () => { this.weightListeners = this.weightListeners.filter(f => f !== fn); };
+        var self = this;
+        return function() { self.weightListeners = self.weightListeners.filter(function(f) { return f !== fn; }); };
     },
 
     async disconnect() {
-        if (this.device && this.device.gatt.connected) this.device.gatt.disconnect();
+        if (this.isNative() && this._nativeDeviceId) {
+            var BleClient = this._getBlePlugin();
+            if (BleClient) {
+                try { await BleClient.disconnect(this._nativeDeviceId); } catch(e) {}
+            }
+            this._nativeDeviceId = null;
+        } else if (this.device && this.device.gatt.connected) {
+            this.device.gatt.disconnect();
+        }
         this.device = null;
         this.characteristic = null;
         this.isConnected = false;
@@ -410,23 +354,27 @@ const BluetoothScale = {
     },
 
     removeScale(id) {
-        this.savedScales = this.savedScales.filter(s => s.id !== id);
+        this.savedScales = this.savedScales.filter(function(s) { return s.id !== id; });
         if (this.activeScaleId === id) { this.activeScaleId = null; this.disconnect(); }
         this._saveSavedScales();
         this.updateUI();
     },
 
     async connectToSaved(id) {
-        if (navigator.bluetooth.getDevices) {
+        if (this.isNative()) {
+            var saved = this.savedScales.find(function(s) { return s.id === id; });
+            if (saved) return await this._connectNativeById(id, saved.name);
+        }
+        if (navigator.bluetooth && navigator.bluetooth.getDevices) {
             try {
-                const devices = await navigator.bluetooth.getDevices();
-                const device = devices.find(d => d.id === id);
+                var devices = await navigator.bluetooth.getDevices();
+                var device = devices.find(function(d) { return d.id === id; });
                 if (device) {
                     this.device = device;
                     this.activeScaleId = id;
                     this._saveSavedScales();
                     await this._connectToDevice();
-                    Utils.showNotification(`Balanza "${device.name}" conectada`, 'success', 2000);
+                    Utils.showNotification('Balanza "' + device.name + '" conectada', 'success', 2000);
                     return true;
                 }
             } catch(e) {}
@@ -439,113 +387,72 @@ const BluetoothScale = {
             Utils.showNotification('Balanza no conectada', 'warning', 2000);
             return;
         }
-        const el = document.getElementById(fieldId);
+        var el = document.getElementById(fieldId);
         if (el) {
-            el.value = this.currentRawWeight.toFixed(3);
+            el.value = this.currentRawWeight.toFixed(2);
             el.dispatchEvent(new Event('input', { bubbles: true }));
             el.style.borderColor = 'var(--primary)';
-            setTimeout(() => el.style.borderColor = '', 1000);
-            Utils.showNotification(`${this.currentRawWeight.toFixed(3)} ${this.currentUnit} capturado`, 'success', 1500);
+            setTimeout(function() { el.style.borderColor = ''; }, 1000);
+            Utils.showNotification(this.currentRawWeight.toFixed(2) + ' ' + this.currentUnit + ' capturado', 'success', 1500);
         }
     },
 
     showDebugLog() {
         if (this._rawLog.length === 0) {
-            Utils.showNotification('No hay datos recibidos aún', 'info', 2000);
+            Utils.showNotification('No hay datos recibidos aun', 'info', 2000);
             return;
         }
-        const lines = this._rawLog.slice(0, 5).map(e => {
-            const hex = e.bytes.map(b => b.toString(16).padStart(2,'0')).join(' ');
-            const ascii = e.bytes.map(b => b >= 32 && b < 127 ? String.fromCharCode(b) : '.').join('');
-            return `HEX: ${hex}\nASCII: ${ascii}`;
+        var lines = this._rawLog.slice(0, 5).map(function(e) {
+            var hex = e.bytes.map(function(b) { return b.toString(16).padStart(2,'0'); }).join(' ');
+            var ascii = e.bytes.map(function(b) { return b >= 32 && b < 127 ? String.fromCharCode(b) : '.'; }).join('');
+            return 'HEX: ' + hex + '\nASCII: ' + ascii;
         }).join('\n---\n');
-
-        const modal = document.createElement('div');
+        var modal = document.createElement('div');
         modal.className = 'modal active';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-bug"></i> Debug Balanza</h3>
-                    <button class="close-modal" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="modal-body">
-                    <p style="color:var(--gray);font-size:0.85rem;">Últimos datos recibidos:</p>
-                    <pre style="background:#1e1e1e;color:#0f0;padding:15px;border-radius:8px;font-size:0.8rem;overflow-x:auto;white-space:pre-wrap;">${lines}</pre>
-                    <p style="color:var(--gray);font-size:0.85rem;margin-top:10px;">Peso actual: <strong>${this.currentWeight.toFixed(3)} lb</strong> (${this.currentUnit})</p>
-                </div>
-            </div>`;
+        modal.innerHTML = '<div class="modal-content"><div class="modal-header"><h3><i class="fas fa-bug"></i> Debug Balanza</h3><button class="close-modal" onclick="this.closest(\'.modal\').remove()"><i class="fas fa-times"></i></button></div><div class="modal-body"><p style="color:var(--gray);font-size:0.85rem;">Ultimos datos recibidos:</p><pre style="background:#1e1e1e;color:#0f0;padding:15px;border-radius:8px;font-size:0.8rem;overflow-x:auto;white-space:pre-wrap;">' + lines + '</pre><p style="color:var(--gray);font-size:0.85rem;margin-top:10px;">Peso actual: <strong>' + this.currentWeight.toFixed(2) + ' lb</strong></p></div></div>';
         document.body.appendChild(modal);
     },
 
     showScalesPanel() {
-        const scalesList = this.savedScales.length === 0
+        var self = this;
+        var scalesList = this.savedScales.length === 0
             ? '<p style="color:var(--gray);text-align:center;padding:20px;">No hay balanzas guardadas</p>'
-            : this.savedScales.map(s => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--light);border-radius:8px;margin-bottom:8px;">
-                    <div>
-                        <div style="font-weight:600;"><i class="fas fa-weight"></i> ${s.name}</div>
-                        <small style="color:var(--gray);">Última vez: ${new Date(s.lastSeen).toLocaleDateString('es-ES')}</small>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        ${this.activeScaleId === s.id && this.isConnected
-                            ? '<span style="color:var(--success);font-size:0.85rem;"><i class="fas fa-circle"></i> Conectada</span>'
-                            : `<button class="btn btn-outline" style="padding:6px 12px;font-size:0.85rem;" onclick="BluetoothScale.connectToSaved('${s.id}');this.closest('.modal').remove()"><i class="fas fa-bluetooth"></i> Conectar</button>`
-                        }
-                        <button class="btn btn-danger" style="padding:6px 10px;font-size:0.85rem;" onclick="BluetoothScale.removeScale('${s.id}');this.closest('.modal').remove();BluetoothScale.showScalesPanel()"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>`).join('');
-
-        const modal = document.createElement('div');
+            : this.savedScales.map(function(s) {
+                return '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--light);border-radius:8px;margin-bottom:8px;"><div><div style="font-weight:600;"><i class="fas fa-weight"></i> ' + s.name + '</div><small style="color:var(--gray);">Ultima vez: ' + new Date(s.lastSeen).toLocaleDateString('es-ES') + '</small></div><div style="display:flex;gap:8px;align-items:center;">' +
+                    (self.activeScaleId === s.id && self.isConnected
+                        ? '<span style="color:var(--success);font-size:0.85rem;"><i class="fas fa-circle"></i> Conectada</span>'
+                        : '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.85rem;" onclick="BluetoothScale.connectToSaved(\'' + s.id + '\');this.closest(\'.modal\').remove()"><i class="fas fa-bluetooth"></i> Conectar</button>') +
+                    '<button class="btn btn-danger" style="padding:6px 10px;font-size:0.85rem;" onclick="BluetoothScale.removeScale(\'' + s.id + '\');this.closest(\'.modal\').remove();BluetoothScale.showScalesPanel()"><i class="fas fa-trash"></i></button></div></div>';
+            }).join('');
+        var modal = document.createElement('div');
         modal.className = 'modal active';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-weight"></i> Mis Balanzas</h3>
-                    <button class="close-modal" onclick="this.closest('.modal').remove()"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="modal-body">
-                    ${scalesList}
-                    <button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="this.closest('.modal').remove();BluetoothScale.connect()">
-                        <i class="fas fa-plus"></i> Agregar nueva balanza
-                    </button>
-                    ${this.isConnected ? `
-                    <button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="BluetoothScale.showDebugLog()">
-                        <i class="fas fa-bug"></i> Ver datos crudos (debug)
-                    </button>` : ''}
-                </div>
-            </div>`;
+        modal.innerHTML = '<div class="modal-content"><div class="modal-header"><h3><i class="fas fa-weight"></i> Mis Balanzas</h3><button class="close-modal" onclick="this.closest(\'.modal\').remove()"><i class="fas fa-times"></i></button></div><div class="modal-body">' + scalesList + '<button class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="this.closest(\'.modal\').remove();BluetoothScale.connect()"><i class="fas fa-plus"></i> Agregar nueva balanza</button>' + (this.isConnected ? '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="BluetoothScale.showDebugLog()"><i class="fas fa-bug"></i> Ver datos crudos (debug)</button>' : '') + '</div></div>';
         document.body.appendChild(modal);
     },
 
     updateUI() {
-        const toggle = document.getElementById('scale-switch');
-        const status = document.getElementById('scale-status-sidebar');
-        const valueEl = document.getElementById('scale-weight-value');
-        const indicator = document.getElementById('scale-weight-indicator');
-
+        var toggle = document.getElementById('scale-switch');
+        var status = document.getElementById('scale-status-sidebar');
+        var valueEl = document.getElementById('scale-weight-value');
+        var indicator = document.getElementById('scale-weight-indicator');
         if (toggle) { toggle.checked = this.isConnected; toggle.disabled = this.isConnecting; }
-
         if (status) {
             if (this.isConnecting) {
                 status.textContent = 'Conectando...';
                 status.style.color = 'var(--warning)';
             } else if (this.isConnected) {
-                status.textContent = this.device?.name || 'Balanza';
+                status.textContent = (this.isNative() ? 'Balanza' : (this.device && this.device.name ? this.device.name : 'Balanza'));
                 status.style.color = 'rgba(76, 175, 80, 0.9)';
             } else {
-                const saved = this.savedScales.find(s => s.id === this.activeScaleId);
-                status.textContent = saved ? `${saved.name} (desconectada)` : 'Toca para conectar';
+                var saved = this.savedScales.find(function(s) { return s.id === this.activeScaleId; }.bind(this));
+                status.textContent = saved ? saved.name + ' (desconectada)' : 'Toca para conectar';
                 status.style.color = '';
             }
         }
-
-        document.querySelectorAll('.scale-capture-btn').forEach(btn => {
+        document.querySelectorAll('.scale-capture-btn').forEach(function(btn) {
             btn.style.display = this.isConnected ? 'flex' : 'none';
-        });
-
+        }.bind(this));
         if (indicator) indicator.style.display = this.isConnected ? 'flex' : 'none';
-        if (valueEl && !this.isConnected) valueEl.textContent = '0.000 lb';
+        if (valueEl && !this.isConnected) valueEl.textContent = '0.00 lb';
     }
 };
-
-// v7.14.54 - kg x2 = lb visual

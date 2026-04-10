@@ -1,7 +1,7 @@
 {
   "appId": "store.ivapps.galloli",
   "appName": "GallOli",
-  "webDir": ".",
+  "webDir": "www",
   "server": {
     "androidScheme": "https"
   },

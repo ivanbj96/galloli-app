@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.14.61'; // Fix workflow TypeScript + cache bust bluetooth-scale
+const APP_VERSION = '7.18.0'; // Java native bridge BLE + Push via JavascriptInterface
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

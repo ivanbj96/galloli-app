@@ -25,12 +25,6 @@ jobs:
       - name: Install TypeScript (required by Capacitor)
         run: npm install -D typescript --legacy-peer-deps
 
-      - name: Install TypeScript (requerido por capacitor.config.ts)
-        run: npm install -D typescript --legacy-peer-deps
-
-      - name: Install Bluetooth LE plugin
-        run: npm install @capacitor-community/bluetooth-le --legacy-peer-deps
-
       - name: Prepare www folder for Capacitor
         run: |
           mkdir -p www
@@ -63,6 +57,29 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Inject native Java bridges (BLE + Push)
+        run: |
+          JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
+          mkdir -p "$JAVA_DIR"
+
+          # Copiar los bridges Java
+          cp .github/android-src/BleJsBridge.java "$JAVA_DIR/BleJsBridge.java"
+          cp .github/android-src/PushJsBridge.java "$JAVA_DIR/PushJsBridge.java"
+          cp .github/android-src/MainActivity.java "$JAVA_DIR/MainActivity.java"
+
+          echo "✅ Java bridges inyectados en $JAVA_DIR"
+          ls -la "$JAVA_DIR"
+
+      - name: Patch AndroidManifest with BLE + Push permissions
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+
+          # Agregar permisos BLE y Push antes de <application
+          sed -i 's|<application|<!-- BLE Permissions -->\n    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <!-- Push Permissions -->\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />\n    <application|' "$MANIFEST"
+
+          echo "✅ Permisos agregados al AndroidManifest"
+          grep -A5 "BLUETOOTH" "$MANIFEST" | head -20
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew

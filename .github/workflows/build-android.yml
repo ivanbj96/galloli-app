@@ -96,10 +96,13 @@ jobs:
           convert "$SRC" -resize 432x432 -gravity center -extent 512x512 "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png"
           mkdir -p "$RES/mipmap-anydpi-v26"
           printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/ic_launcher.xml"
+          # Eliminar ic_launcher_background.xml separado si existe (evitar duplicado con colors.xml)
+          rm -f "$RES/values/ic_launcher_background.xml"
           mkdir -p "$RES/values"
           if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
             sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#185a83</color>|' "$RES/values/colors.xml"
           else
+            sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
             printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#185a83</color>\n</resources>\n' > "$RES/values/colors.xml"
           fi
           echo "Iconos generados"

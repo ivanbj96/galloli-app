@@ -1805,6 +1805,30 @@ async function handlePush(request, env, path, corsHeaders, currentUser) {
     return jsonResponse({ success: true }, corsHeaders);
   }
 
+  // POST /api/push/subscribe-fcm - Guardar token FCM de Android nativo
+  if (path === '/api/push/subscribe-fcm' && method === 'POST') {
+    const { fcmToken, platform } = await getRequestBody(request);
+    if (!fcmToken) return jsonResponse({ error: 'fcmToken requerido' }, corsHeaders, 400);
+
+    // Guardar como endpoint especial con prefijo fcm://
+    const endpoint = 'fcm://' + fcmToken;
+    const existing = await env.DB.prepare(
+      `SELECT id FROM push_subscriptions WHERE endpoint = ?`
+    ).bind(endpoint).first();
+
+    if (existing) {
+      await env.DB.prepare(`
+        UPDATE push_subscriptions SET user_id=?, business_id=?, updated_at=?, is_active=1 WHERE endpoint=?
+      `).bind(currentUser.id, currentUser.business_id, Date.now(), endpoint).run();
+    } else {
+      await env.DB.prepare(`
+        INSERT INTO push_subscriptions (id, user_id, business_id, endpoint, p256dh, auth, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(generateId(), currentUser.id, currentUser.business_id, endpoint, 'fcm', 'fcm', Date.now(), Date.now()).run();
+    }
+    return jsonResponse({ success: true, platform: platform || 'android' }, corsHeaders);
+  }
+
   // DELETE /api/push/subscribe - Eliminar suscripción
   if (path === '/api/push/subscribe' && method === 'DELETE') {
     const { endpoint } = await getRequestBody(request);
@@ -1865,6 +1889,17 @@ async function sendPushToAllSubs(businessId, title, body, data = {}, env) {
 
     for (const sub of (subs.results || [])) {
       try {
+        // Token FCM nativo (Android APK)
+        if (sub.endpoint && sub.endpoint.startsWith('fcm://')) {
+          const fcmToken = sub.endpoint.replace('fcm://', '');
+          const ok = await sendFcmPush(fcmToken, title, body, env);
+          if (!ok) {
+            await env.DB.prepare(`UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?`)
+              .bind(sub.endpoint).run();
+          }
+          continue;
+        }
+        // Web Push VAPID (PWA / TWA)
         const ok = await sendWebPush(sub.endpoint, sub.p256dh, sub.auth, payload, env);
         if (!ok) {
           await env.DB.prepare(`UPDATE push_subscriptions SET is_active = 0 WHERE endpoint = ?`)
@@ -1876,6 +1911,38 @@ async function sendPushToAllSubs(businessId, title, body, data = {}, env) {
     }
   } catch (e) {
     console.error('sendPushToAllSubs error:', e.message);
+  }
+}
+
+// Enviar notificación push via FCM HTTP v1 API (Android nativo)
+async function sendFcmPush(fcmToken, title, body, env) {
+  try {
+    const serverKey = env.FCM_SERVER_KEY;
+    if (!serverKey) { console.warn('FCM_SERVER_KEY no configurada'); return false; }
+
+    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'key=' + serverKey
+      },
+      body: JSON.stringify({
+        to: fcmToken,
+        notification: { title, body, sound: 'default' },
+        data: { title, body },
+        priority: 'high'
+      })
+    });
+
+    const result = await response.json();
+    if (result.failure > 0) {
+      console.warn('FCM error:', JSON.stringify(result));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('sendFcmPush error:', e.message);
+    return false;
   }
 }
 

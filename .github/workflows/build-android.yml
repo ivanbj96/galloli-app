@@ -38,8 +38,7 @@ jobs:
             --outfile=js/ble-bundle.js \
             --platform=browser \
             --target=es2017
-          echo "✅ ble-bundle.js generado:"
-          ls -lh js/ble-bundle.js
+          echo "✅ ble-bundle.js generado"
 
       - name: Prepare www folder
         run: |
@@ -74,17 +73,119 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      # ── LOGO E ICONOS ──────────────────────────────────────────────────────
+      - name: Install ImageMagick for icon generation
+        run: sudo apt-get install -y imagemagick
+
+      - name: Generate app icons from GallOli logo
+        run: |
+          SRC="icons/favicon.pub/android-chrome-512x512.png"
+          RES="android/app/src/main/res"
+
+          # Launcher icons (mipmap)
+          for size in 48 72 96 144 192; do
+            case $size in
+              48)  density="mdpi"    ;;
+              72)  density="hdpi"    ;;
+              96)  density="xhdpi"   ;;
+              144) density="xxhdpi"  ;;
+              192) density="xxxhdpi" ;;
+            esac
+            mkdir -p "$RES/mipmap-$density"
+            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$density/ic_launcher.png"
+            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$density/ic_launcher_round.png"
+          done
+
+          # Adaptive icon foreground (anydpi-v26)
+          mkdir -p "$RES/mipmap-anydpi-v26"
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_launcher_background"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+
+          # Foreground para adaptive icon (512px con padding)
+          mkdir -p "$RES/mipmap-xxxhdpi"
+          convert "$SRC" -resize 432x432 -gravity center -extent 512x512 \
+            "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png"
+
+          # Color de fondo del adaptive icon
+          mkdir -p "$RES/values"
+          # Agregar color si no existe
+          if ! grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
+            sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' \
+              "$RES/values/colors.xml" 2>/dev/null || \
+            echo '<?xml version="1.0" encoding="utf-8"?><resources><color name="ic_launcher_background">#185a83</color></resources>' \
+              > "$RES/values/colors.xml"
+          fi
+
+          echo "✅ Iconos generados"
+
+      # ── SPLASH SCREEN ──────────────────────────────────────────────────────
+      - name: Generate splash screen
+        run: |
+          SRC="icons/favicon.pub/android-chrome-512x512.png"
+          RES="android/app/src/main/res"
+
+          # Splash en drawable (fondo azul + logo centrado)
+          for config in "port-mdpi:320x480" "port-hdpi:480x800" "port-xhdpi:720x1280" "port-xxhdpi:960x1600" "port-xxxhdpi:1280x1920"; do
+            density="${config%%:*}"
+            dims="${config##*:}"
+            w="${dims%%x*}"
+            h="${dims##*x}"
+            mkdir -p "$RES/drawable-$density"
+            # Logo al 40% del ancho, centrado sobre fondo azul
+            logo_size=$((w * 40 / 100))
+            convert -size ${w}x${h} xc:"#185a83" \
+              \( "$SRC" -resize ${logo_size}x${logo_size} \) \
+              -gravity center -composite \
+              "$RES/drawable-$density/splash.png"
+          done
+
+          echo "✅ Splash screens generados"
+
+      # ── JAVA NATIVO ────────────────────────────────────────────────────────
       - name: Copy native Java files
         run: |
           JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
           mkdir -p "$JAVA_DIR"
-          cp .github/android-src/BleForegroundPlugin.java "$JAVA_DIR/BleForegroundPlugin.java"
-          cp .github/android-src/BleForegroundService.java "$JAVA_DIR/BleForegroundService.java"
-          cp .github/android-src/MainActivity.java "$JAVA_DIR/MainActivity.java"
-          echo "✅ Archivos Java copiados:"
+          cp .github/android-src/BleForegroundPlugin.java  "$JAVA_DIR/"
+          cp .github/android-src/BleForegroundService.java "$JAVA_DIR/"
+          cp .github/android-src/GalloliFirebaseService.java "$JAVA_DIR/"
+          cp .github/android-src/MainActivity.java         "$JAVA_DIR/"
+          echo "✅ Java files:"
           ls -la "$JAVA_DIR"
 
-      - name: Add BLE and Foreground Service permissions to AndroidManifest
+      # ── FIREBASE / FCM ─────────────────────────────────────────────────────
+      - name: Write google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          echo "✅ google-services.json escrito"
+
+      - name: Add Firebase to app/build.gradle
+        run: |
+          # Agregar plugin de google-services al build.gradle del app
+          sed -i "s|apply plugin: 'com.android.application'|apply plugin: 'com.android.application'\napply plugin: 'com.google.gms.google-services'|" \
+            android/app/build.gradle
+
+          # Agregar dependencia de Firebase Messaging
+          sed -i "s|dependencies {|dependencies {\n    implementation 'com.google.firebase:firebase-messaging:24.0.0'|" \
+            android/app/build.gradle
+
+          echo "✅ Firebase agregado a build.gradle"
+
+      - name: Add google-services plugin to root build.gradle
+        run: |
+          sed -i "s|dependencies {|dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'|" \
+            android/build.gradle
+          echo "✅ google-services classpath agregado"
+
+      # ── PERMISOS ANDROID MANIFEST ──────────────────────────────────────────
+      - name: Add permissions to AndroidManifest
         run: |
           sed -i '/<manifest/a\
               <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\
@@ -96,21 +197,20 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />\
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\
               <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />' \
             android/app/src/main/AndroidManifest.xml
-          echo "✅ Permisos BLE agregados"
+          echo "✅ Permisos agregados"
 
-      - name: Register BleForegroundService in AndroidManifest
+      - name: Register services in AndroidManifest
         run: |
           sed -i '/<\/activity>/a\
-              <service\
-                  android:name=".BleForegroundService"\
-                  android:enabled="true"\
-                  android:exported="false"\
-                  android:foregroundServiceType="connectedDevice" />' \
+              <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />\
+              <service android:name=".GalloliFirebaseService" android:exported="false">\
+                  <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>\
+              </service>' \
             android/app/src/main/AndroidManifest.xml
-          echo "✅ BleForegroundService registrado"
-          cat android/app/src/main/AndroidManifest.xml
+          echo "✅ Servicios registrados"
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew

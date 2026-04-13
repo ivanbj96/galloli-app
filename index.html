@@ -405,6 +405,36 @@
     <script src="js/facturacion-ui.js"></script>
     <script src="js/app.js"></script>
     
+    <script>
+    // Recibir token FCM desde MainActivity (solo en APK nativa)
+    window.onFcmToken = function(token) {
+        console.log('[FCM] Token recibido:', token ? token.substring(0,20) + '...' : 'null');
+        if (!token) return;
+        localStorage.setItem('fcm_token', token);
+        // Enviar al worker cuando AuthManager esté listo
+        var trySend = function(retries) {
+            if (window.AuthManager && window.AuthManager.token) {
+                fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/subscribe-fcm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + window.AuthManager.token
+                    },
+                    body: JSON.stringify({ fcmToken: token, platform: 'android' })
+                }).then(function(r) {
+                    if (r.ok) console.log('[FCM] Token guardado en servidor');
+                    else r.text().then(function(t) { console.warn('[FCM] Error:', t); });
+                }).catch(function(e) { console.warn('[FCM] Error enviando token:', e); });
+            } else if (retries > 0) {
+                setTimeout(function() { trySend(retries - 1); }, 2000);
+            }
+        };
+        trySend(15);
+    };
+    // Si el token ya estaba disponible antes de que cargara este script
+    if (window._fcmToken) window.onFcmToken(window._fcmToken);
+    </script>
+    
     <!-- Modales personalizados -->
     <div id="custom-modal-overlay" class="modal-overlay">
         <div class="modal-box">

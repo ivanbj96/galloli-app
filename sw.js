@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.19.4'; // BLE scan libre sin filtro de servicio + selector propio
+const APP_VERSION = '7.20.0'; // Logo propio + splash + FCM push nativo Android
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

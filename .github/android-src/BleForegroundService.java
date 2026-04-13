@@ -76,7 +76,7 @@ public class BleForegroundService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("GallOli")
             .setContentText("Balanza BLE conectada - leyendo peso")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
             .build();

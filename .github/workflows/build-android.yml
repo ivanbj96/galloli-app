@@ -105,6 +105,13 @@ jobs:
             sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
             printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#185a83</color>\n</resources>\n' > "$RES/values/colors.xml"
           fi
+          # Generar ic_notification.png — ícono blanco monocromático para notificaciones Android
+          mkdir -p "$RES/drawable"
+          convert "$SRC" -resize 96x96 \
+            -colorspace Gray -threshold 50% \
+            -background transparent -alpha on \
+            -channel RGB -evaluate set 100% \
+            "$RES/drawable/ic_notification.png"
           echo "Iconos generados"
 
       - name: Generate splash screens

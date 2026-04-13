@@ -296,25 +296,30 @@ const PushNotifications = {
 
     // Inicializar FCM nativo si estamos en APK Capacitor
     initNativeFcm() {
-        // El token puede llegar antes o después de que JS cargue
         const tryRegister = (token) => {
-            if (token) this.registerFcmToken(token);
+            if (token) {
+                this.registerFcmToken(token).then(ok => {
+                    if (ok) {
+                        // Actualizar el toggle del sidebar
+                        const sw = document.getElementById('notif-switch');
+                        const status = document.getElementById('notif-status-sidebar');
+                        if (sw) { sw.checked = true; sw.disabled = false; }
+                        if (status) { status.textContent = 'Activas (FCM)'; status.style.color = 'rgba(76, 175, 80, 0.9)'; }
+                    }
+                });
+            }
         };
 
-        // Si ya está disponible (Java lo inyectó antes)
         if (window._fcmToken) {
             tryRegister(window._fcmToken);
         }
 
-        // Callback para cuando Java lo inyecte después
         window.onFcmToken = (token) => {
             console.log('[FCM] Token recibido desde Java');
             tryRegister(token);
         };
 
-        // También revisar SharedPreferences via Capacitor Preferences si está disponible
         if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-            // Verificar si hay token guardado de sesión anterior
             const savedToken = localStorage.getItem('galloli_fcm_token');
             if (savedToken) {
                 console.log('[FCM] Token previo encontrado, re-registrando...');

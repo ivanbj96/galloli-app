@@ -65,7 +65,7 @@ public class GalloliFirebaseService extends FirebaseMessagingService {
         );
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(getApplicationInfo().icon)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)

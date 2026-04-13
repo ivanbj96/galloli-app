@@ -5951,11 +5951,28 @@ App.showScaleCapture = function() {
 App.initNotifToggle = async function() {
     const sw = document.getElementById('notif-switch');
     const status = document.getElementById('notif-status-sidebar');
-    if (!sw || !status) {
-        console.warn('🔔 Toggle notif: elementos no encontrados en DOM');
+    if (!sw || !status) return;
+
+    // Detectar si estamos en APK nativa (Capacitor)
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+    if (isNative) {
+        // En APK nativa usamos FCM — siempre soportado
+        const fcmToken = window._fcmToken || localStorage.getItem('galloli_fcm_token');
+        sw.disabled = false;
+        if (fcmToken) {
+            sw.checked = true;
+            status.textContent = 'Activas (FCM)';
+            status.style.color = 'rgba(76, 175, 80, 0.9)';
+        } else {
+            sw.checked = false;
+            status.textContent = 'Toca para activar';
+            status.style.color = '';
+        }
         return;
     }
 
+    // PWA/TWA: usar Web Push VAPID
     if (!('Notification' in window) || !('PushManager' in window)) {
         status.textContent = 'No soportado';
         sw.disabled = true;
@@ -5963,58 +5980,82 @@ App.initNotifToggle = async function() {
     }
 
     if (Notification.permission === 'denied') {
-        status.textContent = 'Bloqueado en ajustes del sistema';
+        status.textContent = 'Bloqueado en ajustes';
         sw.checked = false;
         sw.disabled = true;
         return;
     }
 
     if (Notification.permission === 'granted') {
-        console.log('🔔 initNotifToggle: permiso granted, verificando suscripcion...');        try {
-            // Usar la registration guardada, o esperar con ready
+        try {
             const reg = App._swRegistration || await navigator.serviceWorker.ready;
-            if (!reg) {
-                console.warn('🔔 No hay SW registrado aun');
-                sw.checked = false;
-                sw.disabled = false;
-                status.textContent = 'Toca para activar';
-                return;
-            }
+            if (!reg) { sw.checked = false; sw.disabled = false; status.textContent = 'Toca para activar'; return; }
             let sub = await reg.pushManager.getSubscription();
-            console.log('🔔 Suscripcion existente:', !!sub);
-
             if (!sub) {
-                // Re-suscribir automxticamente
-                console.log('🔔 Re-suscribiendo automaticamente...');
                 await PushNotifications._setupSubscription();
                 sub = await reg.pushManager.getSubscription();
             } else {
-                // Ya existe — asegurar registro en servidor
                 await PushNotifications._saveSubscriptionToServer(sub, 1);
             }
-
             sw.checked = !!sub;
             sw.disabled = false;
             status.textContent = sub ? 'Activas' : 'Toca para activar';
             status.style.color = sub ? 'rgba(76, 175, 80, 0.9)' : '';
-            console.log('🔔 Toggle notif estado final:', sw.checked ? 'activo' : 'inactivo');
         } catch(e) {
-            console.error('🔔 Error en initNotifToggle:', e.message);
-            sw.checked = false;
-            sw.disabled = false;
-            status.textContent = 'Toca para activar';
+            sw.checked = false; sw.disabled = false; status.textContent = 'Toca para activar';
         }
     } else {
-        sw.checked = false;
-        sw.disabled = false;
-        status.textContent = 'Toca para activar';
+        sw.checked = false; sw.disabled = false; status.textContent = 'Toca para activar';
     }
 };
 
 App.onNotifSwitchChange = async function(checked) {
     const sw = document.getElementById('notif-switch');
     const status = document.getElementById('notif-status-sidebar');
+    const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
+    if (isNative) {
+        // En APK nativa: activar = registrar token FCM, desactivar = eliminar del servidor
+        if (checked) {
+            const fcmToken = window._fcmToken || localStorage.getItem('galloli_fcm_token');
+            if (fcmToken) {
+                sw.disabled = true;
+                status.textContent = 'Activando...';
+                const ok = await PushNotifications.registerFcmToken(fcmToken);
+                sw.disabled = false;
+                if (ok) {
+                    status.textContent = 'Activas (FCM)';
+                    status.style.color = 'rgba(76, 175, 80, 0.9)';
+                    sw.checked = true;
+                    Utils.showNotification('🔔 Notificaciones activadas', 'success', 3000);
+                } else {
+                    sw.checked = false;
+                    status.textContent = 'Error al activar';
+                }
+            } else {
+                // No hay token aún — esperar
+                status.textContent = 'Iniciando FCM...';
+                sw.checked = false;
+                Utils.showNotification('Espera un momento e intenta de nuevo', 'info', 3000);
+            }
+        } else {
+            const token = window.AuthManager ? window.AuthManager.token : null;
+            const fcmToken = window._fcmToken || localStorage.getItem('galloli_fcm_token');
+            if (token && fcmToken) {
+                fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/subscribe', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ endpoint: 'fcm://' + fcmToken })
+                }).catch(() => {});
+            }
+            status.textContent = 'Toca para activar';
+            status.style.color = '';
+            Utils.showNotification('🔕 Notificaciones desactivadas', 'info', 2000);
+        }
+        return;
+    }
+
+    // PWA/TWA: Web Push VAPID
     if (checked) {
         sw.disabled = true;
         status.textContent = 'Activando...';
@@ -6036,12 +6077,10 @@ App.onNotifSwitchChange = async function(checked) {
         }
         sw.disabled = Notification.permission === 'denied';
     } else {
-        // Desuscribir
         try {
             const reg = await navigator.serviceWorker.ready;
             const sub = await reg.pushManager.getSubscription();
             if (sub) {
-                // Notificar al servidor
                 const token = window.AuthManager ? window.AuthManager.token : null;
                 if (token) {
                     fetch('https://galloli-sync.ivanbj-96.workers.dev/api/push/subscribe', {

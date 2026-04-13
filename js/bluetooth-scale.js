@@ -1,6 +1,6 @@
 // Balanza Bluetooth BLE — GallOli
 // Protocolo CAMRY: servicio 0xFFE0, caracteristica 0xFFE1, datos ASCII "001.70kg"
-// En Capacitor APK: usa @capacitor-community/bluetooth-le (BleClient importado via CDN/bundle)
+// En Capacitor APK: usa @capacitor-community/bluetooth-le (BleClient via ble-bundle.js)
 // En navegador/TWA: usa Web Bluetooth API
 const BluetoothScale = {
     device: null,
@@ -17,7 +17,8 @@ const BluetoothScale = {
     activeScaleId: null,
     _rawLog: [],
     _nativeDeviceId: null,
-    _bleClient: null,  // BleClient del plugin @capacitor-community/bluetooth-le
+    _bleClient: null,
+    _reconnectTimer: null,  // timer de reconexión automática
 
     isNative() {
         return typeof window !== 'undefined' &&
@@ -26,10 +27,8 @@ const BluetoothScale = {
                window.Capacitor.isNativePlatform();
     },
 
-    // Obtener BleClient — generado por esbuild en el CI como window.BleClient
     _getBleClient() {
         if (this._bleClient) return this._bleClient;
-        // El bundle ble-bundle.js expone window.BleClient
         if (window.BleClient) {
             this._bleClient = window.BleClient;
             return this._bleClient;
@@ -41,15 +40,66 @@ const BluetoothScale = {
         return this.isNative() || ('bluetooth' in navigator);
     },
 
+    // Iniciar foreground service para mantener conexión en segundo plano
+    _startForeground() {
+        if (!this.isNative() || !window.Capacitor) return;
+        try {
+            var BleForeground = window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+            if (BleForeground) BleForeground.start().catch(function(){});
+        } catch(e) {}
+    },
+
+    _stopForeground() {
+        if (!this.isNative() || !window.Capacitor) return;
+        try {
+            var BleForeground = window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+            if (BleForeground) BleForeground.stop().catch(function(){});
+        } catch(e) {}
+    },
+
+    // Programar reconexión automática sin esperar interacción del usuario
+    _scheduleReconnect() {
+        if (this._reconnectTimer) return;
+        var self = this;
+        this._reconnectTimer = setTimeout(function() {
+            self._reconnectTimer = null;
+            self._autoReconnect();
+        }, 3000);
+    },
+
+    async _autoReconnect() {
+        if (this.isConnected || this.isConnecting) return;
+        if (!this.activeScaleId) return;
+        var saved = this.savedScales.find(function(s) { return s.id === BluetoothScale.activeScaleId; });
+        if (!saved) return;
+        try {
+            await this._connectNativeById(saved.id, saved.name);
+        } catch(e) {
+            // Si falla, volver a intentar en 5s
+            var self = this;
+            this._reconnectTimer = setTimeout(function() {
+                self._reconnectTimer = null;
+                self._autoReconnect();
+            }, 5000);
+        }
+    },
+
     async init() {
         if (!this.isSupported()) return;
         this._loadSavedScales();
         this.updateUI();
-        if (this.activeScaleId) {
-            const tryOnce = async () => {
+
+        // En nativo: reconectar inmediatamente al iniciar si hay dispositivo guardado
+        if (this.isNative() && this.activeScaleId) {
+            var self = this;
+            // Pequeño delay para que BleClient esté listo
+            setTimeout(function() { self._autoReconnect(); }, 1000);
+        } else if (this.activeScaleId) {
+            // Web: esperar interacción del usuario (requerimiento del navegador)
+            var tryOnce = async function() {
                 document.removeEventListener('touchstart', tryOnce);
                 document.removeEventListener('click', tryOnce);
-                await this._tryAutoReconnect();
+                await BluetoothScale._tryAutoReconnect();
             };
             document.addEventListener('touchstart', tryOnce, { once: true, passive: true });
             document.addEventListener('click', tryOnce, { once: true });
@@ -77,29 +127,15 @@ const BluetoothScale = {
     async _tryAutoReconnect() {
         if (this.isConnected || this.isConnecting) return;
         if (this.isNative()) {
-            // En nativo intentar reconectar al dispositivo guardado
-            var saved = this.savedScales.find(function(s) { return s.id === this.activeScaleId; }.bind(this));
-            if (saved && saved.id) {
-                try {
-                    this.isConnecting = true;
-                    this.updateUI();
-                    this._nativeDeviceId = saved.id;
-                    await this._connectNativeById(saved.id, saved.name);
-                } catch(e) {
-                    // silencioso
-                } finally {
-                    this.isConnecting = false;
-                    this.updateUI();
-                }
-            }
+            await this._autoReconnect();
             return;
         }
         if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
         try {
             var devices = await navigator.bluetooth.getDevices();
-            var saved2 = this.savedScales.find(function(s) { return s.id === this.activeScaleId; }.bind(this));
-            if (!saved2) return;
-            var device = devices.find(function(d) { return d.id === this.activeScaleId; }.bind(this));
+            var saved = this.savedScales.find(function(s) { return s.id === BluetoothScale.activeScaleId; });
+            if (!saved) return;
+            var device = devices.find(function(d) { return d.id === BluetoothScale.activeScaleId; });
             if (device) {
                 this.isConnecting = true;
                 this.updateUI();
@@ -153,27 +189,31 @@ const BluetoothScale = {
     async _connectNativeById(deviceId, deviceName) {
         var BleClient = this._getBleClient();
         if (!BleClient) throw new Error('Plugin BLE no disponible');
+
+        // Inicializar BLE antes de conectar
+        try { await BleClient.initialize({ androidNeverForLocation: false }); } catch(e) {}
+
         var self = this;
+
+        // Callback de desconexión: reconectar automáticamente sin esperar interacción
         await BleClient.connect(deviceId, function() {
             self.isConnected = false;
             self._nativeDeviceId = null;
             self.currentWeight = 0;
             self.updateUI();
             self._notifyListeners(null);
-            var tryReconnect = async function() {
-                document.removeEventListener('touchstart', tryReconnect);
-                document.removeEventListener('click', tryReconnect);
-                await self._tryAutoReconnect();
-            };
-            document.addEventListener('touchstart', tryReconnect, { once: true, passive: true });
-            document.addEventListener('click', tryReconnect, { once: true });
+            self._stopForeground();
+            // Reconectar automáticamente en 3s
+            self._scheduleReconnect();
         });
+
         await BleClient.startNotifications(
             deviceId,
             '0000ffe0-0000-1000-8000-00805f9b34fb',
             '0000ffe1-0000-1000-8000-00805f9b34fb',
             function(value) { self._handleData(value); }
         );
+
         this._nativeDeviceId = deviceId;
         var entry = { id: deviceId, name: deviceName || 'Balanza', lastSeen: Date.now() };
         var existing = this.savedScales.findIndex(function(s) { return s.id === deviceId; });
@@ -183,6 +223,10 @@ const BluetoothScale = {
         this._saveSavedScales();
         this.isConnected = true;
         this.updateUI();
+
+        // Iniciar foreground service para mantener conexión en segundo plano
+        this._startForeground();
+
         Utils.showNotification('Balanza "' + (deviceName || 'Desconocida') + '" conectada', 'success', 3000);
         return true;
     },
@@ -339,6 +383,11 @@ const BluetoothScale = {
     },
 
     async disconnect() {
+        // Cancelar reconexión automática pendiente
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
         if (this.isNative() && this._nativeDeviceId) {
             var BleClient = this._getBleClient();
             if (BleClient) {
@@ -354,6 +403,7 @@ const BluetoothScale = {
         this.currentWeight = 0;
         this.activeScaleId = null;
         localStorage.removeItem(this.ACTIVE_KEY);
+        this._stopForeground();
         this.updateUI();
         Utils.showNotification('Balanza desconectada', 'info', 2000);
     },

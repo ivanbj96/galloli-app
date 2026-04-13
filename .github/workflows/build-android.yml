@@ -120,30 +120,9 @@ jobs:
 
       - name: Disable Capacitor splash screen
         run: |
-          STYLES="android/app/src/main/res/values/styles.xml"
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$STYLES" ]; then
-            # Eliminar el bloque completo del estilo NoActionBarLaunch (el splash de Capacitor)
-            # Usamos python para hacer el reemplazo XML de forma segura
-            python3 - <<'PYEOF'
-import re, sys
-with open("android/app/src/main/res/values/styles.xml", "r") as f:
-    content = f.read()
-# Eliminar el estilo AppTheme.NoActionBarLaunch completo
-content = re.sub(
-    r'\s*<style name="AppTheme\.NoActionBarLaunch"[^>]*>.*?</style>',
-    '',
-    content,
-    flags=re.DOTALL
-)
-with open("android/app/src/main/res/values/styles.xml", "w") as f:
-    f.write(content)
-print("NoActionBarLaunch eliminado de styles.xml")
-PYEOF
-          fi
-          # En el AndroidManifest, cambiar el tema de launch al tema base sin splash
-          sed -i 's|AppTheme\.NoActionBarLaunch|AppTheme.NoActionBar|g' "$MANIFEST"
-          echo "AndroidManifest actualizado"
+          python3 .github/scripts/disable_splash.py
+          sed -i 's|AppTheme\.NoActionBarLaunch|AppTheme.NoActionBar|g' android/app/src/main/AndroidManifest.xml
+          echo "Splash nativo desactivado"
 
       - name: Generate splash screens
         run: |

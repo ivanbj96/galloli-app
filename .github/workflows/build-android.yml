@@ -22,10 +22,13 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Install TypeScript (required by Capacitor)
+      - name: Install TypeScript
         run: npm install -D typescript --legacy-peer-deps
 
-      - name: Prepare www folder for Capacitor
+      - name: Install BLE plugin
+        run: npm install @capacitor-community/bluetooth-le --legacy-peer-deps
+
+      - name: Prepare www folder
         run: |
           mkdir -p www
           cp index.html www/
@@ -53,87 +56,48 @@ jobs:
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
       - name: Add Android platform
-        run: npx cap add android || echo "Platform may already exist"
+        run: npx cap add android || echo "Platform already exists"
 
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Inject Capacitor plugins (BLE + Push)
+      - name: Copy native Java files
         run: |
           JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
           mkdir -p "$JAVA_DIR"
-          cp .github/android-src/BlePlugin.java              "$JAVA_DIR/"
-          cp .github/android-src/PushPlugin.java             "$JAVA_DIR/"
-          cp .github/android-src/GalloliFirebaseService.java "$JAVA_DIR/"
-          cp .github/android-src/MainActivity.java           "$JAVA_DIR/"
-          echo "✅ Plugins inyectados:"
-          ls -la "$JAVA_DIR/"
+          cp .github/android-src/BleForegroundPlugin.java "$JAVA_DIR/BleForegroundPlugin.java"
+          cp .github/android-src/BleForegroundService.java "$JAVA_DIR/BleForegroundService.java"
+          cp .github/android-src/MainActivity.java "$JAVA_DIR/MainActivity.java"
+          echo "✅ Archivos Java copiados:"
+          ls -la "$JAVA_DIR"
 
-      - name: Patch AndroidManifest (BLE + Push permissions + FCM service)
+      - name: Add BLE and Foreground Service permissions to AndroidManifest
         run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<manifest/a\
+              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\
+              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\
+              <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />\
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />\
+              <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />' \
+            android/app/src/main/AndroidManifest.xml
+          echo "✅ Permisos BLE agregados"
 
-          # 1. Agregar permisos antes de <application
-          sed -i 's|<application|<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />\n    <application|' "$MANIFEST"
-
-          # 2. Agregar el servicio FCM antes de </application>
-          sed -i 's|</application>|        <service android:name=".GalloliFirebaseService" android:exported="false">\n            <intent-filter>\n                <action android:name="com.google.firebase.MESSAGING_EVENT" />\n            </intent-filter>\n        </service>\n    </application>|' "$MANIFEST"
-
-          echo "✅ AndroidManifest parcheado"
-
-      - name: Add Firebase to build.gradle (app)
+      - name: Register BleForegroundService in AndroidManifest
         run: |
-          APP_GRADLE="android/app/build.gradle"
-
-          # Agregar plugin de google-services al final del bloque plugins si existe, o al inicio del archivo
-          if grep -q "apply plugin:" "$APP_GRADLE"; then
-              echo "apply plugin: 'com.google.gms.google-services'" >> "$APP_GRADLE"
-          else
-              sed -i '1s/^/apply plugin: "com.google.gms.google-services"\n/' "$APP_GRADLE"
-          fi
-
-          # Agregar dependencias Firebase
-          sed -i 's|dependencies {|dependencies {\n    implementation platform("com.google.firebase:firebase-bom:33.1.0")\n    implementation "com.google.firebase:firebase-messaging"|' "$APP_GRADLE"
-
-          echo "✅ Firebase agregado a app/build.gradle"
-
-      - name: Add google-services plugin to root build.gradle
-        run: |
-          ROOT_GRADLE="android/build.gradle"
-
-          # Agregar classpath de google-services en buildscript/dependencies
-          sed -i 's|classpath("com.android.tools.build:gradle|classpath("com.google.gms:google-services:4.4.2")\n        classpath("com.android.tools.build:gradle|' "$ROOT_GRADLE"
-
-          echo "✅ google-services plugin agregado a build.gradle raíz"
-
-      - name: Create google-services.json (sin Firebase real, solo para compilar)
-        run: |
-          cat > android/app/google-services.json << 'EOF'
-          {
-            "project_info": {
-              "project_number": "000000000000",
-              "project_id": "galloli-app",
-              "storage_bucket": "galloli-app.appspot.com"
-            },
-            "client": [
-              {
-                "client_info": {
-                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
-                  "android_client_info": {
-                    "package_name": "store.ivapps.galloli"
-                  }
-                },
-                "oauth_client": [],
-                "api_key": [{ "current_key": "placeholder_key" }],
-                "services": {
-                  "appinvite_service": { "other_platform_oauth_client": [] }
-                }
-              }
-            ],
-            "configuration_version": "1"
-          }
-          EOF
-          echo "✅ google-services.json creado"
+          sed -i '/<\/activity>/a\
+              <service\
+                  android:name=".BleForegroundService"\
+                  android:enabled="true"\
+                  android:exported="false"\
+                  android:foregroundServiceType="connectedDevice" />' \
+            android/app/src/main/AndroidManifest.xml
+          echo "✅ BleForegroundService registrado"
+          cat android/app/src/main/AndroidManifest.xml
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.19.0'; // Capacitor plugins reales BlePlugin + PushPlugin
+const APP_VERSION = '7.19.1'; // BLE correcto: registerPlugin + CapacitorCommunityBluetoothLe
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

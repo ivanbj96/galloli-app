@@ -1,6 +1,6 @@
 // Balanza Bluetooth BLE — GallOli
 // Protocolo CAMRY: servicio 0xFFE0, caracteristica 0xFFE1, datos ASCII "001.70kg"
-// En Capacitor APK: usa plugin nativo BleClient
+// En Capacitor APK: usa @capacitor-community/bluetooth-le (BleClient importado via CDN/bundle)
 // En navegador/TWA: usa Web Bluetooth API
 const BluetoothScale = {
     device: null,
@@ -17,6 +17,7 @@ const BluetoothScale = {
     activeScaleId: null,
     _rawLog: [],
     _nativeDeviceId: null,
+    _bleClient: null,  // BleClient del plugin @capacitor-community/bluetooth-le
 
     isNative() {
         return typeof window !== 'undefined' &&
@@ -25,9 +26,14 @@ const BluetoothScale = {
                window.Capacitor.isNativePlatform();
     },
 
-    _getBlePlugin() {
-        if (this.isNative() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleClient) {
-            return window.Capacitor.Plugins.BleClient;
+    // Obtener BleClient — se resuelve desde window.CapacitorCommunityBluetoothLe
+    // que Capacitor inyecta automáticamente al hacer cap sync
+    _getBleClient() {
+        if (this._bleClient) return this._bleClient;
+        // Capacitor expone el plugin en window después de cap sync
+        if (window.CapacitorCommunityBluetoothLe && window.CapacitorCommunityBluetoothLe.BleClient) {
+            this._bleClient = window.CapacitorCommunityBluetoothLe.BleClient;
+            return this._bleClient;
         }
         return null;
     },
@@ -135,9 +141,9 @@ const BluetoothScale = {
     },
 
     async _connectNative() {
-        var BleClient = this._getBlePlugin();
+        var BleClient = this._getBleClient();
         if (!BleClient) throw new Error('Plugin BLE no disponible');
-        await BleClient.initialize();
+        await BleClient.initialize({ androidNeverForLocation: false });
         var device = await BleClient.requestDevice({
             services: ['0000ffe0-0000-1000-8000-00805f9b34fb'],
             optionalServices: ['0000fff0-0000-1000-8000-00805f9b34fb']
@@ -146,7 +152,7 @@ const BluetoothScale = {
     },
 
     async _connectNativeById(deviceId, deviceName) {
-        var BleClient = this._getBlePlugin();
+        var BleClient = this._getBleClient();
         if (!BleClient) throw new Error('Plugin BLE no disponible');
         var self = this;
         await BleClient.connect(deviceId, function() {
@@ -335,7 +341,7 @@ const BluetoothScale = {
 
     async disconnect() {
         if (this.isNative() && this._nativeDeviceId) {
-            var BleClient = this._getBlePlugin();
+            var BleClient = this._getBleClient();
             if (BleClient) {
                 try { await BleClient.disconnect(this._nativeDeviceId); } catch(e) {}
             }

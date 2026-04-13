@@ -172,46 +172,7 @@ XMLEOF
           echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           echo "✅ google-services.json escrito"
 
-          # Parchear root build.gradle - agregar classpath de google-services
-          python3 - << 'PYEOF'
-import re
-
-# Root build.gradle
-with open('android/build.gradle', 'r') as f:
-    content = f.read()
-
-if 'google-services' not in content:
-    content = content.replace(
-        'dependencies {',
-        "dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'",
-        1
-    )
-    with open('android/build.gradle', 'w') as f:
-        f.write(content)
-    print("✅ google-services classpath agregado a root build.gradle")
-else:
-    print("ℹ️ google-services ya estaba en root build.gradle")
-
-# App build.gradle
-with open('android/app/build.gradle', 'r') as f:
-    content = f.read()
-
-if 'google-services' not in content:
-    # Agregar plugin al inicio del archivo
-    content = "apply plugin: 'com.google.gms.google-services'\n" + content
-    print("✅ google-services plugin agregado a app/build.gradle")
-
-if 'firebase-messaging' not in content:
-    content = content.replace(
-        'dependencies {',
-        "dependencies {\n    implementation 'com.google.firebase:firebase-messaging:24.0.0'",
-        1
-    )
-    print("✅ firebase-messaging dependency agregada")
-
-with open('android/app/build.gradle', 'w') as f:
-    f.write(content)
-PYEOF
+          python3 .github/scripts/patch_firebase.py
 
       # ── PERMISOS ANDROID MANIFEST ──────────────────────────────────────────
       - name: Patch AndroidManifest

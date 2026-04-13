@@ -142,14 +142,15 @@ XMLEOF
 
       # ── JAVA NATIVO ────────────────────────────────────────────────────────
       - name: Copy native Java files
+        env:
+          HAS_FIREBASE: ${{ secrets.GOOGLE_SERVICES_JSON != '' && 'yes' || 'no' }}
         run: |
           JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
           mkdir -p "$JAVA_DIR"
           cp .github/android-src/BleForegroundPlugin.java  "$JAVA_DIR/"
           cp .github/android-src/BleForegroundService.java "$JAVA_DIR/"
 
-          # Usar MainActivity con o sin Firebase según el secret
-          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+          if [ "$HAS_FIREBASE" = "yes" ]; then
             cp .github/android-src/MainActivityFcm.java "$JAVA_DIR/MainActivity.java"
             cp .github/android-src/GalloliFirebaseService.java "$JAVA_DIR/"
             echo "✅ MainActivity con Firebase"

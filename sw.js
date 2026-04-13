@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.2'; // Fix YAML syntax error en workflow - heredoc Python
+const APP_VERSION = '7.20.3'; // Fix YAML: secrets solo en env no en run bash
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -382,6 +382,8 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- BleClient bundle (solo existe en APK, generado por CI) -->
+    <script src="js/ble-bundle.js" onerror="console.log('ble-bundle no disponible - modo PWA')"></script>
     <script src="js/utils.js"></script>
     <script src="js/error-handler.js"></script>
     <script src="js/sw-update.js"></script>

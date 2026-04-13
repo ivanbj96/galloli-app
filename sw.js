@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.19.1'; // BLE correcto: registerPlugin + CapacitorCommunityBluetoothLe
+const APP_VERSION = '7.19.2'; // BleClient via esbuild bundle - window.BleClient
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

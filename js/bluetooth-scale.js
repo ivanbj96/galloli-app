@@ -26,13 +26,12 @@ const BluetoothScale = {
                window.Capacitor.isNativePlatform();
     },
 
-    // Obtener BleClient — se resuelve desde window.CapacitorCommunityBluetoothLe
-    // que Capacitor inyecta automáticamente al hacer cap sync
+    // Obtener BleClient — generado por esbuild en el CI como window.BleClient
     _getBleClient() {
         if (this._bleClient) return this._bleClient;
-        // Capacitor expone el plugin en window después de cap sync
-        if (window.CapacitorCommunityBluetoothLe && window.CapacitorCommunityBluetoothLe.BleClient) {
-            this._bleClient = window.CapacitorCommunityBluetoothLe.BleClient;
+        // El bundle ble-bundle.js expone window.BleClient
+        if (window.BleClient) {
+            this._bleClient = window.BleClient;
             return this._bleClient;
         }
         return null;

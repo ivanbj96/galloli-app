@@ -28,6 +28,19 @@ jobs:
       - name: Install BLE plugin
         run: npm install @capacitor-community/bluetooth-le --legacy-peer-deps
 
+      - name: Bundle BleClient for vanilla JS
+        run: |
+          npm install -D esbuild --legacy-peer-deps
+          npx esbuild js/ble-entry.js \
+            --bundle \
+            --format=iife \
+            --global-name=__BleBundle \
+            --outfile=js/ble-bundle.js \
+            --platform=browser \
+            --target=es2017
+          echo "✅ ble-bundle.js generado:"
+          ls -lh js/ble-bundle.js
+
       - name: Prepare www folder
         run: |
           mkdir -p www

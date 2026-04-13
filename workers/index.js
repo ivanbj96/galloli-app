@@ -1915,34 +1915,113 @@ async function sendPushToAllSubs(businessId, title, body, data = {}, env) {
 }
 
 // Enviar notificación push via FCM HTTP v1 API (Android nativo)
+// Enviar notificación push via FCM HTTP v1 API (Android nativo)
 async function sendFcmPush(fcmToken, title, body, env) {
   try {
-    const serverKey = env.FCM_SERVER_KEY;
-    if (!serverKey) { console.warn('FCM_SERVER_KEY no configurada'); return false; }
+    const saJson = env.FIREBASE_SERVICE_ACCOUNT;
+    if (!saJson) { console.warn('FIREBASE_SERVICE_ACCOUNT no configurada'); return false; }
 
-    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'key=' + serverKey
-      },
-      body: JSON.stringify({
-        to: fcmToken,
-        notification: { title, body, sound: 'default' },
-        data: { title, body },
-        priority: 'high'
-      })
-    });
+    const sa = JSON.parse(saJson);
+    const projectId = sa.project_id;
 
-    const result = await response.json();
-    if (result.failure > 0) {
-      console.warn('FCM error:', JSON.stringify(result));
+    // Generar JWT para OAuth2 usando Web Crypto (compatible con Cloudflare Workers)
+    const accessToken = await getFcmAccessToken(sa);
+    if (!accessToken) { console.warn('No se pudo obtener access token FCM'); return false; }
+
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + accessToken
+        },
+        body: JSON.stringify({
+          message: {
+            token: fcmToken,
+            notification: { title, body },
+            android: {
+              priority: 'high',
+              notification: {
+                channel_id: 'galloli_push_channel',
+                sound: 'default'
+              }
+            },
+            data: { title, body, click_action: 'FLUTTER_NOTIFICATION_CLICK' }
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.warn('FCM v1 error:', response.status, err);
       return false;
     }
     return true;
   } catch (e) {
     console.error('sendFcmPush error:', e.message);
     return false;
+  }
+}
+
+// Generar access token OAuth2 para FCM v1 usando service account (Web Crypto)
+async function getFcmAccessToken(sa) {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const payload = {
+      iss: sa.client_email,
+      scope: 'https://www.googleapis.com/auth/firebase.messaging',
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600
+    };
+
+    const b64 = (obj) => btoa(JSON.stringify(obj))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    const signingInput = b64(header) + '.' + b64(payload);
+
+    // Importar clave privada RSA
+    const pemBody = sa.private_key
+      .replace('-----BEGIN PRIVATE KEY-----', '')
+      .replace('-----END PRIVATE KEY-----', '')
+      .replace(/\n/g, '');
+    const keyDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8', keyDer.buffer,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false, ['sign']
+    );
+
+    const signature = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      cryptoKey,
+      new TextEncoder().encode(signingInput)
+    );
+
+    const jwt = signingInput + '.' +
+      btoa(String.fromCharCode(...new Uint8Array(signature)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    // Intercambiar JWT por access token
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
+    });
+
+    if (!tokenRes.ok) {
+      console.warn('OAuth2 token error:', await tokenRes.text());
+      return null;
+    }
+    const { access_token } = await tokenRes.json();
+    return access_token;
+  } catch (e) {
+    console.error('getFcmAccessToken error:', e.message);
+    return null;
   }
 }
 

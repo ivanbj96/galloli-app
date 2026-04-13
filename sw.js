@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.6'; // Firebase FCM integrado en APK Capacitor
+const APP_VERSION = '7.20.7'; // FCM HTTP v1 con service account, canal notificaciones
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

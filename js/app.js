@@ -83,6 +83,11 @@ const App = {
 
         // INICIALIZAR NOTIFICACIONES PUSH — sin await, no debe bloquear el arranque
         this.initPushNotifications();
+
+        // INICIALIZAR FCM NATIVO (APK Capacitor) — registrar token con el worker
+        if (typeof PushNotifications !== 'undefined') {
+            PushNotifications.initNativeFcm();
+        }
         
         // INICIALIZAR BACKUP AUTOMxTICO
         await AutoBackup.init();

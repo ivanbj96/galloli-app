@@ -261,6 +261,66 @@ const PushNotifications = {
         const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
         const rawData = atob(base64);
         return Uint8Array.from(rawData, c => c.charCodeAt(0));
+    },
+
+    // Registrar token FCM nativo (APK Capacitor) con el worker
+    async registerFcmToken(token) {
+        if (!token) return false;
+        try {
+            const authToken = window.AuthManager ? window.AuthManager.token : null;
+            if (!authToken) {
+                // Reintentar en 3s cuando el auth esté listo
+                setTimeout(() => this.registerFcmToken(token), 3000);
+                return false;
+            }
+            const res = await fetch(`${WORKER_URL}/api/push/subscribe-fcm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ fcmToken: token, platform: 'android' })
+            });
+            if (res.ok) {
+                console.log('[FCM] Token registrado en servidor:', token.substring(0, 20) + '...');
+                localStorage.setItem('galloli_fcm_token', token);
+                return true;
+            }
+            console.warn('[FCM] Error registrando token:', res.status);
+            return false;
+        } catch (e) {
+            console.error('[FCM] registerFcmToken error:', e.message);
+            return false;
+        }
+    },
+
+    // Inicializar FCM nativo si estamos en APK Capacitor
+    initNativeFcm() {
+        // El token puede llegar antes o después de que JS cargue
+        const tryRegister = (token) => {
+            if (token) this.registerFcmToken(token);
+        };
+
+        // Si ya está disponible (Java lo inyectó antes)
+        if (window._fcmToken) {
+            tryRegister(window._fcmToken);
+        }
+
+        // Callback para cuando Java lo inyecte después
+        window.onFcmToken = (token) => {
+            console.log('[FCM] Token recibido desde Java');
+            tryRegister(token);
+        };
+
+        // También revisar SharedPreferences via Capacitor Preferences si está disponible
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+            // Verificar si hay token guardado de sesión anterior
+            const savedToken = localStorage.getItem('galloli_fcm_token');
+            if (savedToken) {
+                console.log('[FCM] Token previo encontrado, re-registrando...');
+                this.registerFcmToken(savedToken);
+            }
+        }
     }
 };
 

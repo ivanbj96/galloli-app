@@ -38,7 +38,7 @@ jobs:
             --outfile=js/ble-bundle.js \
             --platform=browser \
             --target=es2017
-          echo "✅ ble-bundle.js generado"
+          echo "ble-bundle.js generado"
 
       - name: Prepare www folder
         run: |
@@ -73,116 +73,64 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # ── LOGO E ICONOS ──────────────────────────────────────────────────────
       - name: Install ImageMagick
         run: sudo apt-get install -y imagemagick
 
-      - name: Generate app icons from GallOli logo
+      - name: Generate app icons
         run: |
           SRC="icons/favicon.pub/android-chrome-512x512.png"
           RES="android/app/src/main/res"
-
           for size in 48 72 96 144 192; do
             case $size in
-              48)  density="mdpi"    ;;
-              72)  density="hdpi"    ;;
-              96)  density="xhdpi"   ;;
-              144) density="xxhdpi"  ;;
-              192) density="xxxhdpi" ;;
+              48)  d="mdpi"    ;;
+              72)  d="hdpi"    ;;
+              96)  d="xhdpi"   ;;
+              144) d="xxhdpi"  ;;
+              192) d="xxxhdpi" ;;
             esac
-            mkdir -p "$RES/mipmap-$density"
-            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$density/ic_launcher.png"
-            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$density/ic_launcher_round.png"
+            mkdir -p "$RES/mipmap-$d"
+            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher.png"
+            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher_round.png"
           done
-
-          # Foreground para adaptive icon
           mkdir -p "$RES/mipmap-xxxhdpi"
-          convert "$SRC" -resize 432x432 -gravity center -extent 512x512 \
-            "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png"
-
-          # Adaptive icon XML
+          convert "$SRC" -resize 432x432 -gravity center -extent 512x512 "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png"
           mkdir -p "$RES/mipmap-anydpi-v26"
-          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" << 'XMLEOF'
-<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-</adaptive-icon>
-XMLEOF
-
-          # Color de fondo
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/ic_launcher.xml"
           mkdir -p "$RES/values"
           if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
             sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#185a83</color>|' "$RES/values/colors.xml"
           else
-            sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
             printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#185a83</color>\n</resources>\n' > "$RES/values/colors.xml"
           fi
-          echo "✅ Iconos generados"
+          echo "Iconos generados"
 
-      # ── SPLASH SCREEN ──────────────────────────────────────────────────────
       - name: Generate splash screens
         run: |
           SRC="icons/favicon.pub/android-chrome-512x512.png"
           RES="android/app/src/main/res"
-
-          for config in "port-mdpi:320x480" "port-hdpi:480x800" "port-xhdpi:720x1280" "port-xxhdpi:960x1600" "port-xxxhdpi:1280x1920"; do
-            density="${config%%:*}"
-            dims="${config##*:}"
+          for cfg in "port-mdpi:320x480" "port-hdpi:480x800" "port-xhdpi:720x1280" "port-xxhdpi:960x1600" "port-xxxhdpi:1280x1920"; do
+            d="${cfg%%:*}"
+            dims="${cfg##*:}"
             w="${dims%%x*}"
             h="${dims##*x}"
-            logo_size=$((w * 40 / 100))
-            mkdir -p "$RES/drawable-$density"
-            convert -size ${w}x${h} xc:"#185a83" \
-              \( "$SRC" -resize ${logo_size}x${logo_size} \) \
-              -gravity center -composite \
-              "$RES/drawable-$density/splash.png"
+            s=$((w * 40 / 100))
+            mkdir -p "$RES/drawable-$d"
+            convert -size ${w}x${h} xc:"#185a83" \( "$SRC" -resize ${s}x${s} \) -gravity center -composite "$RES/drawable-$d/splash.png"
           done
-          echo "✅ Splash screens generados"
+          echo "Splash screens generados"
 
-      # ── JAVA NATIVO ────────────────────────────────────────────────────────
       - name: Copy native Java files
-        env:
-          HAS_FIREBASE: ${{ secrets.GOOGLE_SERVICES_JSON != '' && 'yes' || 'no' }}
         run: |
           JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
           mkdir -p "$JAVA_DIR"
           cp .github/android-src/BleForegroundPlugin.java  "$JAVA_DIR/"
           cp .github/android-src/BleForegroundService.java "$JAVA_DIR/"
-
-          if [ "$HAS_FIREBASE" = "yes" ]; then
-            cp .github/android-src/MainActivityFcm.java "$JAVA_DIR/MainActivity.java"
-            cp .github/android-src/GalloliFirebaseService.java "$JAVA_DIR/"
-            echo "✅ MainActivity con Firebase"
-          else
-            cp .github/android-src/MainActivity.java "$JAVA_DIR/"
-            echo "✅ MainActivity sin Firebase"
-          fi
+          cp .github/android-src/MainActivity.java         "$JAVA_DIR/"
           ls -la "$JAVA_DIR"
 
-      # ── FIREBASE / FCM (solo si el secret existe) ──────────────────────────
-      - name: Setup Firebase FCM
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "⚠️ GOOGLE_SERVICES_JSON no configurado - saltando Firebase"
-            exit 0
-          fi
-
-          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-          echo "✅ google-services.json escrito"
-
-          python3 .github/scripts/patch_firebase.py
-
-      # ── PERMISOS ANDROID MANIFEST ──────────────────────────────────────────
       - name: Patch AndroidManifest
-        env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-
-          # Permisos BLE + Push
           sed -i '/<manifest/a\
               <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />\
               <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />\
@@ -196,21 +144,10 @@ XMLEOF
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\
               <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />' \
             "$MANIFEST"
-
-          # Registrar BleForegroundService
           sed -i '/<\/activity>/a\
               <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />' \
             "$MANIFEST"
-
-          # Registrar GalloliFirebaseService solo si Firebase está configurado
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            sed -i '/<\/activity>/a\
-              <service android:name=".GalloliFirebaseService" android:exported="false"><intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" \/><\/intent-filter><\/service>' \
-              "$MANIFEST"
-            echo "✅ Firebase service registrado en manifest"
-          fi
-
-          echo "✅ AndroidManifest parcheado"
+          echo "AndroidManifest parcheado"
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew

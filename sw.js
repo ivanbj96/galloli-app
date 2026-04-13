@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.11'; // Fix YAML invalido en workflow - heredoc PYEOF
+const APP_VERSION = '7.20.12'; // Fix icono launcher todas densidades, FCM token timing fix
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

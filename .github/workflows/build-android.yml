@@ -80,6 +80,7 @@ jobs:
         run: |
           SRC="icons/favicon.pub/android-chrome-512x512.png"
           RES="android/app/src/main/res"
+          # Generar ic_launcher y ic_launcher_round en TODAS las densidades
           for size in 48 72 96 144 192; do
             case $size in
               48)  d="mdpi"    ;;
@@ -91,16 +92,16 @@ jobs:
             mkdir -p "$RES/mipmap-$d"
             convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher.png"
             convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher_round.png"
+            # ic_launcher_foreground en cada densidad (para adaptive icon)
+            fg=$((size * 108 / 48))
+            convert "$SRC" -resize ${fg}x${fg} -gravity center -extent ${fg}x${fg} "$RES/mipmap-$d/ic_launcher_foreground.png"
           done
-          mkdir -p "$RES/mipmap-xxxhdpi"
-          convert "$SRC" -resize 432x432 -gravity center -extent 512x512 "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png"
-          # ic_launcher_round_foreground igual al foreground
-          cp "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png" "$RES/mipmap-xxxhdpi/ic_launcher_round_foreground.png" 2>/dev/null || true
+          # Adaptive icon XML para API 26+
           mkdir -p "$RES/mipmap-anydpi-v26"
-          # Sobrescribir AMBOS adaptive icons (ic_launcher y ic_launcher_round)
           for icon in ic_launcher ic_launcher_round; do
             printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/${icon}.xml"
           done
+          # Color de fondo del ícono adaptativo
           rm -f "$RES/values/ic_launcher_background.xml"
           mkdir -p "$RES/values"
           if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
@@ -109,14 +110,15 @@ jobs:
             sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
             printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#185a83</color>\n</resources>\n' > "$RES/values/colors.xml"
           fi
-          # Generar ic_notification.png — ícono blanco monocromático para notificaciones Android
+          # Ícono de notificación — blanco monocromático
           mkdir -p "$RES/drawable"
-          convert "$SRC" -resize 96x96 \
-            -colorspace Gray -threshold 50% \
-            -background transparent -alpha on \
-            -channel RGB -evaluate set 100% \
+          convert "$SRC" -resize 96x96 -colorspace Gray -threshold 50% \
+            -background transparent -alpha on -channel RGB -evaluate set 100% \
             "$RES/drawable/ic_notification.png"
-          echo "Iconos generados"
+          # Verificar
+          echo "=== Iconos generados ==="
+          ls -la "$RES/mipmap-hdpi/"
+          ls -la "$RES/mipmap-anydpi-v26/"
 
       - name: Disable Capacitor splash screen
         run: |

@@ -126,10 +126,19 @@ jobs:
         run: |
           JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
           mkdir -p "$JAVA_DIR"
-          cp .github/android-src/BleForegroundPlugin.java  "$JAVA_DIR/"
-          cp .github/android-src/BleForegroundService.java "$JAVA_DIR/"
-          cp .github/android-src/MainActivity.java         "$JAVA_DIR/"
+          cp .github/android-src/BleForegroundPlugin.java   "$JAVA_DIR/"
+          cp .github/android-src/BleForegroundService.java  "$JAVA_DIR/"
+          cp .github/android-src/MainActivityFcm.java       "$JAVA_DIR/MainActivity.java"
+          cp .github/android-src/GalloliFirebaseService.java "$JAVA_DIR/"
           ls -la "$JAVA_DIR"
+
+      - name: Setup Firebase
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          echo "google-services.json escrito"
+          python .github/scripts/patch_firebase.py
 
       - name: Patch AndroidManifest
         run: |
@@ -148,7 +157,10 @@ jobs:
               <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />' \
             "$MANIFEST"
           sed -i '/<\/activity>/a\
-              <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />' \
+              <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />\
+              <service android:name=".GalloliFirebaseService" android:exported="false">\
+                  <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>\
+              </service>' \
             "$MANIFEST"
           echo "AndroidManifest parcheado"
 

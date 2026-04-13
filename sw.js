@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.5'; // Fix: eliminar ic_launcher_background.xml duplicado
+const APP_VERSION = '7.20.6'; // Firebase FCM integrado en APK Capacitor
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

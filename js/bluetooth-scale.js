@@ -179,11 +179,62 @@ const BluetoothScale = {
         var BleClient = this._getBleClient();
         if (!BleClient) throw new Error('Plugin BLE no disponible');
         await BleClient.initialize({ androidNeverForLocation: false });
-        var device = await BleClient.requestDevice({
-            services: ['0000ffe0-0000-1000-8000-00805f9b34fb'],
-            optionalServices: ['0000fff0-0000-1000-8000-00805f9b34fb']
+
+        // Escanear todos los dispositivos BLE disponibles (sin filtro de servicio)
+        // para que aparezcan aunque no anuncien el servicio 0xFFE0 explícitamente
+        var self = this;
+        var foundDevices = [];
+        var scanDone = false;
+
+        return new Promise(function(resolve, reject) {
+            BleClient.requestLEScan(
+                { services: [], allowDuplicates: false },
+                function(result) {
+                    if (!result.device) return;
+                    var id = result.device.deviceId;
+                    if (!foundDevices.find(function(d) { return d.deviceId === id; })) {
+                        foundDevices.push(result.device);
+                    }
+                }
+            ).then(function() {
+                // Detener escaneo después de 5s y mostrar selector
+                setTimeout(function() {
+                    BleClient.stopLEScan().catch(function(){});
+                    scanDone = true;
+
+                    if (foundDevices.length === 0) {
+                        reject(new Error('No se encontraron dispositivos BLE'));
+                        return;
+                    }
+
+                    // Mostrar selector de dispositivos
+                    self._showDeviceSelector(foundDevices, function(device) {
+                        if (!device) { reject(new Error('Selección cancelada')); return; }
+                        self._connectNativeById(device.deviceId, device.name)
+                            .then(resolve).catch(reject);
+                    });
+                }, 5000);
+            }).catch(reject);
         });
-        return await this._connectNativeById(device.deviceId, device.name);
+    },
+
+    _showDeviceSelector(devices, callback) {
+        var existing = document.getElementById('ble-device-selector');
+        if (existing) existing.remove();
+
+        var list = devices.map(function(d) {
+            var name = d.name || d.localName || 'Dispositivo desconocido';
+            var id = d.deviceId;
+            return '<button class="btn btn-outline" style="width:100%;text-align:left;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;" onclick="document.getElementById(\'ble-device-selector\').remove(); BluetoothScale._selectorCallback({deviceId:\'' + id + '\',name:\'' + name.replace(/'/g, '') + '\'})"><span><i class="fas fa-bluetooth" style="color:#2196F3;margin-right:8px;"></i>' + name + '</span><small style="color:var(--gray);">' + id + '</small></button>';
+        }).join('');
+
+        var modal = document.createElement('div');
+        modal.id = 'ble-device-selector';
+        modal.className = 'modal active';
+        modal.innerHTML = '<div class="modal-content"><div class="modal-header"><h3><i class="fas fa-bluetooth"></i> Seleccionar Balanza</h3><button class="close-modal" onclick="document.getElementById(\'ble-device-selector\').remove(); BluetoothScale._selectorCallback(null)"><i class="fas fa-times"></i></button></div><div class="modal-body">' + list + '</div></div>';
+        document.body.appendChild(modal);
+
+        this._selectorCallback = callback;
     },
 
     async _connectNativeById(deviceId, deviceName) {

@@ -304,7 +304,7 @@ const PushNotifications = {
                         const sw = document.getElementById('notif-switch');
                         const status = document.getElementById('notif-status-sidebar');
                         if (sw) { sw.checked = true; sw.disabled = false; }
-                        if (status) { status.textContent = 'Activas (FCM)'; status.style.color = 'rgba(76, 175, 80, 0.9)'; }
+                        if (status) { status.textContent = 'Activas'; status.style.color = 'rgba(76, 175, 80, 0.9)'; }
                     }
                 });
             }
@@ -314,16 +314,23 @@ const PushNotifications = {
             tryRegister(window._fcmToken);
         }
 
+        // Callback para cuando Java inyecte el token (puede ser después del init)
         window.onFcmToken = (token) => {
             console.log('[FCM] Token recibido desde Java');
+            window._fcmToken = token;
             tryRegister(token);
         };
 
         if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
             const savedToken = localStorage.getItem('galloli_fcm_token');
-            if (savedToken) {
+            if (savedToken && !window._fcmToken) {
                 console.log('[FCM] Token previo encontrado, re-registrando...');
                 this.registerFcmToken(savedToken);
+                // Actualizar toggle inmediatamente con token guardado
+                const sw = document.getElementById('notif-switch');
+                const status = document.getElementById('notif-status-sidebar');
+                if (sw) { sw.checked = true; sw.disabled = false; }
+                if (status) { status.textContent = 'Activas'; status.style.color = 'rgba(76, 175, 80, 0.9)'; }
             }
         }
     }

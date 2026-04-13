@@ -5953,17 +5953,27 @@ App.initNotifToggle = async function() {
     const status = document.getElementById('notif-status-sidebar');
     if (!sw || !status) return;
 
-    // Detectar si estamos en APK nativa (Capacitor)
     const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
 
     if (isNative) {
-        // En APK nativa usamos FCM — siempre soportado
-        const fcmToken = window._fcmToken || localStorage.getItem('galloli_fcm_token');
         sw.disabled = false;
-        if (fcmToken) {
+        // Intentar obtener token FCM hasta 15s (puede tardar en llegar de Java)
+        const waitForFcmToken = async () => {
+            for (let i = 0; i < 15; i++) {
+                const token = window._fcmToken || localStorage.getItem('galloli_fcm_token');
+                if (token) return token;
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            return null;
+        };
+
+        const token = await waitForFcmToken();
+        if (token) {
             sw.checked = true;
-            status.textContent = 'Activas (FCM)';
+            status.textContent = 'Activas';
             status.style.color = 'rgba(76, 175, 80, 0.9)';
+            // Registrar en servidor si aún no está
+            PushNotifications.registerFcmToken(token);
         } else {
             sw.checked = false;
             status.textContent = 'Toca para activar';
@@ -5978,14 +5988,11 @@ App.initNotifToggle = async function() {
         sw.disabled = true;
         return;
     }
-
     if (Notification.permission === 'denied') {
         status.textContent = 'Bloqueado en ajustes';
-        sw.checked = false;
-        sw.disabled = true;
+        sw.checked = false; sw.disabled = true;
         return;
     }
-
     if (Notification.permission === 'granted') {
         try {
             const reg = App._swRegistration || await navigator.serviceWorker.ready;
@@ -5997,8 +6004,7 @@ App.initNotifToggle = async function() {
             } else {
                 await PushNotifications._saveSubscriptionToServer(sub, 1);
             }
-            sw.checked = !!sub;
-            sw.disabled = false;
+            sw.checked = !!sub; sw.disabled = false;
             status.textContent = sub ? 'Activas' : 'Toca para activar';
             status.style.color = sub ? 'rgba(76, 175, 80, 0.9)' : '';
         } catch(e) {

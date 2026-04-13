@@ -94,9 +94,13 @@ jobs:
           done
           mkdir -p "$RES/mipmap-xxxhdpi"
           convert "$SRC" -resize 432x432 -gravity center -extent 512x512 "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png"
+          # ic_launcher_round_foreground igual al foreground
+          cp "$RES/mipmap-xxxhdpi/ic_launcher_foreground.png" "$RES/mipmap-xxxhdpi/ic_launcher_round_foreground.png" 2>/dev/null || true
           mkdir -p "$RES/mipmap-anydpi-v26"
-          printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/ic_launcher.xml"
-          # Eliminar ic_launcher_background.xml separado si existe (evitar duplicado con colors.xml)
+          # Sobrescribir AMBOS adaptive icons (ic_launcher y ic_launcher_round)
+          for icon in ic_launcher ic_launcher_round; do
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/${icon}.xml"
+          done
           rm -f "$RES/values/ic_launcher_background.xml"
           mkdir -p "$RES/values"
           if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
@@ -113,6 +117,24 @@ jobs:
             -channel RGB -evaluate set 100% \
             "$RES/drawable/ic_notification.png"
           echo "Iconos generados"
+
+      - name: Disable Capacitor splash screen
+        run: |
+          # Eliminar el tema de splash de Capacitor del styles.xml para que no aparezca el splash nativo
+          STYLES="android/app/src/main/res/values/styles.xml"
+          if [ -f "$STYLES" ]; then
+            # Reemplazar el tema AppTheme.NoActionBarLaunch con el tema base sin splash
+            sed -i 's|AppTheme.NoActionBarLaunch|AppTheme.NoActionBar|g' "$STYLES"
+            # Eliminar cualquier item windowSplashScreen o SplashScreen
+            sed -i '/<item name="android:windowBackground">@drawable\/splash<\/item>/d' "$STYLES"
+            sed -i '/windowSplashScreen/d' "$STYLES"
+            echo "Splash theme eliminado de styles.xml"
+            cat "$STYLES"
+          fi
+          # Cambiar el tema del AndroidManifest para que use NoActionBar en lugar de NoActionBarLaunch
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i 's|AppTheme.NoActionBarLaunch|AppTheme.NoActionBar|g' "$MANIFEST"
+          echo "Tema splash eliminado del AndroidManifest"
 
       - name: Generate splash screens
         run: |

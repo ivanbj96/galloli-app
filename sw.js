@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.8'; // Splash nativo desactivado, icono notif propio, toggle FCM nativo
+const APP_VERSION = '7.20.9'; // Splash nativo eliminado, icono launcher correcto, toggle FCM con retry
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

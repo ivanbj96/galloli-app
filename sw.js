@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.0'; // Logo propio + splash + FCM push nativo Android
+const APP_VERSION = '7.20.1'; // Workflow robusto - Firebase opcional - logo + splash
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

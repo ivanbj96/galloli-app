@@ -3092,9 +3092,178 @@ const PaymentHistoryModule = {
 };
 
 const RutasModule = {
-    actualizarRutaAutomatica() {},
-    actualizarRutaPorCambioPedido() {},
-    optimizarRuta(clientes) { return clientes; }
+    mapaRuta: null,
+    mapaRutaInicializado: false,
+    marcadoresRuta: [],
+    rutaActual: null,
+
+    // Inicializar mapa de rutas
+    inicializarMapa() {
+        try {
+            const mapContainer = document.getElementById('mapa-ruta-permanente');
+            if (!mapContainer) {
+                console.warn('⚠️ Contenedor mapa-ruta-permanente no encontrado');
+                return;
+            }
+
+            if (this.mapaRutaInicializado && this.mapaRuta) {
+                console.log('✅ Mapa de rutas ya inicializado');
+                return;
+            }
+
+            // Crear mapa usando OfflineMaps
+            this.mapaRuta = OfflineMaps.createMap('mapa-ruta-permanente', {
+                center: [19.4326, -99.1332],
+                zoom: 12
+            });
+
+            if (!this.mapaRuta) {
+                console.error('❌ Error al crear mapa de rutas');
+                return;
+            }
+
+            this.mapaRutaInicializado = true;
+            console.log('✅ Mapa de rutas inicializado correctamente');
+
+            // Cargar rutas existentes
+            this.cargarRutasEnMapa();
+        } catch (error) {
+            console.error('❌ Error inicializando mapa de rutas:', error);
+        }
+    },
+
+    // Actualizar mapa de rutas
+    actualizarMapa() {
+        try {
+            if (!this.mapaRutaInicializado || !this.mapaRuta) {
+                console.warn('⚠️ Mapa de rutas no inicializado, inicializando...');
+                this.inicializarMapa();
+                return;
+            }
+
+            // Limpiar marcadores anteriores
+            this.marcadoresRuta.forEach(marcador => {
+                if (marcador && this.mapaRuta) {
+                    this.mapaRuta.removeLayer(marcador);
+                }
+            });
+            this.marcadoresRuta = [];
+
+            // Cargar nuevas rutas
+            this.cargarRutasEnMapa();
+            console.log('✅ Mapa de rutas actualizado');
+        } catch (error) {
+            console.error('❌ Error actualizando mapa de rutas:', error);
+        }
+    },
+
+    // Cargar rutas en el mapa
+    cargarRutasEnMapa() {
+        try {
+            if (!this.mapaRuta) return;
+
+            const pedidosPendientes = OrdersModule.getPendingOrders();
+            if (!pedidosPendientes || pedidosPendientes.length === 0) {
+                console.log('ℹ️ No hay pedidos pendientes para mostrar en mapa');
+                return;
+            }
+
+            // Agrupar pedidos por cliente
+            const pedidosPorCliente = {};
+            pedidosPendientes.forEach(pedido => {
+                if (!pedidosPorCliente[pedido.clientId]) {
+                    pedidosPorCliente[pedido.clientId] = [];
+                }
+                pedidosPorCliente[pedido.clientId].push(pedido);
+            });
+
+            // Mostrar marcadores para cada cliente
+            let contador = 0;
+            Object.keys(pedidosPorCliente).forEach(clientId => {
+                const cliente = ClientsModule.getClient(clientId);
+                if (cliente && cliente.gps) {
+                    const [lat, lng] = cliente.gps.split(',').map(v => parseFloat(v.trim()));
+                    
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        contador++;
+                        const marcador = OfflineMaps.createMarker(lat, lng, {
+                            color: 'var(--primary)',
+                            size: 35,
+                            label: contador.toString()
+                        });
+
+                        marcador.bindPopup(`
+                            <div style="font-size: 12px;">
+                                <strong>${cliente.name}</strong><br>
+                                Pedidos: ${pedidosPorCliente[clientId].length}<br>
+                                Total: ${Utils.formatCurrency(
+                                    pedidosPorCliente[clientId].reduce((sum, p) => sum + (p.total || 0), 0)
+                                )}
+                            </div>
+                        `);
+
+                        marcador.addTo(this.mapaRuta);
+                        this.marcadoresRuta.push(marcador);
+                    }
+                }
+            });
+
+            console.log(`✅ ${contador} marcadores de ruta cargados en el mapa`);
+        } catch (error) {
+            console.error('❌ Error cargando rutas en mapa:', error);
+        }
+    },
+
+    // Actualizar ruta automáticamente cuando se agrega un pedido
+    actualizarRutaAutomatica() {
+        if (this.mapaRutaInicializado && this.mapaRuta) {
+            this.actualizarMapa();
+        }
+    },
+
+    // Actualizar ruta cuando cambia el estado de un pedido
+    actualizarRutaPorCambioPedido(orderId, status) {
+        if (this.mapaRutaInicializado && this.mapaRuta) {
+            this.actualizarMapa();
+        }
+    },
+
+    // Optimizar ruta (ordenar clientes por proximidad)
+    optimizarRuta(clientes) {
+        if (!clientes || clientes.length === 0) return clientes;
+
+        try {
+            // Ordenar clientes por distancia desde el primer cliente
+            const clientesOrdenados = [clientes[0]];
+            const clientesRestantes = clientes.slice(1);
+
+            while (clientesRestantes.length > 0) {
+                const ultimoCliente = clientesOrdenados[clientesOrdenados.length - 1];
+                const [lat1, lng1] = ultimoCliente.gps.split(',').map(v => parseFloat(v.trim()));
+
+                let proximoIdx = 0;
+                let distanciaMinima = Infinity;
+
+                clientesRestantes.forEach((cliente, idx) => {
+                    const [lat2, lng2] = cliente.gps.split(',').map(v => parseFloat(v.trim()));
+                    const distancia = OfflineMaps.calculateDistance(lat1, lng1, lat2, lng2);
+                    
+                    if (distancia < distanciaMinima) {
+                        distanciaMinima = distancia;
+                        proximoIdx = idx;
+                    }
+                });
+
+                clientesOrdenados.push(clientesRestantes[proximoIdx]);
+                clientesRestantes.splice(proximoIdx, 1);
+            }
+
+            return clientesOrdenados;
+        } catch (error) {
+            console.error('❌ Error optimizando ruta:', error);
+            return clientes;
+        }
+    }
 };
 
 

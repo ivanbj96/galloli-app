@@ -2357,9 +2357,13 @@ async cleanDuplicatePayments() {
                 
                 <div class="card">
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
-                    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
+                    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
                         <i class="fas fa-weight"></i> Modo Pesaje en Cadena
                         <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automatica' : 'Ingresa pesos manualmente uno por uno'}</small>
+                    </button>
+                    <button type="button" class="btn btn-success" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startGeoChain()">
+                        <i class="fas fa-map-marker-alt"></i> Modo GPS Automatico
+                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Detecta cliente por ubicacion y graba solo' : 'Requiere balanza conectada'}</small>
                     </button>
                     <form id="sale-form">
                         <div class="form-group">
@@ -5998,6 +6002,189 @@ App.confirmChainSale = function() {
     const client = ClientsModule.getClientById(clientId);
     Utils.showNotification(`${client?.name} — ${weight.toFixed(3)} lb — ${Utils.formatCurrency(sale.total)}`, 'success', 3000);
 };
+
+// ─── Modo GPS Automatico ────────────────────────────────────────────────────
+
+App.startGeoChain = function() {
+    const todaySalePrice = MermaModule.getTodaySalePrice();
+    const todayCostPrice = MermaModule.getTodayMermaPrice();
+
+    if (!todaySalePrice) {
+        Utils.showNotification('Configura el precio de venta del dia en Merma primero', 'warning', 4000);
+        App.loadPage('merma');
+        return;
+    }
+
+    if (!BluetoothScale.isConnected) {
+        Utils.showNotification('Conecta la balanza primero', 'warning', 3000);
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'geo-chain-modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#2e7d32,#388e3c);color:white;border-radius:12px 12px 0 0;">
+                <h3 style="color:white;"><i class="fas fa-map-marker-alt"></i> Modo GPS Automatico</h3>
+                <button class="close-modal" onclick="App.stopGeoChain()" style="color:white;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+
+                <!-- Estado GPS + cliente -->
+                <div id="geo-status-box" style="padding:16px;background:var(--light);border-radius:12px;margin-bottom:16px;text-align:center;">
+                    <div id="geo-status-icon" style="font-size:2rem;margin-bottom:8px;">
+                        <i class="fas fa-satellite-dish" style="color:var(--gray);"></i>
+                    </div>
+                    <div id="geo-status-text" style="font-size:0.95rem;color:var(--gray);">Iniciando GPS...</div>
+                    <div id="geo-client-name" style="font-size:1.2rem;font-weight:bold;color:var(--primary);margin-top:6px;display:none;"></div>
+                    <div id="geo-client-dist" style="font-size:0.8rem;color:var(--gray);"></div>
+                </div>
+
+                <!-- Peso en tiempo real -->
+                <div style="text-align:center;padding:16px;background:var(--light);border-radius:12px;margin-bottom:16px;">
+                    <div style="color:var(--gray);font-size:0.8rem;margin-bottom:4px;">PESO EN BALANZA</div>
+                    <div id="geo-weight-display" style="font-size:3.5rem;font-weight:bold;color:var(--primary);line-height:1;">0.000</div>
+                    <div style="font-size:0.9rem;color:var(--gray);">lb</div>
+                    <div id="geo-weight-status" style="margin-top:8px;font-size:0.85rem;color:var(--gray);">
+                        <i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza
+                    </div>
+                </div>
+
+                <!-- Precio del dia -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                    <div style="background:#e8f5e9;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:0.75rem;color:var(--gray);">PRECIO VENTA/lb</div>
+                        <div style="font-size:1.4rem;font-weight:bold;color:var(--primary);">${todaySalePrice.toFixed(2)}</div>
+                    </div>
+                    <div style="background:#fff3e0;padding:12px;border-radius:8px;text-align:center;">
+                        <div style="font-size:0.75rem;color:var(--gray);">COSTO/lb</div>
+                        <div style="font-size:1.4rem;font-weight:bold;color:var(--warning);">${todayCostPrice ? todayCostPrice.toFixed(2) : '---'}</div>
+                    </div>
+                </div>
+
+                <!-- Override manual de cliente -->
+                <div style="margin-bottom:16px;">
+                    <label class="form-label" style="font-size:0.85rem;"><i class="fas fa-user-edit"></i> Override manual de cliente</label>
+                    <select class="form-input" id="geo-client-override" onchange="App._geoChainOverrideClient(this.value)" style="font-size:0.9rem;">
+                        <option value="">-- Auto por GPS --</option>
+                        ${ClientsModule.clients.filter(c => c.isActive !== false).map(c =>
+                            `<option value="${c.id}">${c.name}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+
+                <!-- Ultima venta -->
+                <div id="geo-last-sale" style="display:none;background:linear-gradient(135deg,#2e7d32,#388e3c);color:white;padding:15px;border-radius:10px;text-align:center;margin-bottom:16px;">
+                    <div style="font-size:0.8rem;opacity:0.9;">VENTA REGISTRADA</div>
+                    <div id="geo-last-sale-info" style="font-size:1.1rem;font-weight:bold;margin-top:4px;"></div>
+                    <div id="geo-last-sale-total" style="font-size:2rem;font-weight:bold;"></div>
+                </div>
+
+                <!-- Resumen del dia -->
+                <div style="padding:12px;background:var(--light);border-radius:8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+                        <span style="color:var(--gray);">Ventas hoy:</span>
+                        <strong id="geo-sales-count">${SalesModule.getTodaySales().length}</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-top:4px;">
+                        <span style="color:var(--gray);">Total lb:</span>
+                        <strong id="geo-total-lbs">${SalesModule.getTotalWeightByDate(Utils.getTodayDate()).toFixed(2)} lb</strong>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-top:4px;">
+                        <span style="color:var(--gray);">Total cobrado:</span>
+                        <strong id="geo-total-revenue">${Utils.formatCurrency(SalesModule.getTotalSalesByDate(Utils.getTodayDate()))}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+    document.body.appendChild(modal);
+
+    // Escuchar peso para actualizar display en tiempo real
+    const weightUnsub = BluetoothScale.onWeight(() => {
+        const w = BluetoothScale.currentRawWeight;
+        const display = document.getElementById('geo-weight-display');
+        if (display) display.textContent = w.toFixed(3);
+    });
+    App._geoChainWeightUnsub = weightUnsub;
+
+    // Iniciar GeoChain
+    GeoChain.start({
+        salePrice: todaySalePrice,
+        costPrice: todayCostPrice,
+
+        onStatus(msg, type) {
+            const statusText = document.getElementById('geo-status-text');
+            const statusIcon = document.getElementById('geo-weight-status');
+            const iconEl = document.getElementById('geo-status-icon');
+            if (statusText) statusText.textContent = msg;
+
+            const colors = { ok: 'var(--success)', warn: 'var(--warning)', error: 'var(--danger)', info: 'var(--gray)' };
+            const icons = { ok: 'fa-check-circle', warn: 'fa-exclamation-triangle', error: 'fa-times-circle', info: 'fa-satellite-dish' };
+            const color = colors[type] || colors.info;
+            const icon = icons[type] || icons.info;
+
+            if (iconEl) iconEl.innerHTML = `<i class="fas ${icon}" style="color:${color};"></i>`;
+            if (statusIcon) {
+                const dotColor = type === 'ok' ? 'var(--success)' : type === 'warn' ? 'orange' : type === 'error' ? 'red' : '#ccc';
+                statusIcon.innerHTML = `<i class="fas fa-circle" style="color:${dotColor};"></i> ${msg}`;
+            }
+        },
+
+        onClientDetected(client, distanceM) {
+            const nameEl = document.getElementById('geo-client-name');
+            const distEl = document.getElementById('geo-client-dist');
+            if (client) {
+                if (nameEl) { nameEl.textContent = client.name; nameEl.style.display = 'block'; }
+                if (distEl) distEl.textContent = distanceM + 'm de distancia';
+            } else {
+                if (nameEl) nameEl.style.display = 'none';
+                if (distEl) distEl.textContent = '';
+            }
+        },
+
+        onSale(sale, client) {
+            // Mostrar ultima venta
+            const lastSaleDiv = document.getElementById('geo-last-sale');
+            const lastSaleInfo = document.getElementById('geo-last-sale-info');
+            const lastSaleTotal = document.getElementById('geo-last-sale-total');
+            if (lastSaleDiv) lastSaleDiv.style.display = 'block';
+            if (lastSaleInfo) lastSaleInfo.textContent = client.name + ' — ' + sale.weight.toFixed(3) + ' lb';
+            if (lastSaleTotal) lastSaleTotal.textContent = Utils.formatCurrency(sale.total);
+
+            // Actualizar resumen
+            const salesCount = document.getElementById('geo-sales-count');
+            const totalLbs = document.getElementById('geo-total-lbs');
+            const totalRevenue = document.getElementById('geo-total-revenue');
+            if (salesCount) salesCount.textContent = SalesModule.getTodaySales().length;
+            if (totalLbs) totalLbs.textContent = SalesModule.getTotalWeightByDate(Utils.getTodayDate()).toFixed(2) + ' lb';
+            if (totalRevenue) totalRevenue.textContent = Utils.formatCurrency(SalesModule.getTotalSalesByDate(Utils.getTodayDate()));
+        }
+    });
+};
+
+App.stopGeoChain = function() {
+    GeoChain.stop();
+    if (App._geoChainWeightUnsub) {
+        App._geoChainWeightUnsub();
+        App._geoChainWeightUnsub = null;
+    }
+    const modal = document.getElementById('geo-chain-modal');
+    if (modal) modal.remove();
+};
+
+App._geoChainOverrideClient = function(clientId) {
+    if (!clientId) {
+        // Volver a modo automatico
+        GeoChain._currentClientId = null;
+        GeoChain._status('Modo automatico por GPS', 'info');
+        return;
+    }
+    GeoChain.setClient(parseInt(clientId) || clientId);
+};
+
+// ─── Fin Modo GPS Automatico ─────────────────────────────────────────────────
 
 // Métodos para la balanza BLE
 App.toggleScaleFromSidebar = function() {    const sw = document.getElementById('scale-switch');

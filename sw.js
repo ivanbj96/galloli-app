@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.15'; // Encoding completamente limpio en toda la UI
+const APP_VERSION = '7.20.17'; // Modo GPS automatico + geo-chain
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -31,6 +31,8 @@ async function getStaticResources() {
             '/js/payment-processor.js',
             '/js/auto-backup.js',
             '/js/custom-select.js',
+            '/js/bluetooth-scale.js',
+            '/js/geo-chain.js',
             '/js/facturacion-electronica.js',
             '/js/facturacion-ui.js',
             '/manifest.json',

@@ -170,13 +170,16 @@ jobs:
               <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />\
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\
               <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\
+              <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />\
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />\
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />\
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\
               <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />' \
             "$MANIFEST"
           # Agregar meta-data FCM y servicios dentro de <application>
-          sed -i 's|</application>|    <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="galloli_push_channel" />\n        <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />\n        <service android:name=".GalloliFirebaseService" android:exported="false">\n            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>\n        </service>\n    </application>|' \
+          # BleForegroundService con tipo connectedDevice|location para GPS en background
+          sed -i 's|</application>|    <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="galloli_push_channel" />\n        <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|location" />\n        <service android:name=".GalloliFirebaseService" android:exported="false">\n            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>\n        </service>\n    </application>|' \
             "$MANIFEST"
           echo "AndroidManifest parcheado"
 

@@ -5648,10 +5648,7 @@ App.startChainWeighing = function() {
         return;
     }
 
-    let stableTimer = null;
-    let lastWeight = 0;
-    let capturedWeight = 0;
-    let unsubscribe = null;
+    const activeClients = ClientsModule.clients.filter(c => c.isActive !== false);
 
     const modal = document.createElement('div');
     modal.className = 'modal active';
@@ -5664,16 +5661,44 @@ App.startChainWeighing = function() {
             </div>
             <div class="modal-body" style="padding:20px;">
 
+                <!-- Cliente activo (se selecciona al inicio) -->
+                <div style="margin-bottom:16px;">
+                    <label class="form-label" style="font-weight:600;"><i class="fas fa-user"></i> Cliente activo</label>
+                    <input type="text" class="form-input" id="chain-client-search"
+                           placeholder="Buscar cliente..." autocomplete="off"
+                           oninput="App.filterChainClients(this.value)"
+                           style="margin-bottom:6px;">
+                    <select class="form-input" id="chain-client-select" size="4" style="height:auto;" onchange="App._onChainClientChange()">
+                        <option value="">-- Seleccionar cliente --</option>
+                        ${activeClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                    </select>
+                </div>
+
+                <!-- Cantidad y pago -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label"><i class="fas fa-egg"></i> Pollos</label>
+                        <input type="number" class="form-input" id="chain-quantity" min="1" value="1">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label"><i class="fas fa-credit-card"></i> Pago</label>
+                        <select class="form-input" id="chain-payment">
+                            <option value="cash">Efectivo</option>
+                            <option value="credit">Credito</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Peso: balanza o manual -->
-                <div style="text-align:center;padding:20px;background:var(--light);border-radius:12px;margin-bottom:20px;">
+                <div style="text-align:center;padding:20px;background:var(--light);border-radius:12px;margin-bottom:16px;">
                     <div style="color:var(--gray);font-size:0.85rem;margin-bottom:5px;">
-                        ${hasScale ? 'PESO EN BALANZA' : 'INGRESA EL PESO'}
+                        ${hasScale ? 'PESO EN BALANZA (AUTO)' : 'INGRESA EL PESO'}
                     </div>
                     ${hasScale ? `
                     <div id="chain-weight-display" style="font-size:3.5rem;font-weight:bold;color:var(--primary);line-height:1;">0.000</div>
                     <div id="chain-unit-display" style="font-size:1rem;color:var(--gray);">lb</div>
                     <div id="chain-stable-indicator" style="margin-top:8px;font-size:0.85rem;color:var(--gray);">
-                        <i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza
+                        <i class="fas fa-circle" style="color:#ccc;"></i> Selecciona cliente y pon un pollo
                     </div>` : `
                     <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:10px;">
                         <input type="number" step="0.001" min="0" class="form-input" id="chain-manual-weight"
@@ -5689,8 +5714,8 @@ App.startChainWeighing = function() {
                     </button>`}
                 </div>
 
-                <!-- Precio del día -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                <!-- Precio del dia -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                     <div style="background:#e8f5e9;padding:12px;border-radius:8px;text-align:center;">
                         <div style="font-size:0.75rem;color:var(--gray);">PRECIO VENTA/lb</div>
                         <div style="font-size:1.4rem;font-weight:bold;color:var(--primary);">$${todaySalePrice.toFixed(2)}</div>
@@ -5702,50 +5727,15 @@ App.startChainWeighing = function() {
                 </div>
 
                 <!-- Total estimado -->
-                <div id="chain-total-preview" style="display:none;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;padding:15px;border-radius:10px;text-align:center;margin-bottom:20px;">
-                    <div style="font-size:0.85rem;opacity:0.9;">TOTAL A COBRAR</div>
-                    <div id="chain-total-amount" style="font-size:2.5rem;font-weight:bold;">$0.00</div>
-                    <div id="chain-profit-amount" style="font-size:0.9rem;opacity:0.85;">Ganancia: $0.00</div>
+                <!-- Ultima venta registrada -->
+                <div id="chain-last-sale" style="display:none;background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;padding:15px;border-radius:10px;text-align:center;margin-bottom:16px;">
+                    <div style="font-size:0.8rem;opacity:0.9;">VENTA REGISTRADA</div>
+                    <div id="chain-last-sale-info" style="font-size:1.1rem;font-weight:bold;margin-top:4px;"></div>
+                    <div id="chain-last-sale-total" style="font-size:2rem;font-weight:bold;"></div>
                 </div>
 
-                <!-- Selección de cliente -->
-                <div id="chain-client-section" style="display:none;">
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-user"></i> Cliente</label>
-                        <input type="text" class="form-input" id="chain-client-search" 
-                               placeholder="Buscar cliente..." autocomplete="off"
-                               oninput="App.filterChainClients(this.value)"
-                               style="margin-bottom:6px;">
-                        <select class="form-input" id="chain-client-select" size="4" style="height:auto;">
-                            <option value="">-- Seleccionar --</option>
-                            ${ClientsModule.clients.filter(c => c.isActive !== false).map(c =>
-                                `<option value="${c.id}">${c.name}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-egg"></i> Cantidad de pollos</label>
-                        <input type="number" class="form-input" id="chain-quantity" min="1" value="1">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><i class="fas fa-credit-card"></i> Pago</label>
-                        <select class="form-input" id="chain-payment">
-                            <option value="cash">Efectivo</option>
-                            <option value="credit">Crédito</option>
-                        </select>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                        <button class="btn btn-outline" onclick="App.cancelChainCapture()">
-                            <i class="fas fa-redo"></i> Cancelar
-                        </button>
-                        <button class="btn btn-success" onclick="App.confirmChainSale()" style="font-size:1rem;padding:14px;">
-                            <i class="fas fa-check"></i> Registrar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Resumen del día -->
-                <div style="margin-top:15px;padding:12px;background:var(--light);border-radius:8px;">
+                <!-- Resumen del dia -->
+                <div style="padding:12px;background:var(--light);border-radius:8px;">
                     <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
                         <span style="color:var(--gray);">Ventas hoy:</span>
                         <strong id="chain-sales-count">${SalesModule.getTodaySales().length}</strong>
@@ -5764,37 +5754,19 @@ App.startChainWeighing = function() {
 
     document.body.appendChild(modal);
 
-    // Si hay balanza, escuchar cambios de peso
+    // Estado interno del modo cadena
+    App._chainState = {
+        stableTimer: null,
+        lastWeight: 0,
+        waitingForZero: false,
+        salePrice: todaySalePrice,
+        costPrice: todayCostPrice
+    };
+
+    // Si hay balanza, escuchar cambios de peso en tiempo real
     if (hasScale) {
-        unsubscribe = BluetoothScale.onWeight((weight) => {
-            if (!weight) return;
-            const raw = BluetoothScale.currentRawWeight;
-            const unit = BluetoothScale.currentUnit;
-
-            const display = document.getElementById('chain-weight-display');
-            const unitDisplay = document.getElementById('chain-unit-display');
-            const stableIndicator = document.getElementById('chain-stable-indicator');
-
-            if (display) display.textContent = raw.toFixed(3);
-            if (unitDisplay) unitDisplay.textContent = unit;
-
-            if (Math.abs(raw - lastWeight) > 0.01) {
-                lastWeight = raw;
-                clearTimeout(stableTimer);
-                if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:orange;"></i> Estabilizando...';
-
-                if (raw > 0.05) {
-                    stableTimer = setTimeout(() => {
-                        capturedWeight = raw;
-                        App._chainWeighingWeight = raw;
-                        if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:var(--success);"></i> Estable — selecciona cliente';
-                        App._showChainClientSection(raw, todaySalePrice, todayCostPrice);
-                    }, 1500);
-                } else {
-                    App.cancelChainCapture();
-                    if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza';
-                }
-            }
+        const unsubscribe = BluetoothScale.onWeight((weight) => {
+            App._handleChainWeight(weight);
         });
         App._chainWeighingUnsubscribe = unsubscribe;
     }
@@ -5807,11 +5779,16 @@ App.stopChainWeighing = function() {
         App._chainWeighingUnsubscribe();
         App._chainWeighingUnsubscribe = null;
     }
+    if (App._chainState && App._chainState.stableTimer) {
+        clearTimeout(App._chainState.stableTimer);
+    }
+    App._chainState = null;
     const modal = document.getElementById('chain-weighing-modal');
     if (modal) modal.remove();
 };
 
 App._showChainClientSection = function(weight, salePrice, costPrice) {
+    // Mantenido por compatibilidad con modo manual
     const totalPreview = document.getElementById('chain-total-preview');
     const totalAmount = document.getElementById('chain-total-amount');
     const profitAmount = document.getElementById('chain-profit-amount');
@@ -5823,6 +5800,117 @@ App._showChainClientSection = function(weight, salePrice, costPrice) {
     if (totalAmount) totalAmount.textContent = Utils.formatCurrency(total);
     if (profitAmount) profitAmount.textContent = `Ganancia: ${Utils.formatCurrency(profit)}`;
     if (clientSection) clientSection.style.display = 'block';
+};
+
+// Manejar cada lectura de peso en modo cadena automatico
+App._handleChainWeight = function(weight) {
+    const state = App._chainState;
+    if (!state) return;
+
+    const raw = BluetoothScale.currentRawWeight;
+    const display = document.getElementById('chain-weight-display');
+    const unitDisplay = document.getElementById('chain-unit-display');
+    const stableIndicator = document.getElementById('chain-stable-indicator');
+
+    if (display) display.textContent = raw.toFixed(3);
+    if (unitDisplay) unitDisplay.textContent = BluetoothScale.currentUnit;
+
+    // Si estamos esperando que retiren el pollo (peso vuelva a 0)
+    if (state.waitingForZero) {
+        if (raw < 0.5) {
+            state.waitingForZero = false;
+            state.lastWeight = 0;
+            App._chainWeighingWeight = 0;
+            if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon el siguiente pollo';
+        }
+        return;
+    }
+
+    // Detectar cambio de peso
+    if (Math.abs(raw - state.lastWeight) > 0.01) {
+        state.lastWeight = raw;
+        clearTimeout(state.stableTimer);
+
+        if (raw > 3.50) {
+            // Peso valido — esperar estabilizacion
+            if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:orange;"></i> Estabilizando...';
+            state.stableTimer = setTimeout(() => {
+                // Verificar que el peso sigue estable
+                if (Math.abs(BluetoothScale.currentRawWeight - raw) < 0.05) {
+                    App._autoRegisterChainSale(raw);
+                }
+            }, 1500);
+        } else if (raw < 0.5) {
+            // Balanza vacia
+            if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza';
+        } else {
+            // Peso menor a 3.50 — no registrar
+            if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:orange;"></i> ' + raw.toFixed(3) + ' lb — minimo 3.50 lb';
+        }
+    }
+};
+
+// Registrar venta automaticamente cuando el peso es estable > 3.50
+App._autoRegisterChainSale = function(weight) {
+    const state = App._chainState;
+    if (!state) return;
+
+    const clientSelect = document.getElementById('chain-client-select');
+    const clientIdRaw = clientSelect ? clientSelect.value : '';
+    const clientId = parseInt(clientIdRaw) || clientIdRaw;
+
+    if (!clientId) {
+        const stableIndicator = document.getElementById('chain-stable-indicator');
+        if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:red;"></i> Selecciona un cliente primero';
+        return;
+    }
+
+    const quantity = parseInt(document.getElementById('chain-quantity')?.value) || 1;
+    const payment = document.getElementById('chain-payment')?.value || 'cash';
+    const isPaid = payment === 'cash';
+
+    const sale = SalesModule.addSale(clientId, weight, quantity, state.salePrice, null, isPaid);
+    ClientsModule.updateClientStats(clientId, weight, quantity, sale.total);
+
+    const client = ClientsModule.getClientById(clientId);
+
+    // Mostrar confirmacion visual
+    const lastSaleDiv = document.getElementById('chain-last-sale');
+    const lastSaleInfo = document.getElementById('chain-last-sale-info');
+    const lastSaleTotal = document.getElementById('chain-last-sale-total');
+    if (lastSaleDiv) lastSaleDiv.style.display = 'block';
+    if (lastSaleInfo) lastSaleInfo.textContent = (client ? client.name : 'Cliente') + ' — ' + weight.toFixed(3) + ' lb';
+    if (lastSaleTotal) lastSaleTotal.textContent = Utils.formatCurrency(sale.total);
+
+    // Actualizar resumen
+    const salesCount = document.getElementById('chain-sales-count');
+    const totalLbs = document.getElementById('chain-total-lbs');
+    const totalRevenue = document.getElementById('chain-total-revenue');
+    if (salesCount) salesCount.textContent = SalesModule.getTodaySales().length;
+    if (totalLbs) totalLbs.textContent = SalesModule.getTotalWeightByDate(Utils.getTodayDate()).toFixed(2) + ' lb';
+    if (totalRevenue) totalRevenue.textContent = Utils.formatCurrency(SalesModule.getTotalSalesByDate(Utils.getTodayDate()));
+
+    const stableIndicator = document.getElementById('chain-stable-indicator');
+    if (stableIndicator) stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:var(--success);"></i> Registrado — retira el pollo';
+
+    // Vibracion de confirmacion
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+    // Marcar que esperamos que retiren el pollo
+    state.waitingForZero = true;
+    App._chainWeighingWeight = 0;
+
+    Utils.showNotification((client ? client.name : 'Cliente') + ' — ' + weight.toFixed(3) + ' lb — ' + Utils.formatCurrency(sale.total), 'success', 3000);
+};
+
+// Cuando cambia el cliente seleccionado en modo cadena
+App._onChainClientChange = function() {
+    const stableIndicator = document.getElementById('chain-stable-indicator');
+    const clientSelect = document.getElementById('chain-client-select');
+    if (!clientSelect || !clientSelect.value) return;
+    if (stableIndicator && App._chainState && !App._chainState.waitingForZero) {
+        stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza';
+    }
 };
 
 App.updateChainPreview = function() {

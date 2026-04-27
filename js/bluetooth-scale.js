@@ -370,6 +370,14 @@ const BluetoothScale = {
             this.currentWeight = result.weight;
             this._notifyListeners(this.currentWeight);
             this._updateWeightDisplays();
+        } else {
+            // La balanza envió 0 o dato inválido → resetear peso a 0
+            if (this.currentRawWeight !== 0) {
+                this.currentRawWeight = 0;
+                this.currentWeight = 0;
+                this._notifyListeners(0);
+                this._updateWeightDisplays();
+            }
         }
     },
 
@@ -416,13 +424,13 @@ const BluetoothScale = {
             if (el && document.activeElement !== el) {
                 var current = parseFloat(el.value) || 0;
                 if (Math.abs(current - w) > 0.005) {
-                    el.value = w.toFixed(2);
+                    el.value = w > 0 ? w.toFixed(2) : '';
                     el.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }
         });
         var valueEl = document.getElementById('scale-weight-value');
-        if (valueEl) valueEl.textContent = w.toFixed(2) + ' ' + unit;
+        if (valueEl) valueEl.textContent = w > 0 ? w.toFixed(2) + ' ' + unit : '0.00 lb';
         var indicator = document.getElementById('scale-weight-indicator');
         if (indicator) indicator.style.display = 'flex';
     },

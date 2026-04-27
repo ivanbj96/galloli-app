@@ -374,7 +374,7 @@ async function checkScheduledReminders() {
     
     // Backup reminder (8 PM)
     if (hour === 20 && minute === 0) {
-        await self.registration.showNotification('💾 Recordatorio de Backup', {
+        await self.registration.showNotification('Recordatorio de Backup', {
             body: 'No olvides crear un backup de tus datos hoy',
             icon: '/icons/favicon.pub/android-chrome-192x192.png',
             badge: '/icons/favicon.pub/favicon-48x48.png',
@@ -390,7 +390,7 @@ async function checkScheduledReminders() {
     
     // Merma reminder (6 PM)
     if (hour === 18 && minute === 0) {
-        await self.registration.showNotification('🧮 Recordatorio de Merma', {
+        await self.registration.showNotification('Recordatorio de Merma', {
             body: 'Recuerda calcular la merma del día',
             icon: '/icons/favicon.pub/android-chrome-192x192.png',
             badge: '/icons/favicon.pub/favicon-48x48.png',
@@ -406,7 +406,7 @@ async function checkScheduledReminders() {
     
     // Diezmos reminder (9 PM)
     if (hour === 21 && minute === 0) {
-        await self.registration.showNotification('🙏 Recordatorio de Diezmos', {
+        await self.registration.showNotification('Recordatorio de Diezmos', {
             body: 'Revisa y guarda los diezmos del día',
             icon: '/icons/favicon.pub/android-chrome-192x192.png',
             badge: '/icons/favicon.pub/favicon-48x48.png',
@@ -449,8 +449,8 @@ async function handleWASMNotification(data) {
                 timestamp: Date.now()
             },
             actions: options.actions || [
-                { action: 'open', title: '📱 Abrir App' },
-                { action: 'dismiss', title: '❌ Descartar' }
+                { action: 'open', title: 'Abrir App' },
+                { action: 'dismiss', title: 'Descartar' }
             ]
         });
         
@@ -496,7 +496,7 @@ setInterval(() => {
         
         // Enviar recordatorio si no se han enviado muchas notificaciones
         if (userActivity.notificationsSent < 3) {
-            self.registration.showNotification('🐔 GallOli te extraña', {
+            self.registration.showNotification('GallOli te recuerda', {
                 body: 'No olvides registrar tus ventas del día',
                 icon: '/icons/favicon.pub/android-chrome-192x192.png',
                 badge: '/icons/favicon.pub/favicon-48x48.png',
@@ -593,7 +593,7 @@ async function handleCreditAction(action, data, userInput) {
             
             if (isNaN(amount) || amount <= 0) {
                 await self.registration.showNotification(
-                    '❌ Monto Inválido',
+                    'Monto Invalido',
                     {
                         body: 'Ingresa un monto válido para el abono',
                         icon: './icons/favicon.pub/android-chrome-192x192.png',
@@ -606,7 +606,7 @@ async function handleCreditAction(action, data, userInput) {
             
             if (amount > data.totalDebt) {
                 await self.registration.showNotification(
-                    '⚠️ Monto Excedido',
+                    'Monto Excedido',
                     {
                         body: `El monto (${formatCurrency(amount)}) es mayor a la deuda (${formatCurrency(data.totalDebt)})`,
                         icon: './icons/favicon.pub/android-chrome-192x192.png',
@@ -646,7 +646,7 @@ async function handleCreditAction(action, data, userInput) {
     } catch (error) {
         console.error('[Service Worker] ❌ Error procesando pago:', error);
         await self.registration.showNotification(
-            '❌ Error',
+            'Error de pago',
             {
                 body: 'No se pudo procesar el pago. Intenta desde la app.',
                 icon: './icons/favicon.pub/android-chrome-192x192.png',

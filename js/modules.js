@@ -1,4 +1,4 @@
-// Mo½dulo de Clientes
+﻿// Modulo de Clientes
 const ClientsModule = {
     clients: [],
 
@@ -31,11 +31,11 @@ const ClientsModule = {
         this.clients.push(client);
         this.saveClients();
         
-        // Notificar creacio½n de cliente (sin bloquear si falla)
+        // Notificar creacion de cliente (sin bloquear si falla)
         if (typeof NotificationsModule !== 'undefined') {
             try {
                 NotificationsModule.notifyClientCreated(client.name).catch(err => {
-                    console.warn('No se pudo enviar notificacio½n:', err);
+                    console.warn('No se pudo enviar notificacion:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -50,15 +50,15 @@ const ClientsModule = {
     },
     
     /**
-     * Busca clientes duplicados baso½ndose en nombre, telo½fono o direccio½n
+     * Busca clientes duplicados basandose en nombre, telefono o direccion
      * @param {string} name - Nombre del cliente
-     * @param {string} phone - Telo½fono del cliente
-     * @param {string} address - Direccio½n del cliente
+     * @param {string} phone - Telefono del cliente
+     * @param {string} address - Direccion del cliente
      * @returns {object|null} - Cliente duplicado o null si no existe
      */
     findDuplicate(name, phone, address) {
         const nameLower = name.toLowerCase().trim();
-        const phoneCleaned = phone.replace(/\D/g, ''); // Eliminar caracteres no numo½ricos
+        const phoneCleaned = phone.replace(/\D/g, ''); // Eliminar caracteres no numericos
         const addressLower = address.toLowerCase().trim();
         
         return this.clients.find(client => {
@@ -71,13 +71,13 @@ const ClientsModule = {
             // Coincidencia exacta de nombre
             const nameMatch = clientNameLower === nameLower;
             
-            // Coincidencia exacta de telo½fono (sin formato)
+            // Coincidencia exacta de telefono (sin formato)
             const phoneMatch = phoneCleaned && clientPhoneCleaned === phoneCleaned;
             
-            // Coincidencia de direccio½n (similar)
+            // Coincidencia de direccion (similar)
             const addressMatch = clientAddressLower === addressLower;
             
-            // Es duplicado si coincide nombre Y telo½fono, o nombre Y direccio½n, o telo½fono Y direccio½n
+            // Es duplicado si coincide nombre Y telefono, o nombre Y direccion, o telefono Y direccion
             return (nameMatch && phoneMatch) || (nameMatch && addressMatch) || (phoneMatch && addressMatch);
         });
     },
@@ -108,14 +108,14 @@ const ClientsModule = {
         const li = document.createElement('li');
         li.className = 'client-item';
         
-        // Crear enlace de telo½fono
+        // Crear enlace de telefono
         const phoneLink = client.phone ? 
             `<a href="tel:${client.phone}" class="client-phone">
                 <i class="fas fa-phone"></i> ${client.phone}
             </a>` : 
             `<span class="client-phone"><i class="fas fa-phone"></i> ${client.phone}</span>`;
         
-        // Crear enlace de ubicacio½n si tiene coordenadas
+        // Crear enlace de ubicacion si tiene coordenadas
         let locationLink = '';
         if (client.coordinates && client.coordinates.lat && client.coordinates.lng) {
             const mapsUrl = `https://www.google.com/maps?q=${client.coordinates.lat},${client.coordinates.lng}`;
@@ -136,7 +136,7 @@ const ClientsModule = {
                 <p>${phoneLink}</p>
                 ${locationLink}
                 ${client.coordinates ? 
-                    `<p class="client-location"><i class="fas fa-map-pin"></i> ${client.location || 'Ubicacio½n seleccionada'}</p>` : ''}
+                    `<p class="client-location"><i class="fas fa-map-pin"></i> ${client.location || 'Ubicacion seleccionada'}</p>` : ''}
                 ${client.coordinates ? 
                     `<p class="client-location"><i class="fas fa-clock"></i> ${new Date(client.timestamp).toLocaleTimeString('es-ES')}</p>` : ''}
                 <p class="client-location"><i class="fas fa-shopping-cart"></i> ${client.totalSales} ventas | ${client.totalOrders} pedidos</p>
@@ -211,17 +211,17 @@ const ClientsModule = {
                 <div class="modal-body">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <i class="fas fa-archive" style="font-size: 3rem; color: var(--warning); margin-bottom: 15px;"></i>
-                        <h3 style="margin-bottom: 10px;">o½Archivar "${client.name}"?</h3>
-                        <p style="color: var(--gray); margin-bottom: 20px;">El cliente se ocultaro½ pero mantendro½ su historial</p>
+                        <h3 style="margin-bottom: 10px;">Archivar "${client.name}"?</h3>
+                        <p style="color: var(--gray); margin-bottom: 20px;">El cliente se ocultara pero mantendra su historial</p>
                     </div>
                     
                     <div style="background: var(--light); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                         <p style="margin: 5px 0;"><strong><i class="fas fa-user"></i> Cliente:</strong> ${client.name}</p>
-                        <p style="margin: 5px 0;"><strong><i class="fas fa-phone"></i> Telo½fono:</strong> ${client.phone}</p>
+                        <p style="margin: 5px 0;"><strong><i class="fas fa-phone"></i> Telefono:</strong> ${client.phone}</p>
                         ${hasData ? `
                             <p style="margin: 5px 0;"><strong><i class="fas fa-receipt"></i> Ventas:</strong> ${associatedData.totalSales} registros</p>
                             <p style="margin: 5px 0;"><strong><i class="fas fa-clipboard-list"></i> Pedidos:</strong> ${associatedData.totalOrders} registros</p>
-                            <p style="margin: 5px 0;"><strong><i class="fas fa-credit-card"></i> Cro½ditos:</strong> ${associatedData.totalCredits} pendientes</p>
+                            <p style="margin: 5px 0;"><strong><i class="fas fa-credit-card"></i> Creditos:</strong> ${associatedData.totalCredits} pendientes</p>
                         ` : '<p style="color: var(--gray);">Sin historial de datos</p>'}
                     </div>
                     
@@ -230,10 +230,10 @@ const ClientsModule = {
                             <i class="fas fa-info-circle"></i> <strong>Al archivar:</strong>
                         </p>
                         <ul style="margin: 10px 0 0 20px; color: #856404; font-size: 0.85rem;">
-                            <li>No aparecero½ en la lista de clientes activos</li>
-                            <li>No estaro½ disponible para nuevas ventas/pedidos</li>
-                            <li>Su historial se mantendro½ intacto</li>
-                            <li>Podro½s reactivarlo cuando quieras</li>
+                            <li>No aparecera en la lista de clientes activos</li>
+                            <li>No estara disponible para nuevas ventas/pedidos</li>
+                            <li>Su historial se mantendra intacto</li>
+                            <li>Podras reactivarlo cuando quieras</li>
                         </ul>
                     </div>
                     
@@ -259,7 +259,7 @@ const ClientsModule = {
             this.updateClientList();
             this.updateClientSelect();
             modal.remove();
-            Utils.showNotification('?? Cliente archivado correctamente', 'success', 3000);
+            Utils.showNotification('Cliente archivado correctamente', 'success', 3000);
         });
         
         return true;
@@ -274,7 +274,7 @@ const ClientsModule = {
             this.saveClients();
             this.updateClientList();
             this.updateClientSelect();
-            Utils.showNotification('? Cliente reactivado correctamente', 'success', 3000);
+            Utils.showNotification('Cliente reactivado correctamente', 'success', 3000);
         }
     },
 
@@ -359,7 +359,7 @@ const ClientsModule = {
         };
     },
 
-    // Editar cliente existente - NUEVA IMPLEMENTACIo½N LIMPIA
+    // Editar cliente existente - NUEVA IMPLEMENTACION LIMPIA
     editClient(clientId) {
         const client = this.getClientById(clientId);
         if (!client) {
@@ -386,19 +386,19 @@ const ClientsModule = {
                                    value="${client.name || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Telo½fono</label>
+                            <label class="form-label">Telefono</label>
                             <input type="tel" class="form-input" id="edit-client-phone" 
                                    value="${client.phone || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Direccio½n</label>
+                            <label class="form-label">Direccion</label>
                             <input type="text" class="form-input" id="edit-client-address" 
                                    value="${client.address || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Ubicacio½n (Descripcio½n)</label>
+                            <label class="form-label">Ubicacion (Descripcion)</label>
                             <input type="text" class="form-input" id="edit-client-location" 
-                                   value="${client.location || ''}" placeholder="Descripcio½n de la ubicacio½n">
+                                   value="${client.location || ''}" placeholder="Descripcion de la ubicacion">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Coordenadas</label>
@@ -430,7 +430,7 @@ const ClientsModule = {
         });
     },
 
-    // Guardar cambios del cliente - NUEVA IMPLEMENTACIo½N
+    // Guardar cambios del cliente - NUEVA IMPLEMENTACION
     saveClientChanges(clientId, modal) {
         const client = this.getClientById(clientId);
         if (!client) return;
@@ -447,14 +447,14 @@ const ClientsModule = {
             return;
         }
 
-        // Actualizar datos bo½sicos
+        // Actualizar datos basicos
         client.name = name;
         client.phone = phone;
         client.address = address;
         client.location = location;
         client.lastModified = Date.now();
 
-        // Actualizar coordenadas si esto½n presentes
+        // Actualizar coordenadas si estan presentes
         if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
             client.coordinates = {
                 lat: parseFloat(lat),
@@ -470,7 +470,7 @@ const ClientsModule = {
         Utils.showNotification('Cliente actualizado correctamente', 'success', 3000);
     },
 
-    // Abrir mapa para editar ubicacio½n - NUEVA IMPLEMENTACIo½N
+    // Abrir mapa para editar ubicacion - NUEVA IMPLEMENTACION
     openMapForEdit(clientId) {
         const client = this.getClientById(clientId);
         if (!client) return;
@@ -491,7 +491,7 @@ const ClientsModule = {
         mapModal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-map-marker-alt"></i> Seleccionar Ubicacio½n</h3>
+                    <h3><i class="fas fa-map-marker-alt"></i> Seleccionar Ubicacion</h3>
                     <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -513,7 +513,7 @@ const ClientsModule = {
                             <i class="fas fa-times"></i> Cancelar
                         </button>
                         <button class="btn btn-success" onclick="ClientsModule.saveMapLocation(${clientId})" style="flex: 1;">
-                            <i class="fas fa-check"></i> Usar Esta Ubicacio½n
+                            <i class="fas fa-check"></i> Usar Esta Ubicacion
                         </button>
                     </div>
                 </div>
@@ -522,7 +522,7 @@ const ClientsModule = {
         
         document.body.appendChild(mapModal);
         
-        // Inicializar mapa despuo½s de un breve delay
+        // Inicializar mapa despues de un breve delay
         setTimeout(() => {
             if (typeof L !== 'undefined') {
                 const map = L.map('edit-location-map').setView([lat, lng], 13);
@@ -554,17 +554,17 @@ const ClientsModule = {
         }, 200);
     },
 
-    // Guardar ubicacio½n del mapa - NUEVA IMPLEMENTACIo½N
+    // Guardar ubicacion del mapa - NUEVA IMPLEMENTACION
     saveMapLocation(clientId) {
         const lat = document.getElementById('map-edit-lat').value;
         const lng = document.getElementById('map-edit-lng').value;
         
         if (!lat || !lng) {
-            Utils.showNotification('Selecciona una ubicacio½n en el mapa', 'error', 3000);
+            Utils.showNotification('Selecciona una ubicacion en el mapa', 'error', 3000);
             return;
         }
         
-        // Actualizar los campos en el formulario de edicio½n
+        // Actualizar los campos en el formulario de edicion
         const editLatInput = document.getElementById('edit-client-lat');
         const editLngInput = document.getElementById('edit-client-lng');
         
@@ -575,29 +575,29 @@ const ClientsModule = {
         const mapModal = document.querySelector('.modal[style*="10001"]');
         if (mapModal) mapModal.remove();
         
-        Utils.showNotification('Ubicacio½n seleccionada correctamente', 'success', 3000);
+        Utils.showNotification('Ubicacion seleccionada correctamente', 'success', 3000);
     },
 
-    // Crear cliente ro½pido con ubicacio½n automo½tica - CON GEOCODIFICACIo½N
-    async createQuickClient(name, phone, address = 'Sin direccio½n') {
+    // Crear cliente rapido con ubicacion automatica - CON GEOCODIFICACION
+    async createQuickClient(name, phone, address = 'Sin direccion') {
         try {
             const position = await this.getCurrentPosition();
             const lat = position.coords.latitude;
             const lng = position.coords.longitude;
             
-            // Intentar obtener direccio½n real de las coordenadas
+            // Intentar obtener direccion real de las coordenadas
             let realAddress = address;
-            let locationDescription = 'Ubicacio½n automo½tica';
+            let locationDescription = 'Ubicacion automatica';
             
             try {
                 const addressData = await this.getAddressFromCoordinates(lat, lng);
                 if (addressData) {
                     realAddress = addressData.display_name || addressData.address || address;
-                    locationDescription = addressData.display_name || 'Ubicacio½n automo½tica';
+                    locationDescription = addressData.display_name || 'Ubicacion automatica';
                 }
             } catch (geoError) {
-                console.log('No se pudo obtener direccio½n:', geoError);
-                // Continuar con coordenadas sin direccio½n
+                console.log('No se pudo obtener direccion:', geoError);
+                // Continuar con coordenadas sin direccion
             }
             
             const client = {
@@ -623,18 +623,18 @@ const ClientsModule = {
             this.clients.push(client);
             this.saveClients();
             
-            // Notificar creacio½n de cliente (sin bloquear si falla)
+            // Notificar creacion de cliente (sin bloquear si falla)
             if (typeof NotificationsModule !== 'undefined') {
                 try {
                     NotificationsModule.notifyClientCreated(client.name).catch(err => {
-                        console.warn('No se pudo enviar notificacio½n:', err);
+                        console.warn('No se pudo enviar notificacion:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar:', err);
                 }
             }
             
-            Utils.showNotification('? Cliente creado con ubicacio½n automo½tica', 'success', 3000);
+            Utils.showNotification('Cliente creado con ubicacion automatica', 'success', 3000);
             return client;
         } catch (error) {
             const client = {
@@ -642,7 +642,7 @@ const ClientsModule = {
                 name: name,
                 phone: phone,
                 address: address,
-                location: 'Sin ubicacio½n',
+                location: 'Sin ubicacion',
                 isActive: true, // NUEVO: Activo por defecto
                 coordinates: null,
                 timestamp: new Date().toISOString(),
@@ -657,23 +657,23 @@ const ClientsModule = {
             this.clients.push(client);
             this.saveClients();
             
-            // Notificar creacio½n de cliente (sin bloquear si falla)
+            // Notificar creacion de cliente (sin bloquear si falla)
             if (typeof NotificationsModule !== 'undefined') {
                 try {
                     NotificationsModule.notifyClientCreated(client.name).catch(err => {
-                        console.warn('No se pudo enviar notificacio½n:', err);
+                        console.warn('No se pudo enviar notificacion:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar:', err);
                 }
             }
             
-            Utils.showNotification('?? Cliente creado sin ubicacio½n (GPS no disponible)', 'warning', 3000);
+            Utils.showNotification('Cliente creado sin ubicacion (GPS no disponible)', 'warning', 3000);
             return client;
         }
     },
 
-    // Obtener direccio½n desde coordenadas usando Nominatim (OpenStreetMap)
+    // Obtener direccion desde coordenadas usando Nominatim (OpenStreetMap)
     async getAddressFromCoordinates(lat, lng) {
         try {
             const response = await fetch(
@@ -685,21 +685,21 @@ const ClientsModule = {
                 }
             );
             
-            if (!response.ok) throw new Error('Error en geocodificacio½n');
+            if (!response.ok) throw new Error('Error en geocodificacion');
             
             const data = await response.json();
             return data;
         } catch (error) {
-            console.warn('Error obteniendo direccio½n:', error);
+            console.warn('Error obteniendo direccion:', error);
             return null;
         }
     },
 
-    // Obtener posicio½n actual
+    // Obtener posicion actual
     getCurrentPosition() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
-                reject(new Error('Geolocalizacio½n no soportada'));
+                reject(new Error('Geolocalizacion no soportada'));
                 return;
             }
 
@@ -735,7 +735,7 @@ const ClientsModule = {
     }
 };
 
-// Mo½dulo de Pedidos
+// Modulo de Pedidos
 const OrdersModule = {
     orders: [],
 
@@ -774,7 +774,7 @@ const OrdersModule = {
         this.saveOrders();
         ClientsModule.updateClientOrderStats(clientId);
         
-        // NUEVO: Notificar al mo½dulo de rutas sobre nuevo pedido
+        // NUEVO: Notificar al modulo de rutas sobre nuevo pedido
         if (RutasModule.actualizarRutaAutomatica) {
             RutasModule.actualizarRutaAutomatica();
         }
@@ -806,7 +806,7 @@ const OrdersModule = {
             }
             this.saveOrders();
             
-            // NUEVO: Notificar al mo½dulo de rutas sobre el cambio de estado
+            // NUEVO: Notificar al modulo de rutas sobre el cambio de estado
             if (estadoAnterior !== status && RutasModule.actualizarRutaPorCambioPedido) {
                 RutasModule.actualizarRutaPorCambioPedido(orderId, status);
             }
@@ -978,7 +978,7 @@ const OrdersModule = {
         // Registrar como venta
         const sale = SalesModule.addSale(order.clientId, weight, quantity, price);
         
-        // Actualizar estado½sticas del cliente
+        // Actualizar estadisticas del cliente
         ClientsModule.updateClientStats(order.clientId, weight, quantity, sale.total);
         
         // Marcar pedido como entregado
@@ -997,7 +997,7 @@ const OrdersModule = {
                 const client = ClientsModule.getClientById(order.clientId);
                 const clientName = client ? client.name : 'Cliente';
                 NotificationsModule.notifyOrderDelivered(clientName).catch(err => {
-                    console.warn('No se pudo enviar notificacio½n:', err);
+                    console.warn('No se pudo enviar notificacion:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -1013,7 +1013,7 @@ const OrdersModule = {
             RutasModule.actualizarRutaPorCambioPedido(orderId, 'delivered');
         }
         
-        // Actualizar estado½sticas y contabilidad
+        // Actualizar estadisticas y contabilidad
         StatsModule.updateStats(Utils.getTodayDate());
         AccountingModule.updateAccounting(Utils.getTodayDate());
         
@@ -1051,9 +1051,9 @@ const OrdersModule = {
             <div class="order-details-modal">
                 <h3><i class="fas fa-clipboard-list"></i> Detalles del Pedido #${orderId}</h3>
                 <p><strong>Cliente:</strong> ${client.name}</p>
-                <p><strong>Telo½fono:</strong> ${client.phone}</p>
-                <p><strong>Direccio½n:</strong> ${client.address}</p>
-                <p><strong>Ubicacio½n:</strong> ${client.location || 'No especificada'}</p>
+                <p><strong>Telefono:</strong> ${client.phone}</p>
+                <p><strong>Direccion:</strong> ${client.address}</p>
+                <p><strong>Ubicacion:</strong> ${client.location || 'No especificada'}</p>
                 <hr>
                 <p><strong>Peso Total:</strong> ${order.weight.toFixed(2)} lb</p>
                 <p><strong>Cantidad de Pollos:</strong> ${order.quantity}</p>
@@ -1061,7 +1061,7 @@ const OrdersModule = {
                 <p><strong>Precio por lb:</strong> $${(order.price || 0).toFixed(2)}</p>
                 <p><strong>Total:</strong> $${order.total.toFixed(2)}</p>
                 <p><strong>Estado:</strong> <span class="order-status ${order.status}">${this.getStatusText(order.status)}</span></p>
-                <p><strong>Fecha de creacio½n:</strong> ${order.createdDate} ${order.createdTime}</p>
+                <p><strong>Fecha de creacion:</strong> ${order.createdDate} ${order.createdTime}</p>
                 ${order.deliveryDate ? `<p><strong>Fecha de entrega:</strong> ${order.deliveryDate} ${order.deliveryTime || ''}</p>` : ''}
                 ${order.notes ? `<p><strong>Notas:</strong> ${order.notes}</p>` : ''}
                 ${order.actualWeight ? `<p><strong>Peso real entregado:</strong> ${order.actualWeight.toFixed(2)} lb</p>` : ''}
@@ -1130,7 +1130,7 @@ const OrdersModule = {
     }
 };
 
-// Mo½dulo de Ventas
+// Modulo de Ventas
 const SalesModule = {
     sales: [],
 
@@ -1188,7 +1188,7 @@ const SalesModule = {
                 const client = ClientsModule.getClientById(clientId);
                 const clientName = client ? client.name : 'Cliente';
                 NotificationsModule.notifySaleCompleted(total, clientName).catch(err => {
-                    console.warn('No se pudo enviar notificacio½n:', err);
+                    console.warn('No se pudo enviar notificacion:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -1199,7 +1199,7 @@ const SalesModule = {
     },
 
     getSalesByDate(date) {
-        // Normalizar formato de fecha para comparacio½n
+        // Normalizar formato de fecha para comparacion
         const targetDate = date.includes('/') ? this.convertDateFormat(date) : date;
         return this.sales.filter(sale => {
             // FILTRAR VENTAS ELIMINADAS
@@ -1213,7 +1213,7 @@ const SalesModule = {
     // Convertir fecha de DD/MM/YYYY a YYYY-MM-DD
     convertDateFormat(date) {
         if (date.includes('-') && date.split('-')[0].length === 4) {
-            return date; // Ya esto½ en formato correcto
+            return date; // Ya esta en formato correcto
         }
         const parts = date.split('/');
         if (parts.length === 3) {
@@ -1288,7 +1288,7 @@ const SalesModule = {
                 const client = ClientsModule.getClientById(sale.clientId);
                 const clientName = client ? client.name : 'Cliente no encontrado';
 
-                // Determinar si tiene costo directo baso½ndose en hasCustomCost
+                // Determinar si tiene costo directo basandose en hasCustomCost
                 const hasCustomCost = sale.hasCustomCost === true;
                 const costBadge = hasCustomCost ? 
                     '<span style="background: #007bff; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; margin-left: 8px; font-weight: 600;"><i class="fas fa-drumstick-bite"></i> Pelado (Costo Directo)</span>' : 
@@ -1300,15 +1300,15 @@ const SalesModule = {
                     <div class="sale-info">
                         <h3><i class="fas fa-user"></i> ${clientName} ${costBadge}</h3>
                         <p class="sale-details">
-                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb o½ 
+                            <i class="fas fa-weight"></i> ${sale.weight.toFixed(2)} lb | 
                             <i class="fas fa-egg"></i> ${sale.quantity} pollos
                         </p>
                         <p class="sale-details">
-                            <i class="fas fa-balance-scale"></i> ${sale.averageWeight} lb/pollo o½ 
+                            <i class="fas fa-balance-scale"></i> ${sale.averageWeight} lb/pollo | 
                             ${sale.price.toFixed(2)}/lb
                         </p>
                         <p class="sale-details">
-                            <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(sale.costPerLb)}/lb o½ 
+                            <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(sale.costPerLb)}/lb | 
                             <i class="fas fa-chart-line"></i> Ganancia: ${Utils.formatCurrency(sale.profitPerLb)}/lb
                         </p>
                         <p class="sale-details"><i class="fas fa-clock"></i> ${sale.time}</p>
@@ -1383,7 +1383,7 @@ const SalesModule = {
                             </label>
                             <input type="number" step="0.01" min="0" class="form-input" 
                                    id="edit-sale-cost" value="${sale.costPerLb || ''}" 
-                                   placeholder="Dejar vaco½o para usar costo de merma">
+                                   placeholder="Dejar vacio para usar costo de merma">
                             <small style="color: var(--gray); display: block; margin-top: 5px;">
                                 <i class="fas fa-drumstick-bite"></i> Usa este campo solo para pollos pelados con costo directo
                             </small>
@@ -1392,7 +1392,7 @@ const SalesModule = {
                             <label class="form-label">Tipo de Pago</label>
                             <select class="form-input" id="edit-sale-payment" required>
                                 <option value="paid" ${sale.isPaid ? 'selected' : ''}>Efectivo (Pagado)</option>
-                                <option value="credit" ${!sale.isPaid ? 'selected' : ''}>Cro½dito (A deber)</option>
+                                <option value="credit" ${!sale.isPaid ? 'selected' : ''}>Credito (A deber)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1488,17 +1488,17 @@ const SalesModule = {
         await this.saveSales();
         await ClientsModule.saveClients();
         
-        // CR?TICO: Notificar al sistema de sincronizacio½n sobre la actualizacio½n
+        // CR?TICO: Notificar al sistema de sincronizacion sobre la actualizacion
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', saleId, 'update');
-            // Si cambio½ de cliente, notificar tambio½n los clientes
+            // Si cambio de cliente, notificar tambien los clientes
             if (oldClientId !== sale.clientId) {
                 await SyncEngine.notifyChange('clients', oldClientId, 'update');
                 await SyncEngine.notifyChange('clients', sale.clientId, 'update');
             }
         }
         
-        // Actualizar contabilidad de ambas fechas si cambio½ la fecha
+        // Actualizar contabilidad de ambas fechas si cambio la fecha
         if (typeof AccountingModule !== 'undefined') {
             AccountingModule.updateAccounting(oldDate);
             if (oldDate !== sale.date) {
@@ -1506,7 +1506,7 @@ const SalesModule = {
             }
         }
         
-        // Actualizar badges de cro½ditos si cambio½ el estado de pago
+        // Actualizar badges de creditos si cambio el estado de pago
         if (oldIsPaid !== sale.isPaid && typeof CreditosModule !== 'undefined') {
             CreditosModule.updateCreditBadges();
         }
@@ -1532,24 +1532,24 @@ const SalesModule = {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3><i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Confirmar Eliminacio½n</h3>
+                    <h3><i class="fas fa-exclamation-triangle" style="color: #ff6b6b;"></i> Confirmar Eliminacion</h3>
                     <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <p><strong>o½Esto½s seguro de que deseas eliminar esta venta?</strong></p>
+                        <p><strong>Estas seguro de que deseas eliminar esta venta?</strong></p>
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
                             <p><strong>Cliente:</strong> ${clientName}</p>
                             <p><strong>Peso:</strong> ${sale.weight.toFixed(2)} lb</p>
                             <p><strong>Cantidad:</strong> ${sale.quantity} pollos</p>
                             <p><strong>Total:</strong> ${Utils.formatCurrency(sale.total)}</p>
                             <p><strong>Fecha:</strong> ${sale.date}</p>
-                            <p><strong>Estado:</strong> ${sale.isPaid ? 'Pagado' : 'Cro½dito'}</p>
+                            <p><strong>Estado:</strong> ${sale.isPaid ? 'Pagado' : 'Credito'}</p>
                         </div>
                         <p style="color: #ff6b6b; font-size: 0.9rem;">
-                            <i class="fas fa-warning"></i> Esta accio½n no se puede deshacer y se sincronizaro½ en todos los dispositivos.
+                            <i class="fas fa-warning"></i> Esta accion no se puede deshacer y se sincronizara en todos los dispositivos.
                         </p>
                     </div>
                     <div style="display: flex; gap: 10px; justify-content: center;">
@@ -1594,7 +1594,7 @@ const SalesModule = {
             }
             
             // 3. GUARDAR LA VENTA MARCADA COMO ELIMINADA
-            // Esto activaro½ los interceptores automo½ticos igual que la edicio½n
+            // Esto activara los interceptores automaticos igual que la edicion
             await this.saveSales();
             
             // 4. ACTUALIZAR CONTABILIDAD
@@ -1602,7 +1602,7 @@ const SalesModule = {
                 AccountingModule.updateAccounting(sale.date);
             }
             
-            // 5. ACTUALIZAR BADGES DE CRo½DITOS
+            // 5. ACTUALIZAR BADGES DE CREDITOS
             if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
                 CreditosModule.updateCreditBadges();
             }
@@ -1642,7 +1642,7 @@ const SalesModule = {
         const paymentTime = new Date().toLocaleTimeString('es-ES');
         const paymentAmount = parseFloat(amount);
 
-        // Redondear a 2 decimales para evitar problemas de precisio½n
+        // Redondear a 2 decimales para evitar problemas de precision
         const roundedAmount = Math.round(paymentAmount * 100) / 100;
         const roundedDebt = Math.round(sale.remainingDebt * 100) / 100;
 
@@ -1651,7 +1651,7 @@ const SalesModule = {
         sale.paidAmount += paymentAmount;
         sale.remainingDebt -= paymentAmount;
         
-        // CR?TICO: Actualizar timestamp de o½ltima modificacio½n para sincronizacio½n
+        // CR?TICO: Actualizar timestamp de ultima modificacion para sincronizacion
         sale.lastModified = Date.now();
         
         if (!sale.paymentHistory) sale.paymentHistory = [];
@@ -1662,7 +1662,7 @@ const SalesModule = {
             timestamp: Date.now()
         });
 
-        // YA NO registrar en PaymentHistoryModule - se construye dino½micamente desde sale.paymentHistory
+        // YA NO registrar en PaymentHistoryModule - se construye dinamicamente desde sale.paymentHistory
 
         if (sale.remainingDebt <= 0.01) {
             sale.isPaid = true;
@@ -1674,7 +1674,7 @@ const SalesModule = {
                     const client = ClientsModule.getClientById(sale.clientId);
                     const clientName = client ? client.name : 'Cliente';
                     NotificationsModule.notifyPaymentReceived(paymentAmount, clientName).catch(err => {
-                        console.warn('No se pudo enviar notificacio½n de pago:', err);
+                        console.warn('No se pudo enviar notificacion de pago:', err);
                     });
                 } catch (err) {
                     console.warn('Error al intentar notificar pago:', err);
@@ -1684,7 +1684,7 @@ const SalesModule = {
 
         await this.saveSales();
         
-        // CR?TICO: Notificar al sistema de sincronizacio½n si no es silencioso
+        // CR?TICO: Notificar al sistema de sincronizacion si no es silencioso
         if (!silent && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('sales', sale.id, 'update');
         }
@@ -1742,17 +1742,17 @@ const SalesModule = {
             }));
     },
 
-    // Funcio½n para agregar eliminaciones pendientes
+    // Funcion para agregar eliminaciones pendientes
     addPendingDeletion(saleId) {
         const pendingDeletions = JSON.parse(localStorage.getItem('pendingSalesDeletions') || '[]');
         if (!pendingDeletions.includes(saleId)) {
             pendingDeletions.push(saleId);
             localStorage.setItem('pendingSalesDeletions', JSON.stringify(pendingDeletions));
-            console.log(`?? Eliminacio½n pendiente guardada: ${saleId}`);
+            console.log(`?? Eliminacion pendiente guardada: ${saleId}`);
         }
     },
 
-    // Funcio½n para sincronizar eliminaciones pendientes cuando SyncEngine esto½ disponible
+    // Funcion para sincronizar eliminaciones pendientes cuando SyncEngine este disponible
     async syncPendingDeletions() {
         if (typeof window.SyncEngine !== 'undefined' && 
             window.SyncEngine && 
@@ -1767,9 +1767,9 @@ const SalesModule = {
                 for (const saleId of pendingDeletions) {
                     try {
                         await window.SyncEngine.notifyChange('sales', saleId, 'delete');
-                        console.log(`? Eliminacio½n sincronizada: ${saleId}`);
+                        console.log(`? Eliminacion sincronizada: ${saleId}`);
                     } catch (error) {
-                        console.error(`? Error sincronizando eliminacio½n ${saleId}:`, error);
+                        console.error(`? Error sincronizando eliminacion ${saleId}:`, error);
                     }
                 }
                 
@@ -1781,10 +1781,10 @@ const SalesModule = {
     }
 };
 
-// Mo½dulo de Merma
+// Modulo de Merma
 const MermaModule = {
     dailyPrices: [],
-    mermaRecords: [], // NUEVO: Historial completo de co½lculos de merma
+    mermaRecords: [], // NUEVO: Historial completo de calculos de merma
 
     async init() {
         await this.loadDailyPrices();
@@ -1792,11 +1792,11 @@ const MermaModule = {
     },
 
     calculateMerma(liveWeight, liveCost, processedWeight, processingCost, realCostPerLb = null) {
-        // null = campo vaco½o (a deducir), 0 = ingresado explo½citamente como cero
+        // null = campo vacio (a deducir), 0 = ingresado explicitamente como cero
         const hasLiveWeight = liveWeight != null && liveWeight > 0;
         const hasLiveCost = liveCost != null && liveCost > 0;
         const hasProcessedWeight = processedWeight != null && processedWeight > 0;
-        const hasProcessingCost = processingCost != null; // null = vaco½o, 0 = vo½lido
+        const hasProcessingCost = processingCost != null; // null = vacio, 0 = valido
         const hasRealCost = realCostPerLb != null && realCostPerLb > 0;
         
         const missingCount = [hasLiveWeight, hasLiveCost, hasProcessedWeight, hasProcessingCost, hasRealCost].filter(v => !v).length;
@@ -1815,22 +1815,22 @@ const MermaModule = {
         // Calcular el valor faltante
         if (!hasLiveWeight) {
             finalLiveWeight = (finalRealCost * finalProcessedWeight - finalProcessingCost) / finalLiveCost;
-            if (finalLiveWeight <= 0) throw new Error('Peso vivo calculado invo½lido');
+            if (finalLiveWeight <= 0) throw new Error('Peso vivo calculado invalido');
             deducedValue = 'liveWeight';
         } else if (!hasLiveCost) {
             finalLiveCost = (finalRealCost * finalProcessedWeight - finalProcessingCost) / finalLiveWeight;
-            if (finalLiveCost <= 0) throw new Error('Costo por lb vivo calculado invo½lido');
+            if (finalLiveCost <= 0) throw new Error('Costo por lb vivo calculado invalido');
             deducedValue = 'liveCost';
         } else if (!hasProcessedWeight) {
             finalProcessedWeight = (finalLiveWeight * finalLiveCost + finalProcessingCost) / finalRealCost;
-            if (finalProcessedWeight <= 0) throw new Error('Peso pelado calculado invo½lido');
+            if (finalProcessedWeight <= 0) throw new Error('Peso pelado calculado invalido');
             deducedValue = 'processedWeight';
         } else if (!hasProcessingCost) {
             finalProcessingCost = finalRealCost * finalProcessedWeight - finalLiveWeight * finalLiveCost;
             deducedValue = 'processingCost';
         } else if (!hasRealCost) {
             finalRealCost = (finalLiveWeight * finalLiveCost + finalProcessingCost) / finalProcessedWeight;
-            if (finalRealCost <= 0) throw new Error('Costo real calculado invo½lido');
+            if (finalRealCost <= 0) throw new Error('Costo real calculado invalido');
             deducedValue = 'realCostPerLb';
         }
         
@@ -1871,7 +1871,7 @@ const MermaModule = {
 
         await this.saveMermaRecords();
         
-        // Guardar tambio½n el precio
+        // Guardar tambien el precio
         await this.saveDailyPrice(mermaData.realCostPerLb, date);
         
         // CRITICO: Notificar al sistema de sincronizacion
@@ -1913,7 +1913,7 @@ const MermaModule = {
                 AccountingModule.updateAccounting(date);
             }
             
-            // Recalcular estado½sticas
+            // Recalcular estadisticas
             if (typeof StatsModule !== 'undefined') {
                 StatsModule.updateStats(date);
             }
@@ -1952,7 +1952,7 @@ const MermaModule = {
         
         await this.saveDailyPrices();
         
-        // CR?TICO: Notificar al sistema de sincronizacio½n
+        // CR?TICO: Notificar al sistema de sincronizacion
         if (typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             await SyncEngine.notifyChange('prices', priceRecord.id, 'update');
         }
@@ -2035,7 +2035,7 @@ const MermaModule = {
     }
 };
 
-// Mo½dulo de Estado½sticas
+// Modulo de Estadisticas
 const StatsModule = {
     updateStats(date = null) {
         const targetDate = date || Utils.getTodayDate();
@@ -2047,7 +2047,7 @@ const StatsModule = {
         const salesWithMerma = sales.filter(sale => !sale.hasCustomCost);
         const salesWithCustomCost = sales.filter(sale => sale.hasCustomCost);
         
-        // Actualizar estado½sticas del do½a - SOLO si los elementos existen
+        // Actualizar estadisticas del dia - SOLO si los elementos existen
         const salesTodayElement = document.getElementById('sales-today');
         const incomeTodayElement = document.getElementById('income-today');
         const weightTodayElement = document.getElementById('weight-today');
@@ -2089,7 +2089,7 @@ const StatsModule = {
             totalQuantityElement.textContent = totalQuantity;
         }
         
-        // Precio de merma del do½a
+        // Precio de merma del dia
         if (mermaPriceElement) {
             mermaPriceElement.textContent = mermaPrice ? 
                 Utils.formatCurrency(mermaPrice.price) + '/lb' : 'No definido';
@@ -2113,7 +2113,7 @@ const StatsModule = {
                             <i class="fas fa-feather" style="font-size: 2rem; margin-right: 15px;"></i>
                             <div>
                                 <h4 style="margin: 0; font-size: 1.2rem;">Pollos en Pluma</h4>
-                                <p style="margin: 5px 0 0; opacity: 0.95; font-size: 0.9rem;">Con co½lculo de merma</p>
+                                <p style="margin: 5px 0 0; opacity: 0.95; font-size: 0.9rem;">Con calculo de merma</p>
                             </div>
                         </div>
                         <div style="background: rgba(255,255,255,0.25); padding: 15px; border-radius: 8px;">
@@ -2149,7 +2149,7 @@ const StatsModule = {
             chickenTypeBreakdownElement.innerHTML = breakdownHTML;
         }
         
-        // Actualizar estado½sticas por cliente
+        // Actualizar estadisticas por cliente
         this.updateClientStats(sales);
     },
 
@@ -2228,7 +2228,7 @@ const StatsModule = {
         const currentDate = new Date(start);
         const endDate = new Date(end);
         
-        // Inicializar todos los do½as
+        // Inicializar todos los dias
         while (currentDate <= endDate) {
             const dateKey = Utils.formatDate(currentDate);
             statsByDay[dateKey] = {
@@ -2266,7 +2266,7 @@ const StatsModule = {
 };
 
 
-// Mo½dulo de Contabilidad
+// Modulo de Contabilidad
 const AccountingModule = {
     expenses: [],
 
@@ -2551,7 +2551,7 @@ const AccountingModule = {
         const sales = SalesModule.getSalesByDate(date);
         const expenses = this.getExpensesByDate(date);
         
-        // Calcular ganancia bruta: (PVP - Costo Merma) o½ Libras
+        // Calcular ganancia bruta: (PVP - Costo Merma) x Libras
         let grossProfit = 0;
         sales.forEach(sale => {
             const costPerLb = sale.costPerLb || 0;
@@ -2577,7 +2577,7 @@ const DiezmosModule = {
         await this.forzarRecalculoCompleto();
     },
 
-    // NUEVO: Calcular automo½ticamente diezmos de do½as anteriores
+    // NUEVO: Calcular automaticamente diezmos de dias anteriores
     async calcularDiezmosPendientes() {
         // Obtener todas las fechas con ventas
         const fechasConVentas = [...new Set(SalesModule.sales.map(s => s.date))];
@@ -2606,7 +2606,7 @@ const DiezmosModule = {
                         diezmoPercent: this.config.diezmoPercent,
                         ofrendaPercent: this.config.ofrendaPercent,
                         timestamp: Date.now(),
-                        autoCalculated: true // Marcar como calculado automo½ticamente
+                        autoCalculated: true // Marcar como calculado automaticamente
                     };
                     
                     this.records.push(record);
@@ -2617,12 +2617,12 @@ const DiezmosModule = {
         
         if (registrosCreados > 0) {
             await this.saveRecords();
-            console.log(`? Se calcularon automo½ticamente ${registrosCreados} registros de diezmos pendientes`);
+            console.log(`? Se calcularon automaticamente ${registrosCreados} registros de diezmos pendientes`);
         }
     },
 
     getPreview(date = Utils.getTodayDate()) {
-        // Prevenir recursio½n infinita
+        // Prevenir recursion infinita
         if (this._calculatingPreview) {
             return {
                 netProfit: 0,
@@ -2683,11 +2683,11 @@ const DiezmosModule = {
 
         await this.saveRecords();
         
-        // Notificar co½lculo de diezmos (sin bloquear si falla)
+        // Notificar calculo de diezmos (sin bloquear si falla)
         if (typeof NotificationsModule !== 'undefined') {
             try {
                 NotificationsModule.notifyDiezmosCalculated(record.total).catch(err => {
-                    console.warn('No se pudo enviar notificacio½n:', err);
+                    console.warn('No se pudo enviar notificacion:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -2737,7 +2737,7 @@ const DiezmosModule = {
         
         if (registrosActualizados > 0) {
             await this.saveRecords();
-            Utils.showNotification(`? Se recalcularon ${registrosActualizados} registros con los nuevos porcentajes`, 'success', 3000);
+            Utils.showNotification(`Se recalcularon ${registrosActualizados} registros con los nuevos porcentajes`, 'success', 3000);
         }
     },
 
@@ -2773,7 +2773,7 @@ const DiezmosModule = {
         if (savedLocal) this.records = JSON.parse(savedLocal);
     },
 
-    // NUEVO: Funcio½n para forzar reco½lculo de todos los diezmos pendientes
+    // NUEVO: Funcion para forzar recalculo de todos los diezmos pendientes
     async forzarRecalculoCompleto() {
         const fechasConVentas = [...new Set(SalesModule.sales.map(s => s.date))];
         let registrosCreados = 0;
@@ -2814,7 +2814,7 @@ const DiezmosModule = {
         
         if (registrosCreados > 0 || registrosActualizados > 0) {
             await this.saveRecords();
-            const mensaje = `? Reco½lculo completo: ${registrosCreados} nuevos registros, ${registrosActualizados} actualizados`;
+            const mensaje = `? Recalculo completo: ${registrosCreados} nuevos registros, ${registrosActualizados} actualizados`;
             Utils.showNotification(mensaje, 'success', 4000);
             return { creados: registrosCreados, actualizados: registrosActualizados };
         }
@@ -2845,7 +2845,7 @@ const ConfigModule = {
         }
     },
     themes: {
-        default: { name: 'Verde Clo½sico', colors: { primary: '#4CAF50', secondary: '#FF9800', light: '#f5f5f5' } },
+        default: { name: 'Verde Clasico', colors: { primary: '#4CAF50', secondary: '#FF9800', light: '#f5f5f5' } },
         blue: { name: 'Azul Profesional', colors: { primary: '#2196F3', secondary: '#FF5722', light: '#E3F2FD' } },
         purple: { name: 'Morado Moderno', colors: { primary: '#9C27B0', secondary: '#FFC107', light: '#F3E5F5' } },
         red: { name: 'Rojo Intenso', colors: { primary: '#F44336', secondary: '#4CAF50', light: '#FFEBEE' } }
@@ -2913,7 +2913,7 @@ const ConfigModule = {
     },
 
     saveConfig() {
-        // Guardar en localStorage (ro½pido)
+        // Guardar en localStorage (rapido)
         localStorage.setItem('polloConfig', JSON.stringify(this.currentConfig));
         
         // Guardar en IndexedDB (persistente)
@@ -2924,12 +2924,12 @@ const ConfigModule = {
         this.applyConfig();
         this.updateDynamicManifest();
         if (typeof Utils !== 'undefined') {
-            Utils.showNotification('? Configuracio½n guardada correctamente', 'success', 3000);
+            Utils.showNotification('Configuracion guardada correctamente', 'success', 3000);
         }
     },
 
     async loadConfig() {
-        // Intentar cargar desde IndexedDB primero (mo½s confiable)
+        // Intentar cargar desde IndexedDB primero (mas confiable)
         if (DB.db) {
             try {
                 const saved = await DB.get('config', 'app-config');
@@ -2949,7 +2949,7 @@ const ConfigModule = {
         if (saved) {
             try {
                 this.currentConfig = { ...this.currentConfig, ...JSON.parse(saved) };
-                // Guardar en IndexedDB para pro½xima vez
+                // Guardar en IndexedDB para proxima vez
                 if (DB.db) {
                     DB.set('config', { key: 'app-config', value: this.currentConfig });
                 }
@@ -2961,8 +2961,8 @@ const ConfigModule = {
 
     async resetToDefault() {
         const confirmed = await Utils.showDangerConfirm(
-            'Se restauraro½ la configuracio½n por defecto y se recargaro½ la aplicacio½n.',
-            'o½Restaurar Configuracio½n?',
+            'Se restaurara la configuracion por defecto y se recargara la aplicacion.',
+            'Restaurar Configuracion?',
             'Restaurar'
         );
         
@@ -2992,11 +2992,11 @@ const ConfigModule = {
     }
 };
 
-// Mo½dulo de Historial de Pagos - Registro permanente de todos los pagos
+// Modulo de Historial de Pagos - Registro permanente de todos los pagos
 const PaymentHistoryModule = {
-    // YA NO se usa payments[] - se construye dino½micamente desde SalesModule.sales
+    // YA NO se usa payments[] - se construye dinamicamente desde SalesModule.sales
     
-    // Obtener todos los pagos (construido dino½micamente desde sale.paymentHistory)
+    // Obtener todos los pagos (construido dinamicamente desde sale.paymentHistory)
     getAllPayments() {
         const allPayments = [];
         
@@ -3056,7 +3056,7 @@ const PaymentHistoryModule = {
             .reduce((sum, p) => sum + p.amount, 0);
     },
 
-    // Obtener estado½sticas de pagos
+    // Obtener estadisticas de pagos
     getStats() {
         const allPayments = this.getAllPayments();
         const totalPayments = allPayments.length;
@@ -3074,8 +3074,8 @@ const PaymentHistoryModule = {
     
     // YA NO se necesitan estas funciones - los datos vienen de sale.paymentHistory
     async init() {
-        // No hacer nada - los datos se construyen dino½micamente
-        console.log('? PaymentHistoryModule inicializado (modo dino½mico desde ventas)');
+        // No hacer nada - los datos se construyen dinamicamente
+        console.log('? PaymentHistoryModule inicializado (modo dinamico desde ventas)');
     },
 
     exportPayments(clientId = null) {
@@ -3132,16 +3132,16 @@ const BackupModule = {
             // Historial de pagos permanente
             paymentHistory: PaymentHistoryModule.payments || [],
             
-            // Cro½ditos (incluido en sales pero separado para claridad)
+            // Creditos (incluido en sales pero separado para claridad)
             creditosData: {
                 creditSales: SalesModule.sales.filter(s => !s.isPaid) || [],
                 paymentHistory: SalesModule.sales.filter(s => s.paymentHistory && s.paymentHistory.length > 0) || []
             },
             
-            // Configuracio½n completa de la app
+            // Configuracion completa de la app
             config: ConfigModule.currentConfig || {},
             
-            // Configuracio½n de Telegram
+            // Configuracion de Telegram
             telegramConfig: {
                 botToken: BackupModule.telegramBotToken || null,
                 chatId: BackupModule.telegramChatId || null
@@ -3169,7 +3169,7 @@ const BackupModule = {
         if (typeof PushNotifications !== 'undefined') {
             try {
                 PushNotifications.notifyBackupSuccess('backup').catch(err => {
-                    console.warn('No se pudo enviar notificacio½n:', err);
+                    console.warn('No se pudo enviar notificacion:', err);
                 });
             } catch (err) {
                 console.warn('Error al notificar:', err);
@@ -3292,14 +3292,14 @@ const BackupModule = {
         localStorage.setItem('telegramBotToken', token);
         localStorage.setItem('telegramChatId', chatId);
         
-        // Guardar tambio½n en AutoBackup para backups automo½ticos (IndexedDB seguro)
+        // Guardar tambien en AutoBackup para backups automaticos (IndexedDB seguro)
         if (typeof AutoBackup !== 'undefined') {
             AutoBackup.saveCredentials(token, chatId);
         }
     },
 
     async loadTelegramConfig() {
-        // Intentar cargar desde versio½n encriptada primero
+        // Intentar cargar desde version encriptada primero
         const encryptedToken = localStorage.getItem('tg_bt');
         const encryptedChatId = localStorage.getItem('tg_ci');
         
@@ -3318,7 +3318,7 @@ const BackupModule = {
             this.telegramChatId = localStorage.getItem('telegramChatId');
         }
         
-        // Si ao½n no hay, intentar cargar desde IndexedDB (AutoBackup)
+        // Si aun no hay, intentar cargar desde IndexedDB (AutoBackup)
         if ((!this.telegramBotToken || !this.telegramChatId) && typeof AutoBackup !== 'undefined') {
             try {
                 const credentials = await AutoBackup.getCredentials();
@@ -3343,7 +3343,7 @@ const BackupModule = {
         this.lastAutoBackup = localStorage.getItem('lastAutoBackup');
     },
 
-    // Encriptacio½n simple (ofuscacio½n)
+    // Encriptacion simple (ofuscacion)
     encrypt(text) {
         if (!text) return null;
         return btoa(encodeURIComponent(text).split('').reverse().join(''));
@@ -3362,20 +3362,20 @@ const BackupModule = {
         if (token) {
             this.telegramBotToken = token;
             localStorage.setItem('tg_bt', this.encrypt(token));
-            localStorage.setItem('telegramBotToken', token); // Tambio½n sin encriptar para compatibilidad
+            localStorage.setItem('telegramBotToken', token); // Tambien sin encriptar para compatibilidad
         }
         if (chatId) {
             this.telegramChatId = chatId;
             localStorage.setItem('tg_ci', this.encrypt(chatId));
-            localStorage.setItem('telegramChatId', chatId); // Tambio½n sin encriptar para compatibilidad
+            localStorage.setItem('telegramChatId', chatId); // Tambien sin encriptar para compatibilidad
         }
         
-        // Guardar tambio½n en AutoBackup para backups automo½ticos (IndexedDB seguro)
+        // Guardar tambien en AutoBackup para backups automaticos (IndexedDB seguro)
         if (typeof AutoBackup !== 'undefined' && token && chatId) {
             AutoBackup.saveCredentials(token, chatId);
         }
         
-        Utils.showNotification('? Configuracio½n de Telegram guardada de forma segura', 'success', 3000);
+        Utils.showNotification('Configuracion de Telegram guardada de forma segura', 'success', 3000);
     },
 
     clearTelegramConfig() {
@@ -3383,7 +3383,7 @@ const BackupModule = {
         this.telegramChatId = null;
         localStorage.removeItem('tg_bt');
         localStorage.removeItem('tg_ci');
-        Utils.showNotification('??? Configuracio½n de Telegram eliminada', 'info', 3000);
+        Utils.showNotification('Configuracion de Telegram eliminada', 'info', 3000);
     },
 
     async testTelegramConnection() {
@@ -3397,7 +3397,7 @@ const BackupModule = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     chat_id: this.telegramChatId,
-                    text: '? Conexio½n exitosa con GallOli\n\n?? Tu bot esto½ configurado correctamente y listo para recibir backups automo½ticos.'
+                    text: '? Conexion exitosa con GallOli\n\n?? Tu bot esta configurado correctamente y listo para recibir backups automaticos.'
                 })
             });
 
@@ -3409,7 +3409,7 @@ const BackupModule = {
 
             return result;
         } catch (error) {
-            throw new Error(`Error de conexio½n: ${error.message}`);
+            throw new Error(`Error de conexion: ${error.message}`);
         }
     },
 
@@ -3426,14 +3426,14 @@ const BackupModule = {
             formData.append('chat_id', this.telegramChatId);
             formData.append('document', blob, backup.filename);
             formData.append('caption', 
-                `?? Backup Automo½tico GallOli\n` +
+                `?? Backup Automatico GallOli\n` +
                 `?? ${Utils.formatDateTime()}\n\n` +
-                `?? Estado½sticas:\n` +
+                `?? Estadisticas:\n` +
                 `?? Clientes: ${stats.totalClients}\n` +
                 `?? Ventas: ${stats.totalSales}\n` +
                 `?? Pedidos: ${stats.totalOrders}\n` +
                 `?? Gastos: ${stats.totalExpenses}\n` +
-                `?? Tamao½o: ${stats.totalSize}`
+                `?? Tamano: ${stats.totalSize}`
             );
 
             const response = await fetch(
@@ -3452,11 +3452,11 @@ const BackupModule = {
 
             localStorage.setItem('lastTelegramBackup', new Date().toISOString());
             
-            // Notificacio½n de o½xito
+            // Notificacion de exito
             if (typeof PushNotifications !== 'undefined') {
                 try {
                     PushNotifications.notifyBackupSuccess(backup.filename).catch(err => {
-                        console.warn('No se pudo enviar notificacio½n:', err);
+                        console.warn('No se pudo enviar notificacion:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar:', err);
@@ -3465,11 +3465,11 @@ const BackupModule = {
             
             return result;
         } catch (error) {
-            // Notificacio½n de error
+            // Notificacion de error
             if (typeof PushNotifications !== 'undefined') {
                 try {
                     PushNotifications.notifyBackupError(error.message).catch(err => {
-                        console.warn('No se pudo enviar notificacio½n de error:', err);
+                        console.warn('No se pudo enviar notificacion de error:', err);
                     });
                 } catch (err) {
                     console.warn('Error al notificar error:', err);
@@ -3487,12 +3487,12 @@ const BackupModule = {
             const result = await this.sendToTelegram(backup);
             
             if (result.ok) {
-                Utils.showNotification('? Backup enviado a Telegram correctamente', 'success', 5000);
+                Utils.showNotification('Backup enviado a Telegram correctamente', 'success', 5000);
                 return true;
             }
             return false;
         } catch (error) {
-            Utils.showNotification(`? ${error.message}`, 'error', 5000);
+            Utils.showNotification(`${error.message}`, 'error', 5000);
             return false;
         } finally {
             Utils.showLoading(false);
@@ -3505,16 +3505,16 @@ const BackupModule = {
         
         if (enabled) {
             this.scheduleAutoBackup();
-            Utils.showNotification('? Backup automo½tico activado', 'success', 3000);
+            Utils.showNotification('Backup automatico activado', 'success', 3000);
         } else {
-            Utils.showNotification('?? Backup automo½tico desactivado', 'info', 3000);
+            Utils.showNotification('Backup automatico desactivado', 'info', 3000);
         }
     },
 
     scheduleAutoBackup() {
         if (!this.autoBackupEnabled) return;
         
-        // Backup automo½tico cada 24 horas
+        // Backup automatico cada 24 horas
         const lastBackup = localStorage.getItem('lastTelegramBackup');
         const now = new Date().getTime();
         const dayInMs = 24 * 60 * 60 * 1000;
@@ -3547,7 +3547,7 @@ const ReportsModule = {
     },
 
     generatePDFReport(report, title) {
-        Utils.showNotification('Generacio½n de PDF no implementada ao½n', 'info', 3000);
+        Utils.showNotification('Generacion de PDF no implementada aun', 'info', 3000);
         return `reporte_${Utils.formatDate()}.pdf`;
     }
 };
@@ -3567,7 +3567,7 @@ const MapModule = {
 
         this.map = L.map('location-map').setView([lat, lng], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'o½ OpenStreetMap'
+            attribution: 'OpenStreetMap'
         }).addTo(this.map);
 
         this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
@@ -3617,7 +3617,7 @@ const MapModule = {
 
 
 // ============================================
-// Mo½DULO: SINCRONIZACIo½N EN LA NUBE
+// MODULO: SINCRONIZACION EN LA NUBE
 // ============================================
 const CloudSyncModule = {
     name: 'cloud-sync',
@@ -3635,7 +3635,7 @@ const CloudSyncModule = {
     renderLoginPage() {
         return `
             <div class="page-header">
-                <h1><i class="fas fa-cloud"></i> Sincronizacio½n en la Nube</h1>
+                <h1><i class="fas fa-cloud"></i> Sincronizacion en la Nube</h1>
                 <p>Accede a tus datos desde cualquier dispositivo</p>
             </div>
             
@@ -3662,15 +3662,15 @@ const CloudSyncModule = {
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Tu ID de Telegram</label>
                         <input type="text" id="telegram-id" placeholder="Ej: 123456789" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">
-                            <i class="fas fa-info-circle"></i> Envo½a /start a @userinfobot para obtener tu ID
+                            <i class="fas fa-info-circle"></i> Envia /start a @userinfobot para obtener tu ID
                         </small>
                     </div>
                     
                     <div id="telegram-code-section" style="display: none; margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Co½digo de Verificacio½n</label>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Codigo de Verificacion</label>
                         <input type="text" id="telegram-code" placeholder="123456" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">
-                            <i class="fas fa-info-circle"></i> Revisa tu Telegram, te enviamos un co½digo
+                            <i class="fas fa-info-circle"></i> Revisa tu Telegram, te enviamos un codigo
                         </small>
                     </div>
                     
@@ -3687,12 +3687,12 @@ const CloudSyncModule = {
                     </div>
                     
                     <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contraseo½a</label>
-                        <input type="password" id="password-input" placeholder="o½o½o½o½o½o½o½o½" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contrasena</label>
+                        <input type="password" id="password-input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <button onclick="CloudSyncModule.handleEmailLogin()" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;">
-                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesio½n
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesion
                     </button>
                     
                     <button onclick="CloudSyncModule.handleEmailRegister()" style="width: 100%; padding: 1rem; background: white; color: #4CAF50; border: 2px solid #4CAF50; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer;">
@@ -3712,12 +3712,12 @@ const CloudSyncModule = {
         
         return `
             <div class="page-header">
-                <h1><i class="fas fa-cloud"></i> Sincronizacio½n en la Nube</h1>
+                <h1><i class="fas fa-cloud"></i> Sincronizacion en la Nube</h1>
                 <p>Conectado como ${user.name}</p>
             </div>
             
             <div style="max-width: 1000px; margin: 2rem auto;">
-                <!-- Tabs de navegacio½n -->
+                <!-- Tabs de navegacion -->
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid #eee; background: white; padding: 1rem; border-radius: 12px 12px 0 0;">
                     <button class="sync-tab active" onclick="CloudSyncModule.switchSyncTab('account')" style="padding: 0.75rem 1.5rem; border: none; background: none; cursor: pointer; border-bottom: 3px solid #2196F3; color: #2196F3; font-weight: bold;">
                         <i class="fas fa-user"></i> Mi Cuenta
@@ -3738,7 +3738,7 @@ const CloudSyncModule = {
                         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #388E3C); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
                             <i class="fas fa-check" style="font-size: 2.5rem; color: white;"></i>
                         </div>
-                        <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">o½Conectado!</h2>
+                        <h2 style="margin: 0 0 0.5rem 0; color: #4CAF50;">Conectado!</h2>
                         <p style="color: #666; margin: 0;">${business.name}</p>
                     </div>
                     
@@ -3757,7 +3757,7 @@ const CloudSyncModule = {
                             <div style="display: flex; align-items: center; gap: 1rem;">
                                 <i class="fas fa-sync" style="font-size: 2rem; color: #4CAF50;"></i>
                                 <div style="flex: 1;">
-                                    <div style="font-weight: bold;">Sincronizacio½n Automo½tica</div>
+                                    <div style="font-weight: bold;">Sincronizacion Automatica</div>
                                     <div style="color: #666; font-size: 0.9rem;">Activa - Tiempo real</div>
                                 </div>
                             </div>
@@ -3770,7 +3770,7 @@ const CloudSyncModule = {
                         </button>
                         
                         <button onclick="CloudSyncModule.logout()" style="padding: 1rem; background: white; color: #f44336; border: 2px solid #f44336; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesio½n
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesion
                         </button>
                     </div>
                 </div>
@@ -3795,14 +3795,14 @@ const CloudSyncModule = {
                 <!-- Tab: Invitaciones -->
                 <div class="sync-tab-content" id="invitations-tab" style="display: none; background: white; padding: 2rem; border-radius: 0 0 12px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                        <h2 style="margin: 0;"><i class="fas fa-ticket-alt"></i> Co½digos de Invitacio½n</h2>
+                        <h2 style="margin: 0;"><i class="fas fa-ticket-alt"></i> Codigos de Invitacion</h2>
                         <button onclick="CloudSyncModule.showCreateInvitation()" style="padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                            <i class="fas fa-plus"></i> Crear Co½digo
+                            <i class="fas fa-plus"></i> Crear Codigo
                         </button>
                     </div>
                     <div id="invitations-list">
                         <div style="text-align: center; padding: 2rem; color: #666;">
-                            <p>Crea co½digos de invitacio½n para agregar nuevos usuarios</p>
+                            <p>Crea codigos de invitacion para agregar nuevos usuarios</p>
                         </div>
                     </div>
                 </div>
@@ -3812,12 +3812,12 @@ const CloudSyncModule = {
     },
     
     async init() {
-        // AuthManager y SyncEngine ya esto½n inicializados globalmente en App.init()
+        // AuthManager y SyncEngine ya estan inicializados globalmente en App.init()
         // Solo verificar estado
         if (window.AuthManager.isAuthenticated()) {
-            console.log('? Sesio½n activa en CloudSync');
+            console.log('? Sesion activa en CloudSync');
         } else {
-            console.log('?? No hay sesio½n en CloudSync');
+            console.log('?? No hay sesion en CloudSync');
         }
     },
     
@@ -3858,11 +3858,11 @@ const CloudSyncModule = {
             return;
         }
         
-        // Si ya se mostro½ el co½digo, verificar
+        // Si ya se mostro el codigo, verificar
         if (codeSection.style.display !== 'none') {
             const code = codeInput.value.trim();
             if (!code || code.length !== 6) {
-                this.showMessage('Ingresa el co½digo de 6 do½gitos', 'error');
+                this.showMessage('Ingresa el codigo de 6 digitos', 'error');
                 return;
             }
             
@@ -3873,30 +3873,30 @@ const CloudSyncModule = {
                 const result = await window.AuthManager.verifyTelegramCode(telegramId, code);
                 
                 if (result.success) {
-                    this.showMessage('o½Login exitoso! Recargando...', 'success');
+                    this.showMessage('Login exitoso! Recargando...', 'success');
                     setTimeout(() => App.loadPage('cloud-sync'), 1000);
                 }
             } catch (error) {
                 this.showMessage(error.message, 'error');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Co½digo';
+                btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Codigo';
             }
             return;
         }
         
-        // Solicitar co½digo
+        // Solicitar codigo
         try {
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando co½digo...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando codigo...';
             
             await window.AuthManager.loginWithTelegram(telegramId);
             
             codeSection.style.display = 'block';
-            btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Co½digo';
+            btn.innerHTML = '<i class="fab fa-telegram"></i> Verificar Codigo';
             btn.disabled = false;
             codeInput.focus();
             
-            this.showMessage('Co½digo enviado a tu Telegram', 'success');
+            this.showMessage('Codigo enviado a tu Telegram', 'success');
         } catch (error) {
             this.showMessage(error.message, 'error');
             btn.disabled = false;
@@ -3916,7 +3916,7 @@ const CloudSyncModule = {
         try {
             const result = await window.AuthManager.loginWithEmail(email, password);
             if (result.success) {
-                this.showMessage('o½Login exitoso! Recargando...', 'success');
+                this.showMessage('Login exitoso! Recargando...', 'success');
                 setTimeout(() => App.loadPage('cloud-sync'), 1000);
             }
         } catch (error) {
@@ -3933,13 +3933,13 @@ const CloudSyncModule = {
             return;
         }
         
-        const name = prompt('o½Co½mo te llamas?');
+        const name = prompt('Como te llamas?');
         if (!name) return;
         
         try {
             const result = await window.AuthManager.registerWithEmail(email, password, name);
             if (result.success) {
-                this.showMessage('o½Registro exitoso! Recargando...', 'success');
+                this.showMessage('Registro exitoso! Recargando...', 'success');
                 setTimeout(() => App.loadPage('cloud-sync'), 1000);
             }
         } catch (error) {
@@ -3952,10 +3952,10 @@ const CloudSyncModule = {
             Utils.showLoading(true);
             await window.SyncEngine.smartSync();
             Utils.showLoading(false);
-            Utils.showNotification('? Sincronizacio½n completada', 'success', 3000);
+            Utils.showNotification('Sincronizacion completada', 'success', 3000);
         } catch (error) {
             Utils.showLoading(false);
-            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4027,7 +4027,7 @@ const CloudSyncModule = {
                                 ${u.telegram_username ? `<i class="fab fa-telegram"></i> @${u.telegram_username}` : ''}
                             </div>
                             <div style="font-size: 0.85rem; color: #999; margin-top: 0.25rem;">
-                                <i class="fas fa-clock"></i> o½ltima actividad: ${u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES') : 'Nunca'}
+                                <i class="fas fa-clock"></i> ultima actividad: ${u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES') : 'Nunca'}
                             </div>
                         </div>
                         ${u.id !== window.AuthManager.user.id && u.role !== 'super_admin' ? `
@@ -4104,15 +4104,15 @@ const CloudSyncModule = {
             if (!response.ok) throw new Error('Error actualizando rol');
             
             document.querySelector('.modal').remove();
-            Utils.showNotification('? Rol actualizado correctamente', 'success', 3000);
+            Utils.showNotification('Rol actualizado correctamente', 'success', 3000);
             this.loadUsers();
         } catch (error) {
-            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('Error: ' + error.message, 'error', 3000);
         }
     },
     
     async deactivateUser(userId, userName) {
-        if (!confirm(`o½Desactivar a ${userName}?\n\nNo podro½ acceder al sistema hasta que lo reactives.`)) return;
+        if (!confirm(`Desactivar a ${userName}?\n\nNo podra acceder al sistema hasta que lo reactives.`)) return;
         
         try {
             const response = await fetch(`https://galloli-sync.ivanbj-96.workers.dev/api/users/${userId}`, {
@@ -4122,10 +4122,10 @@ const CloudSyncModule = {
             
             if (!response.ok) throw new Error('Error desactivando usuario');
             
-            Utils.showNotification('? Usuario desactivado', 'success', 3000);
+            Utils.showNotification('Usuario desactivado', 'success', 3000);
             this.loadUsers();
         } catch (error) {
-            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4139,10 +4139,10 @@ const CloudSyncModule = {
             
             if (!response.ok) throw new Error('Error activando usuario');
             
-            Utils.showNotification('? Usuario activado', 'success', 3000);
+            Utils.showNotification('Usuario activado', 'success', 3000);
             this.loadUsers();
         } catch (error) {
-            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4162,7 +4162,7 @@ const CloudSyncModule = {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-ticket-alt"></i> Crear Co½digo de Invitacio½n</h3>
+                    <h3><i class="fas fa-ticket-alt"></i> Crear Codigo de Invitacion</h3>
                     <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -4176,18 +4176,18 @@ const CloudSyncModule = {
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos Mo½ximos:</label>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos Maximos:</label>
                         <input type="number" id="invitation-max-uses" value="1" min="1" max="100" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Expira en (horas):</label>
                         <input type="number" id="invitation-expires" value="24" min="1" max="720" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
-                        <small style="color: #666; display: block; margin-top: 0.5rem;">Dejar vaco½o para que no expire</small>
+                        <small style="color: #666; display: block; margin-top: 0.5rem;">Dejar vacio para que no expire</small>
                     </div>
                     
                     <button onclick="CloudSyncModule.createInvitation()" style="width: 100%; padding: 1rem; background: #4CAF50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                        <i class="fas fa-plus"></i> Generar Co½digo
+                        <i class="fas fa-plus"></i> Generar Codigo
                     </button>
                 </div>
             </div>
@@ -4211,35 +4211,35 @@ const CloudSyncModule = {
                 })
             });
             
-            if (!response.ok) throw new Error('Error creando co½digo');
+            if (!response.ok) throw new Error('Error creando codigo');
             
             const data = await response.json();
             
             document.querySelector('.modal').remove();
             
-            // Mostrar co½digo generado
+            // Mostrar codigo generado
             const codeModal = document.createElement('div');
             codeModal.className = 'modal active';
             codeModal.innerHTML = `
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header" style="background: #4CAF50; color: white;">
-                        <h3><i class="fas fa-check-circle"></i> Co½digo Generado</h3>
+                        <h3><i class="fas fa-check-circle"></i> Codigo Generado</h3>
                         <button class="close-modal" onclick="this.closest('.modal').remove()" style="color: white;">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="modal-body" style="text-align: center;">
-                        <p style="margin-bottom: 1rem;">Comparte este co½digo con el nuevo usuario:</p>
+                        <p style="margin-bottom: 1rem;">Comparte este codigo con el nuevo usuario:</p>
                         <div style="padding: 1.5rem; background: #f5f5f5; border-radius: 8px; margin-bottom: 1rem;">
                             <div style="font-size: 2rem; font-weight: bold; letter-spacing: 0.5rem; color: #4CAF50;">${data.code}</div>
                         </div>
                         <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
                             Rol: <strong>${this.getRoleLabel(data.role)}</strong><br>
                             Usos: <strong>${data.max_uses}</strong><br>
-                            ${data.expires_at ? `Expira: <strong>${new Date(data.expires_at).toLocaleString('es-ES')}</strong>` : 'Sin expiracio½n'}
+                            ${data.expires_at ? `Expira: <strong>${new Date(data.expires_at).toLocaleString('es-ES')}</strong>` : 'Sin expiracion'}
                         </p>
-                        <button onclick="navigator.clipboard.writeText('${data.code}'); alert('Co½digo copiado')" style="padding: 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
-                            <i class="fas fa-copy"></i> Copiar Co½digo
+                        <button onclick="navigator.clipboard.writeText('${data.code}'); alert('Codigo copiado')" style="padding: 1rem; background: #2196F3; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">
+                            <i class="fas fa-copy"></i> Copiar Codigo
                         </button>
                     </div>
                 </div>
@@ -4247,7 +4247,7 @@ const CloudSyncModule = {
             document.body.appendChild(codeModal);
             
         } catch (error) {
-            Utils.showNotification('? Error: ' + error.message, 'error', 3000);
+            Utils.showNotification('Error: ' + error.message, 'error', 3000);
         }
     },
     
@@ -4268,7 +4268,7 @@ const CloudSyncModule = {
     },
     
     async logout() {
-        if (confirm('o½Cerrar sesio½n?')) {
+        if (confirm('Cerrar sesion?')) {
             await window.AuthManager.logout();
             App.loadPage('cloud-sync');
         }
@@ -4285,7 +4285,7 @@ const CloudSyncModule = {
 };
 
 
-// Exportar mo½dulos a window para que SyncEngine pueda interceptarlos
+// Exportar modulos a window para que SyncEngine pueda interceptarlos
 window.ClientsModule = ClientsModule;
 window.SalesModule = SalesModule;
 window.OrdersModule = OrdersModule;

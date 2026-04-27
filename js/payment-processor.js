@@ -45,7 +45,7 @@ const PaymentProcessor = {
                 
                 // Enviar UNA SOLA notificación de confirmación
                 Utils.showNotification(
-                    `✅ Pago completo: ${displayName}`,
+                    `Pago completo: ${displayName}`,
                     'success',
                     5000
                 );
@@ -68,7 +68,7 @@ const PaymentProcessor = {
                 
                 // Enviar UNA SOLA notificación de confirmación
                 Utils.showNotification(
-                    `✅ Abono registrado: ${displayName} - ${Utils.formatCurrency(amount)}`,
+                    `Abono registrado: ${displayName} - ${Utils.formatCurrency(amount)}`,
                     'success',
                     5000
                 );
@@ -89,7 +89,7 @@ const PaymentProcessor = {
         } catch (error) {
             console.error('❌ Error procesando pago:', error);
             Utils.showNotification(
-                `❌ Error: ${error.message}`,
+                `Error: ${error.message}`,
                 'error',
                 5000
             );

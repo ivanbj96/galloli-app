@@ -1,4 +1,4 @@
-// Sistema de manejo de errores global
+﻿// Sistema de manejo de errores global
 (function() {
     'use strict';
     
@@ -42,11 +42,11 @@
         
         const errorDetails = `
             <div style="text-align: left; font-family: monospace; font-size: 0.85rem;">
-                <p><strong>🕐 Hora:</strong> ${errorInfo.timestamp}</p>
-                <p><strong>📱 Dispositivo:</strong> ${errorInfo.userAgent.includes('Mobile') ? 'Móvil' : 'Desktop'}</p>
-                <p><strong>� Ubicación:</strong> ${errorInfo.filename}:${errorInfo.lineno}:${errorInfo.colno}</p>
+                <p><strong>Hora:</strong> ${errorInfo.timestamp}</p>
+                <p><strong>Dispositivo:</strong> ${errorInfo.userAgent.includes('Mobile') ? 'Movil' : 'Desktop'}</p>
+                <p><strong>Ubicacion:</strong> ${errorInfo.filename}:${errorInfo.lineno}:${errorInfo.colno}</p>
                 <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
-                <p><strong>💬 Mensaje:</strong></p>
+                <p><strong>Mensaje:</strong></p>
                 <p style="background: #f5f5f5; padding: 8px; border-radius: 4px; word-break: break-word;">
                     ${errorInfo.message}
                 </p>
@@ -62,7 +62,7 @@ ${errorInfo.stack}</pre>
         
         await Utils.showAlert(
             errorDetails,
-            '🐛 Error Detectado',
+            'Error Detectado',
             'error'
         );
     }
@@ -162,7 +162,7 @@ ${errorInfo.stack}</pre>
         if (typeof Utils !== 'undefined') {
             Utils.showAlert(
                 `<div style="max-height: 400px; overflow-y: auto;">${logHtml}</div>`,
-                `🐛 Log de Errores (${errorLog.length})`,
+                `Log de Errores (${errorLog.length})`,
                 'info'
             );
         } else {

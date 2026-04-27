@@ -1,4 +1,4 @@
-// app.js - COMPLETO Y FUNCIONAL
+﻿// app.js - COMPLETO Y FUNCIONAL
 const App = {
     currentPage: 'dashboard',
     currentDate: Utils.getTodayDate(),
@@ -577,7 +577,7 @@ const App = {
         // Notificación push
         if (NotificationsModule) {
             const preview = DiezmosModule.getPreview(today);
-            NotificationsModule.show('💰 Diezmos Guardados', `Total: ${Utils.formatCurrency(preview.total)}`).catch(err => {
+            NotificationsModule.show('Diezmos Guardados', `Total: ${Utils.formatCurrency(preview.total)}`).catch(err => {
                 console.warn('No se pudo enviar notificación:', err);
             });
         }
@@ -746,7 +746,7 @@ const App = {
                         <div style="background: linear-gradient(135deg, #4CAF50, #388E3C); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                                 <div style="color: white;">
-                                    <div style="font-size: 0.9rem; opacity: 0.9;">💡 Pago Inteligente</div>
+                                    <div style="font-size: 0.9rem; opacity: 0.9;">Pago Inteligente</div>
                                     <div style="font-size: 1.3rem; font-weight: bold;">${data.sales.length} créditos activos</div>
                                 </div>
                                 <button class="btn" onclick="App.showSmartPaymentModal(${data.client.id})" 
@@ -1015,7 +1015,7 @@ const App = {
                         <i class="fas fa-arrow-right"></i> Pago: ${Utils.formatCurrency(d.payment)}
                     </span>
                     <span style="color: ${d.remaining === 0 ? 'var(--success)' : 'var(--warning)'}; font-weight: bold;">
-                        ${d.remaining === 0 ? '✓ Liquidado' : `Resta: ${Utils.formatCurrency(d.remaining)}`}
+                        ${d.remaining === 0 ? 'Liquidado' : `Resta: ${Utils.formatCurrency(d.remaining)}`}
                     </span>
                 </div>
             </div>
@@ -1044,7 +1044,7 @@ const App = {
         // Esperar a que se guarden todos los cambios
         await SalesModule.saveSales();
 
-        // CR�TICO: Notificar al sistema de sincronización sobre los pagos procesados
+        // CRITICO: Notificar al sistema de sincronización sobre los pagos procesados
         if (paymentsProcessed > 0 && typeof SyncEngine !== 'undefined' && SyncEngine.notifyChange) {
             // Notificar cada venta modificada
             for (const saleId of processedSaleIds) {
@@ -1054,7 +1054,7 @@ const App = {
 
         if (paymentsProcessed > 0) {
             Utils.showNotification(
-                `✅ Pago inteligente aplicado: ${Utils.formatCurrency(totalAmount - remaining)} distribuido en ${paymentsProcessed} crédito${paymentsProcessed > 1 ? 's' : ''}`,
+                `Pago inteligente aplicado: ${Utils.formatCurrency(totalAmount - remaining)} distribuido en ${paymentsProcessed} credito${paymentsProcessed > 1 ? 's' : ''}`,
                 'success',
                 5000
             );
@@ -1325,7 +1325,7 @@ const App = {
     exportPaymentHistory() {
         const clientId = document.getElementById('filter-client').value;
         PaymentHistoryModule.exportPayments(clientId || null);
-        Utils.showNotification('✅ Historial exportado correctamente', 'success', 3000);
+        Utils.showNotification('Historial exportado correctamente', 'success', 3000);
     },
 
     // Pxgina de Configuración (NUEVA)
@@ -3428,7 +3428,7 @@ async cleanDuplicatePayments() {
                         </p>
                         
                         <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--primary);">
-                            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">📋 Instrucciones:</h4>
+                            <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">Instrucciones:</h4>
                             <ol style="margin: 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.6;">
                                 <li>Abre <a href="https://t.me/BotFather" target="_blank" style="color: var(--primary);">@BotFather</a> en Telegram</li>
                                 <li>Envía el comando <code>/newbot</code></li>
@@ -3469,14 +3469,14 @@ async cleanDuplicatePayments() {
                     </p>
                     <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--success);">
                         <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;">
-                            ✅ El sistema verifica automxticamente si hay cambios en los datos<br>
-                            ✅ Solo crea backup si detecta cambios (evita duplicados)<br>
-                            ✅ Usa el mismo método que el backup manual<br>
-                            ✅ Envía el backup a tu Telegram configurado
+                            El sistema verifica automxticamente si hay cambios en los datos<br>
+                            Solo crea backup si detecta cambios (evita duplicados)<br>
+                            Usa el mismo método que el backup manual<br>
+                            Envía el backup a tu Telegram configurado
                         </p>
                     </div>
                     <button class="btn btn-success" onclick="App.testAutoBackup()" style="width: 100%;">
-                        <i class="fas fa-robot"></i> 🤖 Probar Backup Automxtico
+                        <i class="fas fa-robot"></i> Probar Backup Automxtico
                     </button>
                     <p style="margin-top: 10px; text-align: center; color: var(--gray); font-size: 0.85rem;">
                         Este botón ejecuta el mismo backup que se enviarx a las 10 PM
@@ -3613,7 +3613,7 @@ async cleanDuplicatePayments() {
                 <strong>Teléfono:</strong> ${duplicate.phone}<br>
                 <strong>Dirección:</strong> ${duplicate.address}<br><br>
                 ¿Deseas guardar este cliente de todas formas?`,
-                '⚠️ Cliente Duplicado Detectado',
+                'Cliente Duplicado Detectado',
                 'Guardar de Todas Formas'
             );
             
@@ -4097,12 +4097,12 @@ async cleanDuplicatePayments() {
             console.log('🔔 Resultado de permisos:', permission);
             
             if (permission === 'granted') {
-                Utils.showNotification('✅ Notificaciones activadas', 'success', 3000);
+                Utils.showNotification('Notificaciones activadas', 'success', 3000);
                 // Mostrar notificación de prueba
                 setTimeout(() => {
                     this.showLocalNotification(
-                        '🐔 GallOli - Notificaciones Activas',
-                        'Las notificaciones estxn funcionando correctamente'
+                        'GallOli - Notificaciones Activas',
+                        'Las notificaciones estan funcionando correctamente'
                     );
                 }, 1000);
                 return true;
@@ -4117,7 +4117,7 @@ async cleanDuplicatePayments() {
     },
 
     // Enviar notificación local - CORREGIDO
-    showLocalNotification(title, body, icon = '🐔') {
+    showLocalNotification(title, body, icon = '') {
         console.log('🔔 Intentando mostrar notificación:', title, body);
         
         // Verificar si Notification estx disponible
@@ -4160,7 +4160,7 @@ async cleanDuplicatePayments() {
     notifyNewSale(sale, client) {
         console.log('💰 Notificando nueva venta:', sale.id);
         this.showLocalNotification(
-            '💰 Nueva Venta Registrada',
+            'Nueva Venta Registrada',
             `${client.name}: ${Utils.formatCurrency(sale.total)} - ${sale.weight}lb`
         );
     },
@@ -4168,7 +4168,7 @@ async cleanDuplicatePayments() {
     notifyNewOrder(order, client) {
         console.log('📋 Notificando nuevo pedido:', order.id);
         this.showLocalNotification(
-            '📋 Nuevo Pedido',
+            'Nuevo Pedido',
             `${client.name}: ${order.weight}lb - ${order.quantity} pollos`
         );
     },
@@ -4178,7 +4178,7 @@ async cleanDuplicatePayments() {
         const totalIncome = todaySales.reduce((sum, sale) => sum + sale.total, 0);
         
         this.showLocalNotification(
-            '📊 Resumen del Día',
+            'Resumen del Dia',
             `${todaySales.length} ventas - ${Utils.formatCurrency(totalIncome)}`
         );
     },
@@ -4208,9 +4208,9 @@ async cleanDuplicatePayments() {
     async enableNotifications() {
         const enabled = await this.requestNotificationPermission();
         if (enabled) {
-            Utils.showNotification('✅ Notificaciones activadas correctamente', 'success', 3000);
+            Utils.showNotification('Notificaciones activadas correctamente', 'success', 3000);
         } else {
-            Utils.showNotification('❌ No se pudieron activar las notificaciones', 'error', 3000);
+            Utils.showNotification('No se pudieron activar las notificaciones', 'error', 3000);
         }
         
         // Actualizar estado en la UI
@@ -4222,18 +4222,18 @@ async cleanDuplicatePayments() {
     },
 
     disableNotifications() {
-        Utils.showNotification('🔕 Notificaciones desactivadas', 'warning', 3000);
+        Utils.showNotification('Notificaciones desactivadas', 'warning', 3000);
     },
 
     testNotification() {
         console.log('🧪 Probando notificación...');
         const success = this.showLocalNotification(
-            '🐔 Notificación de Prueba',
-            'Las notificaciones estxn funcionando correctamente en GallOli'
+            'Notificacion de Prueba',
+            'Las notificaciones estan funcionando correctamente en GallOli'
         );
         
         if (!success) {
-            Utils.showNotification('❌ Error: Activa los permisos de notificación primero', 'error', 5000);
+            Utils.showNotification('Error: Activa los permisos de notificación primero', 'error', 5000);
         }
     },
 
@@ -4556,7 +4556,7 @@ async cleanDuplicatePayments() {
             
             // Notificación push
             if (NotificationsModule) {
-                NotificationsModule.show('📊 Merma Calculada', `Merma del día: ${result.merma}%`).catch(err => {
+                NotificationsModule.show('Merma Calculada', `Merma del día: ${result.merma}%`).catch(err => {
                     console.warn('No se pudo enviar notificación:', err);
                 });
             }
@@ -4788,7 +4788,7 @@ async cleanDuplicatePayments() {
             Utils.showNotification('Sincronizando con la nube...', 'info', 2000);
             try {
                 await window.SyncEngine.forceFullSync();
-                Utils.showNotification('✅ Sincronización completada', 'success', 3000);
+                Utils.showNotification('Sincronización completada', 'success', 3000);
             } catch (e) {
                 Utils.showNotification('Error al sincronizar', 'error', 3000);
             }
@@ -4837,7 +4837,7 @@ async cleanDuplicatePayments() {
                 if (deferredPrompt) {
                     const install = await Utils.showConfirm(
                         '¿Deseas instalar GallOli en tu dispositivo para uso sin conexión?',
-                        '📱 Instalar Aplicación',
+                        'Instalar Aplicacion',
                         'Instalar',
                         'Ahora No'
                     );
@@ -4980,7 +4980,7 @@ async cleanDuplicatePayments() {
             
             // Notificación push
             if (NotificationsModule) {
-                NotificationsModule.show('💾 Backup Creado', 'Backup creado exitosamente').catch(err => {
+                NotificationsModule.show('Backup Creado', 'Backup creado exitosamente').catch(err => {
                     console.warn('No se pudo enviar notificación:', err);
                 });
             }
@@ -5071,7 +5071,7 @@ async cleanDuplicatePayments() {
         
         const startDate = await Utils.showPrompt(
             'Ingresa la fecha de inicio:',
-            '📅 Fecha Inicio',
+            'Fecha Inicio',
             Utils.formatDate(yesterday),
             'YYYY-MM-DD'
         );
@@ -5080,7 +5080,7 @@ async cleanDuplicatePayments() {
         
         const endDate = await Utils.showPrompt(
             'Ingresa la fecha de fin:',
-            '📅 Fecha Fin',
+            'Fecha Fin',
             Utils.formatDate(today),
             'YYYY-MM-DD'
         );
@@ -5125,18 +5125,18 @@ async cleanDuplicatePayments() {
     async testAutoBackup() {
         try {
             Utils.showLoading(true);
-            Utils.showNotification('🤖 Ejecutando backup automxtico de prueba...', 'info', 3000);
+            Utils.showNotification('Ejecutando backup automxtico de prueba...', 'info', 3000);
             
             // Ejecutar el mismo método que se ejecuta a las 10 PM
             const result = await AutoBackup.forceBackup();
             
             if (result !== false) {
-                Utils.showNotification('✅ Backup automxtico enviado correctamente. Revisa tu Telegram.', 'success', 5000);
+                Utils.showNotification('Backup automxtico enviado correctamente. Revisa tu Telegram.', 'success', 5000);
             } else {
-                Utils.showNotification('⚠️ No se pudo enviar el backup. Verifica las credenciales.', 'warning', 5000);
+                Utils.showNotification('No se pudo enviar el backup. Verifica las credenciales.', 'warning', 5000);
             }
         } catch (error) {
-            Utils.showNotification('❌ Error en backup automxtico: ' + error.message, 'error', 5000);
+            Utils.showNotification('Error en backup automxtico: ' + error.message, 'error', 5000);
         } finally {
             Utils.showLoading(false);
         }
@@ -5167,10 +5167,10 @@ async cleanDuplicatePayments() {
             const result = await BackupModule.testTelegramConnection();
             
             if (result.ok) {
-                Utils.showNotification('✅ ¡Conexión exitosa! Revisa tu Telegram', 'success', 5000);
+                Utils.showNotification('Conexión exitosa! Revisa tu Telegram', 'success', 5000);
             }
         } catch (error) {
-            Utils.showNotification('❌ ' + error.message, 'error', 5000);
+            Utils.showNotification(error.message, 'error', 5000);
         } finally {
             Utils.showLoading(false);
         }
@@ -5493,7 +5493,7 @@ async cleanDuplicatePayments() {
         const hasCredentials = await AutoBackup.hasCredentials();
         
         if (!hasCredentials) {
-            Utils.showNotification('⚠️ Configura tus credenciales de Telegram primero en la pxgina de Backups', 'warning', 5000);
+            Utils.showNotification('Configura tus credenciales de Telegram primero en la pxgina de Backups', 'warning', 5000);
             return;
         }
         
@@ -5511,10 +5511,10 @@ async cleanDuplicatePayments() {
         try {
             await AutoBackup.forceBackup();
             Utils.showLoading(false);
-            Utils.showNotification('✅ Backup automxtico enviado correctamente', 'success', 5000);
+            Utils.showNotification('Backup automxtico enviado correctamente', 'success', 5000);
         } catch (error) {
             Utils.showLoading(false);
-            Utils.showNotification(`❌ Error: ${error.message}`, 'error', 5000);
+            Utils.showNotification(`Error: ${error.message}`, 'error', 5000);
         }
     },
 
@@ -5537,7 +5537,7 @@ async cleanDuplicatePayments() {
                 // Ir a pxgina de merma
                 console.log('📊 Navegando a pxgina de merma');
                 this.loadPage('merma');
-                Utils.showNotification('📊 Calcula la merma del día', 'info', 3000);
+                Utils.showNotification('Calcula la merma del día', 'info', 3000);
                 break;
                 
             case 'pay-full':
@@ -5553,7 +5553,7 @@ async cleanDuplicatePayments() {
                             'Cancelar'
                         );
                         if (confirmed) {
-                            Utils.showNotification(`💵 Procesando pago de ${data.clientName}`, 'info', 3000);
+                            Utils.showNotification(`Procesando pago de ${data.clientName}`, 'info', 3000);
                             // Aquí iría la lógica de pago completo
                         }
                     }, 1000);
@@ -5566,14 +5566,14 @@ async cleanDuplicatePayments() {
                 if (data.clientId) {
                     this.loadPage('creditos');
                     setTimeout(() => {
-                        Utils.showNotification(`💰 Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
+                        Utils.showNotification(`Selecciona la venta de ${data.clientName} para hacer el abono`, 'info', 5000);
                     }, 1000);
                 }
                 break;
                 
             case 'view':
                 // Ver detalles de créditos
-                console.log('�️ Ver detalles de créditos');
+                console.log('Ver detalles de créditos');
                 this.loadPage('creditos');
                 break;
                 
@@ -5582,7 +5582,7 @@ async cleanDuplicatePayments() {
                 console.log('💾 Crear backup');
                 this.loadPage('backup');
                 setTimeout(() => {
-                    Utils.showNotification('💾 Crea tu backup desde esta pxgina', 'info', 3000);
+                    Utils.showNotification('Crea tu backup desde esta pxgina', 'info', 3000);
                 }, 1000);
                 break;
                 
@@ -5908,7 +5908,7 @@ App.confirmChainSale = function() {
     App.cancelChainCapture();
 
     const client = ClientsModule.getClientById(clientId);
-    Utils.showNotification(`✅ ${client?.name} — ${weight.toFixed(3)} lb — ${Utils.formatCurrency(sale.total)}`, 'success', 3000);
+    Utils.showNotification(`${client?.name} — ${weight.toFixed(3)} lb — ${Utils.formatCurrency(sale.total)}`, 'success', 3000);
 };
 
 // Métodos para la balanza BLE
@@ -6033,7 +6033,7 @@ App.onNotifSwitchChange = async function(checked) {
                     status.textContent = 'Activas (FCM)';
                     status.style.color = 'rgba(76, 175, 80, 0.9)';
                     sw.checked = true;
-                    Utils.showNotification('🔔 Notificaciones activadas', 'success', 3000);
+                    Utils.showNotification('Notificaciones activadas', 'success', 3000);
                 } else {
                     sw.checked = false;
                     status.textContent = 'Error al activar';
@@ -6056,7 +6056,7 @@ App.onNotifSwitchChange = async function(checked) {
             }
             status.textContent = 'Toca para activar';
             status.style.color = '';
-            Utils.showNotification('🔕 Notificaciones desactivadas', 'info', 2000);
+            Utils.showNotification('Notificaciones desactivadas', 'info', 2000);
         }
         return;
     }
@@ -6070,7 +6070,7 @@ App.onNotifSwitchChange = async function(checked) {
             status.textContent = 'Activas';
             status.style.color = 'rgba(76, 175, 80, 0.9)';
             sw.checked = true;
-            Utils.showNotification('🔔 Notificaciones activadas', 'success', 3000);
+            Utils.showNotification('Notificaciones activadas', 'success', 3000);
         } else {
             sw.checked = false;
             if (Notification.permission === 'denied') {
@@ -6100,7 +6100,7 @@ App.onNotifSwitchChange = async function(checked) {
         } catch (e) { /* silencioso */ }
         status.textContent = 'Toca para activar';
         status.style.color = '';
-        Utils.showNotification('🔕 Notificaciones desactivadas', 'info', 2000);
+        Utils.showNotification('Notificaciones desactivadas', 'info', 2000);
     }
 };
 

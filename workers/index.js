@@ -131,7 +131,7 @@ export default {
           for (const sub of (subs.results || [])) {
             try {
               const payload = JSON.stringify({
-                title: '🔔 Test Push Servidor',
+                title: 'Test Push Servidor',
                 body: 'Notificación de prueba desde el Worker',
                 tag: 'test-server'
               });
@@ -304,15 +304,15 @@ async function runScheduledBackup(env) {
         formData.append('chat_id', creds.chatId);
         formData.append('document', new Blob([dataStr], { type: 'application/json' }), filename);
         formData.append('caption', 
-          `📦 Backup Automático GallOli\n` +
-          `🏢 ${business.name}\n` +
-          `📅 ${new Date().toLocaleString('es-ES')}\n\n` +
-          `📊 Estadísticas:\n` +
-          `👥 Clientes: ${groupedData.clients.length}\n` +
-          `💰 Ventas: ${groupedData.sales.length}\n` +
-          `📋 Pedidos: ${groupedData.orders.length}\n` +
-          `💸 Gastos: ${groupedData.expenses.length}\n` +
-          `📦 Tamaño: ${(new Blob([dataStr]).size / 1024).toFixed(2)} KB`
+          `Backup Automatico GallOli\n` +
+          `Negocio: ${business.name}\n` +
+          `Fecha: ${new Date().toLocaleString('es-ES')}\n\n` +
+          `Estadisticas:\n` +
+          `Clientes: ${groupedData.clients.length}\n` +
+          `Ventas: ${groupedData.sales.length}\n` +
+          `Pedidos: ${groupedData.orders.length}\n` +
+          `Gastos: ${groupedData.expenses.length}\n` +
+          `Tamano: ${(new Blob([dataStr]).size / 1024).toFixed(2)} KB`
         );
         
         const telegramResponse = await fetch(
@@ -398,8 +398,8 @@ async function runScheduledPushNotifications(env, { merma = true, creditos = tru
         if ((salesToday?.cnt || 0) > 0 && (mermaToday?.cnt || 0) === 0) {
           await sendPushToAllSubs(
             business.id,
-            '⚠️ Merma Sin Calcular',
-            `Tienes ${salesToday.cnt} ventas hoy. ¡Calcula la merma!`,
+            'Merma Sin Calcular',
+            `Tienes ${salesToday.cnt} ventas hoy. Calcula la merma!`,
             { tag: 'merma-urgent', action: 'calculate-merma' },
             env
           );
@@ -416,7 +416,7 @@ async function runScheduledPushNotifications(env, { merma = true, creditos = tru
         if ((credits?.cnt || 0) > 0) {
           await sendPushToAllSubs(
             business.id,
-            '💳 Créditos Pendientes',
+            'Creditos Pendientes',
             `Tienes ${credits.cnt} venta${credits.cnt > 1 ? 's' : ''} a crédito sin cobrar`,
             { tag: 'credits-pending', action: 'view-credits' },
             env
@@ -583,7 +583,7 @@ async function handleAuth(request, env, path, corsHeaders) {
       // Enviar código via Telegram Bot (opcional)
       try {
         const botToken = env.TELEGRAM_BOT_TOKEN;
-        const message = `🔐 Tu código de verificación para GallOli es: *${verification_code}*\n\nExpira en 5 minutos.`;
+        const message = `Tu codigo de verificacion para GallOli es: *${verification_code}*\n\nExpira en 5 minutos.`;
         
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
@@ -1709,14 +1709,14 @@ async function handleBackup(request, env, path, corsHeaders, currentUser) {
       formData.append('chat_id', telegram_chat_id);
       formData.append('document', new Blob([dataStr], { type: 'application/json' }), filename);
       formData.append('caption', 
-        `📦 Backup Automático GallOli (Servidor)\n` +
-        `📅 ${new Date().toLocaleString('es-ES')}\n\n` +
-        `📊 Estadísticas:\n` +
-        `👥 Clientes: ${stats.totalClients}\n` +
-        `💰 Ventas: ${stats.totalSales}\n` +
-        `📋 Pedidos: ${stats.totalOrders}\n` +
-        `💸 Gastos: ${stats.totalExpenses}\n` +
-        `📦 Tamaño: ${stats.totalSize}`
+        `Backup Automatico GallOli (Servidor)\n` +
+        `Fecha: ${new Date().toLocaleString('es-ES')}\n\n` +
+        `Estadisticas:\n` +
+        `Clientes: ${stats.totalClients}\n` +
+        `Ventas: ${stats.totalSales}\n` +
+        `Pedidos: ${stats.totalOrders}\n` +
+        `Gastos: ${stats.totalExpenses}\n` +
+        `Tamano: ${stats.totalSize}`
       );
       
       const telegramResponse = await fetch(
@@ -2236,14 +2236,14 @@ async function handleFeedback(request, env, corsHeaders) {
       return jsonResponse({ error: 'El mensaje no puede estar vacío' }, corsHeaders, 400);
     }
 
-    const stars = '⭐'.repeat(Math.min(Math.max(parseInt(rating) || 0, 1), 5));
+    const stars = '*'.repeat(Math.min(Math.max(parseInt(rating) || 0, 1), 5));
     const text =
-      `📬 *Nuevo Feedback - GallOli*\n\n` +
-      `${stars}\n` +
-      `💬 ${message.trim()}\n\n` +
-      `📱 Versión: ${appVersion || 'desconocida'}\n` +
-      `🖥️ Plataforma: ${platform || 'desconocida'}\n` +
-      `🕐 ${new Date().toLocaleString('es-ES', { timeZone: 'America/Guayaquil' })}`;
+      `*Nuevo Feedback - GallOli*\n\n` +
+      `Calificacion: ${stars}\n` +
+      `${message.trim()}\n\n` +
+      `Version: ${appVersion || 'desconocida'}\n` +
+      `Plataforma: ${platform || 'desconocida'}\n` +
+      `${new Date().toLocaleString('es-ES', { timeZone: 'America/Guayaquil' })}`;
 
     const telegramRes = await fetch(
       `https://api.telegram.org/bot${env.FEEDBACK_BOT_TOKEN}/sendMessage`,

@@ -2357,13 +2357,9 @@ async cleanDuplicatePayments() {
                 
                 <div class="card">
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
-                    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:8px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
+                    <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
                         <i class="fas fa-weight"></i> Modo Pesaje en Cadena
                         <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automatica' : 'Ingresa pesos manualmente uno por uno'}</small>
-                    </button>
-                    <button type="button" class="btn btn-success" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startGeoChain()">
-                        <i class="fas fa-map-marker-alt"></i> Modo GPS Automatico
-                        <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Detecta cliente por ubicacion y graba solo' : 'Requiere balanza conectada'}</small>
                     </button>
                     <form id="sale-form">
                         <div class="form-group">
@@ -5676,6 +5672,9 @@ App.startChainWeighing = function() {
                         <option value="">-- Seleccionar cliente --</option>
                         ${activeClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
                     </select>
+                    <div id="chain-gps-indicator" style="display:none;margin-top:6px;font-size:0.8rem;color:var(--gray);padding:4px 8px;background:var(--light);border-radius:6px;">
+                        <i class="fas fa-satellite-dish" style="color:var(--gray);"></i> Buscando GPS...
+                    </div>
                 </div>
 
                 <!-- Cantidad y pago -->
@@ -5764,7 +5763,9 @@ App.startChainWeighing = function() {
         lastWeight: 0,
         waitingForZero: false,
         salePrice: todaySalePrice,
-        costPrice: todayCostPrice
+        costPrice: todayCostPrice,
+        gpsTimer: null,
+        gpsWatchId: null
     };
 
     // Si hay balanza, escuchar cambios de peso en tiempo real
@@ -5773,6 +5774,16 @@ App.startChainWeighing = function() {
             App._handleChainWeight(weight);
         });
         App._chainWeighingUnsubscribe = unsubscribe;
+    }
+
+    // Iniciar GPS automaticamente para pre-seleccionar cliente cercano
+    App._startChainGps();
+
+    // Mostrar indicador GPS inmediatamente
+    const gpsIndicator = document.getElementById('chain-gps-indicator');
+    if (gpsIndicator) {
+        gpsIndicator.style.display = 'block';
+        gpsIndicator.innerHTML = '<i class="fas fa-satellite-dish" style="color:var(--warning);"></i> Buscando cliente cercano...';
     }
 
     App._chainWeighingWeight = 0;
@@ -5786,6 +5797,7 @@ App.stopChainWeighing = function() {
     if (App._chainState && App._chainState.stableTimer) {
         clearTimeout(App._chainState.stableTimer);
     }
+    App._stopChainGps();
     App._chainState = null;
     const modal = document.getElementById('chain-weighing-modal');
     if (modal) modal.remove();
@@ -5915,6 +5927,116 @@ App._onChainClientChange = function() {
     if (stableIndicator && App._chainState && !App._chainState.waitingForZero) {
         stableIndicator.innerHTML = '<i class="fas fa-circle" style="color:#ccc;"></i> Pon un pollo en la balanza';
     }
+};
+
+// GPS automatico para pre-seleccionar cliente cercano en modo cadena
+App._startChainGps = function() {
+    const state = App._chainState;
+    if (!state) return;
+
+    const plugin = (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
+        ? (window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground)
+        : null;
+
+    const onLocation = function(lat, lng) {
+        App._chainAutoSelectClient(lat, lng);
+    };
+
+    if (plugin) {
+        // APK nativo: leer GPS del servicio cada 4s (funciona con app minimizada)
+        const poll = async function() {
+            try {
+                const loc = await plugin.getLocation();
+                if (loc && loc.hasLocation) onLocation(loc.lat, loc.lng);
+            } catch(e) {}
+        };
+        poll();
+        state.gpsTimer = setInterval(poll, 4000);
+    } else if (navigator.geolocation) {
+        // PWA/TWA: watchPosition normal
+        state.gpsWatchId = navigator.geolocation.watchPosition(
+            function(pos) { onLocation(pos.coords.latitude, pos.coords.longitude); },
+            function() {},
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+        // Leer inmediatamente
+        navigator.geolocation.getCurrentPosition(
+            function(pos) { onLocation(pos.coords.latitude, pos.coords.longitude); },
+            function() {},
+            { enableHighAccuracy: true, timeout: 8000 }
+        );
+    }
+};
+
+App._stopChainGps = function() {
+    const state = App._chainState;
+    if (!state) return;
+    if (state.gpsTimer) { clearInterval(state.gpsTimer); state.gpsTimer = null; }
+    if (state.gpsWatchId != null) {
+        navigator.geolocation.clearWatch(state.gpsWatchId);
+        state.gpsWatchId = null;
+    }
+};
+
+// Seleccionar automaticamente el cliente mas cercano segun GPS
+App._chainAutoSelectClient = function(lat, lng) {
+    const clients = ClientsModule.clients.filter(c => c.isActive !== false && c.gps && c.gps.trim());
+    let nearest = null;
+    let minDist = Infinity;
+
+    clients.forEach(function(c) {
+        try {
+            const parts = c.gps.split(',');
+            if (parts.length < 2) return;
+            const cLat = parseFloat(parts[0].trim());
+            const cLng = parseFloat(parts[1].trim());
+            if (isNaN(cLat) || isNaN(cLng)) return;
+            const dist = App._haversineM(lat, lng, cLat, cLng);
+            if (dist < 50 && dist < minDist) { minDist = dist; nearest = c; }
+        } catch(e) {}
+    });
+
+    const select = document.getElementById('chain-client-select');
+    const gpsIndicator = document.getElementById('chain-gps-indicator');
+    if (!select) return;
+
+    if (nearest) {
+        // Solo cambiar si el usuario no seleccionó manualmente (o si el GPS encontró uno más cercano)
+        const currentVal = select.value;
+        const nearestId = String(nearest.id);
+        if (currentVal !== nearestId) {
+            select.value = nearestId;
+            // Si no encontró el valor (IDs numéricos vs string), buscar por opción
+            if (!select.value) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (String(select.options[i].value) === nearestId) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (gpsIndicator) {
+                gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--success);"></i> ' + nearest.name + ' (' + Math.round(minDist) + 'm)';
+                gpsIndicator.style.display = 'block';
+            }
+        }
+    } else {
+        if (gpsIndicator) {
+            gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--gray);"></i> Sin cliente cercano';
+            gpsIndicator.style.display = 'block';
+        }
+    }
+};
+
+// Calculo de distancia Haversine en metros
+App._haversineM = function(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
 App.updateChainPreview = function() {

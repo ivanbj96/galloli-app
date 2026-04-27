@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.13'; // Encoding completamente limpio, sin caracteres corruptos
+const APP_VERSION = '7.20.14'; // Encoding completamente limpio en toda la UI
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

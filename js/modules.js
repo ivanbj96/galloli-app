@@ -3688,7 +3688,7 @@ const CloudSyncModule = {
                     
                     <div style="margin-bottom: 1.5rem;">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contrasena</label>
-                        <input type="password" id="password-input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <input type="password" id="password-input" placeholder="........" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <button onclick="CloudSyncModule.handleEmailLogin()" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 1rem;">

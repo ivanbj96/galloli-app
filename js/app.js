@@ -4609,7 +4609,7 @@ async cleanDuplicatePayments() {
                             <i class="fas fa-dollar-sign"></i> Costo: ${Utils.formatCurrency(record.realCostPerLb)}/lb
                         </p>
                         <p class="sale-details">
-                            <i class="fas fa-weight"></i> ${record.liveWeight} lb vivo â†’ ${record.processedWeight} lb pelado
+                            <i class="fas fa-weight"></i> ${record.liveWeight} lb vivo -> ${record.processedWeight} lb pelado
                         </p>
                         ${chickenInfo}
                         <p class="sale-details">
@@ -5410,10 +5410,10 @@ async cleanDuplicatePayments() {
         [statusText, statusTextMobile].forEach(element => {
             if (element) {
                 if (devMode) {
-                    element.textContent = 'âš ï¸ Modo Desarrollo: Cache desactivado';
+                    element.textContent = 'Modo Desarrollo: Cache desactivado';
                     element.style.color = 'rgba(255, 193, 7, 0.8)';
                 } else {
-                    element.textContent = 'âœ… Modo Producción: Offline completo';
+                    element.textContent = 'Modo Produccion: Offline completo';
                     element.style.color = 'rgba(76, 175, 80, 0.8)';
                 }
             }

@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.24'; // fix: sync pedidos cancelados, backup encoding, backup completo, no duplicado
+const APP_VERSION = '7.20.25'; // fix FCM: getFcmToken nativo, registro automatico, UI APK sin modal redundante
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

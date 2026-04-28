@@ -143,6 +143,22 @@ public class BleForegroundPlugin extends Plugin {
     }
 
     /**
+     * Lee el token FCM guardado por GalloliFirebaseService en SharedPreferences.
+     * Llamar al iniciar la app para registrarlo en el Worker.
+     */
+    @PluginMethod
+    public void getFcmToken(PluginCall call) {
+        String token = getContext()
+            .getSharedPreferences(BleForegroundService.PREFS_NAME,
+                android.content.Context.MODE_PRIVATE)
+            .getString("fcm_token", null);
+        JSObject result = new JSObject();
+        result.put("token", token != null ? token : "");
+        result.put("hasToken", token != null && !token.isEmpty());
+        call.resolve(result);
+    }
+
+    /**
      * JS actualiza el peso en el servicio (cuando la app está en primer plano).
      */
     @PluginMethod

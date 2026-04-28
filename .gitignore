@@ -75,3 +75,6 @@ GallOli - Google Play package2.zip
 *.keystore
 *.jks
 signing-key-info.txt
+
+# Ideas y backlog privado — no publicar
+ideas/

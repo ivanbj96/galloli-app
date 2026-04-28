@@ -287,6 +287,7 @@ Cuando se agregue cualquier dato nuevo, actualizar TODOS estos puntos:
 | `saveBleDeviceId({deviceId})` | Guarda device ID para reconexión automática |
 | `getPendingSales()` | → `{sales}` JSON de ventas registradas en background |
 | `clearPendingSales()` | Limpia la cola de ventas pendientes |
+| `getFcmToken()` | → `{token, hasToken}` — lee token FCM de SharedPreferences |
 | `resetDayCounters()` | Resetea contadores del día en el servicio |
 
 ---

@@ -6146,6 +6146,9 @@ App._syncDataToNativeService = function() {
             plugin.syncSalePrice({ price }).catch(() => {});
         }
 
+        // Resetear contadores del dia en el servicio nativo
+        plugin.resetDayCounters && plugin.resetDayCounters().catch(() => {});
+
         console.log('🔄 Datos sincronizados al servicio nativo');
     } catch(e) {
         console.warn('Error sincronizando al servicio nativo:', e);

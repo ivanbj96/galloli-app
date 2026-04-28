@@ -105,6 +105,22 @@ public class BleForegroundPlugin extends Plugin {
     }
 
     /**
+     * Resetea los contadores del día en el servicio nativo.
+     * JS llama esto al inicio de cada día o al sincronizar datos.
+     */
+    @PluginMethod
+    public void resetDayCounters(PluginCall call) {
+        getContext()
+            .getSharedPreferences(BleForegroundService.PREFS_NAME,
+                android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putInt(BleForegroundService.KEY_SALES_TODAY, 0)
+            .putFloat(BleForegroundService.KEY_TOTAL_TODAY, 0)
+            .apply();
+        call.resolve();
+    }
+
+    /**
      * Devuelve la ubicación GPS actual del servicio nativo.
      */
     @PluginMethod

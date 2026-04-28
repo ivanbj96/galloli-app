@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.20'; // Pesaje automatico en segundo plano nativo + activacion auto al conectar
+const APP_VERSION = '7.20.21'; // Notificaciones ricas: estado, peso, cliente, ventas del dia
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

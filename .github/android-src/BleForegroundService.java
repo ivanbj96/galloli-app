@@ -89,7 +89,7 @@ public class BleForegroundService extends Service {
     private static final double MIN_WEIGHT_LB   = 3.50;
     private static final double ZERO_THRESHOLD  = 0.50;
     private static final long   STABLE_MS       = 1500;
-    private static final double CLIENT_RADIUS_M = 150.0;
+    private static final double CLIENT_RADIUS_M = 500.0;
 
     // Peso compartido con el Plugin
     private static double currentWeight = 0;

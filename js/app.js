@@ -5682,9 +5682,10 @@ App.startChainWeighing = function() {
                         <option value="">-- Seleccionar cliente --</option>
                         ${activeClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
                     </select>
-                    <div id="chain-gps-indicator" style="display:none;margin-top:6px;font-size:0.8rem;color:var(--gray);padding:4px 8px;background:var(--light);border-radius:6px;">
-                        <i class="fas fa-satellite-dish" style="color:var(--gray);"></i> Buscando GPS...
+                    <div id="chain-gps-indicator" style="display:block;margin-top:6px;font-size:0.8rem;color:var(--gray);padding:6px 8px;background:var(--light);border-radius:6px;">
+                        <i class="fas fa-satellite-dish" style="color:var(--warning);"></i> Iniciando GPS...
                     </div>
+                    <div id="chain-gps-debug" style="display:none;margin-top:4px;font-size:0.75rem;color:var(--gray);padding:4px 8px;background:#f0f0f0;border-radius:6px;font-family:monospace;word-break:break-all;"></div>
                 </div>
 
                 <!-- Cantidad y pago -->
@@ -5957,8 +5958,22 @@ App._startChainGps = function() {
         const poll = async function() {
             try {
                 const loc = await plugin.getLocation();
-                if (loc && loc.hasLocation) onLocation(loc.lat, loc.lng);
-            } catch(e) {}
+                const gpsIndicator = document.getElementById('chain-gps-indicator');
+                if (loc && loc.hasLocation) {
+                    onLocation(loc.lat, loc.lng);
+                } else {
+                    if (gpsIndicator) {
+                        gpsIndicator.innerHTML = '<i class="fas fa-satellite-dish" style="color:var(--warning);"></i> GPS nativo: sin fix aun...';
+                        gpsIndicator.style.display = 'block';
+                    }
+                }
+            } catch(e) {
+                const gpsIndicator = document.getElementById('chain-gps-indicator');
+                if (gpsIndicator) {
+                    gpsIndicator.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:red;"></i> Error GPS nativo: ' + e.message;
+                    gpsIndicator.style.display = 'block';
+                }
+            }
         };
         poll();
         state.gpsTimer = setInterval(poll, 4000);
@@ -5966,15 +5981,35 @@ App._startChainGps = function() {
         // PWA/TWA: watchPosition normal
         state.gpsWatchId = navigator.geolocation.watchPosition(
             function(pos) { onLocation(pos.coords.latitude, pos.coords.longitude); },
-            function() {},
+            function(err) {
+                const gpsIndicator = document.getElementById('chain-gps-indicator');
+                if (gpsIndicator) {
+                    const msgs = ['', 'Permiso GPS denegado', 'GPS no disponible', 'Timeout GPS'];
+                    gpsIndicator.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:red;"></i> ' + (msgs[err.code] || 'Error GPS');
+                    gpsIndicator.style.display = 'block';
+                }
+            },
             { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
         );
         // Leer inmediatamente
         navigator.geolocation.getCurrentPosition(
             function(pos) { onLocation(pos.coords.latitude, pos.coords.longitude); },
-            function() {},
+            function(err) {
+                const gpsIndicator = document.getElementById('chain-gps-indicator');
+                if (gpsIndicator) {
+                    const msgs = ['', 'Permiso GPS denegado — activa ubicacion', 'GPS no disponible', 'Timeout GPS'];
+                    gpsIndicator.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:red;"></i> ' + (msgs[err.code] || 'Error GPS');
+                    gpsIndicator.style.display = 'block';
+                }
+            },
             { enableHighAccuracy: true, timeout: 8000 }
         );
+    } else {
+        const gpsIndicator = document.getElementById('chain-gps-indicator');
+        if (gpsIndicator) {
+            gpsIndicator.innerHTML = '<i class="fas fa-times-circle" style="color:red;"></i> GPS no soportado en este dispositivo';
+            gpsIndicator.style.display = 'block';
+        }
     }
 };
 
@@ -5990,34 +6025,65 @@ App._stopChainGps = function() {
 
 // Seleccionar automaticamente el cliente mas cercano segun GPS
 App._chainAutoSelectClient = function(lat, lng) {
-    // Los clientes guardan coordenadas en c.coordinates.lat / c.coordinates.lng
-    const clients = ClientsModule.clients.filter(function(c) {
+    const gpsIndicator = document.getElementById('chain-gps-indicator');
+    const debugEl = document.getElementById('chain-gps-debug');
+
+    // Mostrar coordenadas actuales en debug
+    if (debugEl) {
+        debugEl.style.display = 'block';
+        debugEl.textContent = 'GPS: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+    }
+
+    // Todos los clientes activos con coordenadas
+    const allClients = ClientsModule.clients || [];
+    const withCoords = allClients.filter(function(c) {
         return c.isActive !== false &&
                c.coordinates &&
-               c.coordinates.lat &&
-               c.coordinates.lng;
+               (c.coordinates.lat !== null && c.coordinates.lat !== undefined) &&
+               (c.coordinates.lng !== null && c.coordinates.lng !== undefined);
     });
 
+    if (debugEl) {
+        debugEl.textContent += ' | Total: ' + allClients.length +
+            ' activos con coords: ' + withCoords.length;
+    }
+
+    if (withCoords.length === 0) {
+        if (gpsIndicator) {
+            gpsIndicator.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--warning);"></i> Clientes sin coordenadas GPS guardadas';
+            gpsIndicator.style.display = 'block';
+        }
+        return;
+    }
+
+    // Calcular distancia a todos y encontrar el mas cercano
     let nearest = null;
     let minDist = Infinity;
+    let closestDist = Infinity; // para mostrar aunque no esté en radio
 
-    clients.forEach(function(c) {
+    withCoords.forEach(function(c) {
         try {
             const cLat = parseFloat(c.coordinates.lat);
             const cLng = parseFloat(c.coordinates.lng);
             if (isNaN(cLat) || isNaN(cLng)) return;
             const dist = App._haversineM(lat, lng, cLat, cLng);
-            if (dist < 150 && dist < minDist) { minDist = dist; nearest = c; }
+            if (dist < closestDist) closestDist = dist;
+            if (dist < 500 && dist < minDist) { // radio 500m
+                minDist = dist;
+                nearest = c;
+            }
         } catch(e) {}
     });
 
+    if (debugEl && closestDist < Infinity) {
+        debugEl.textContent += ' | Mas cercano: ' + Math.round(closestDist) + 'm';
+    }
+
     const select = document.getElementById('chain-client-select');
-    const gpsIndicator = document.getElementById('chain-gps-indicator');
     if (!select) return;
 
     if (nearest) {
         const nearestId = String(nearest.id);
-        // Buscar la opcion correcta (comparar como string)
         let found = false;
         for (let i = 0; i < select.options.length; i++) {
             if (String(select.options[i].value) === nearestId) {
@@ -6026,14 +6092,17 @@ App._chainAutoSelectClient = function(lat, lng) {
                 break;
             }
         }
-        if (found && gpsIndicator) {
+        if (gpsIndicator) {
             gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--success);"></i> ' +
                 nearest.name + ' (' + Math.round(minDist) + 'm)';
             gpsIndicator.style.display = 'block';
         }
     } else {
         if (gpsIndicator) {
-            gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--gray);"></i> Sin cliente cercano (radio 150m)';
+            const msg = closestDist < Infinity
+                ? 'Mas cercano: ' + Math.round(closestDist) + 'm (radio 500m)'
+                : 'Sin clientes con GPS';
+            gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--warning);"></i> ' + msg;
             gpsIndicator.style.display = 'block';
         }
     }
@@ -6131,12 +6200,24 @@ App._syncDataToNativeService = function() {
 
         // Sincronizar clientes
         if (ClientsModule && ClientsModule.clients) {
-            const clientsData = ClientsModule.clients.map(c => ({
-                id: c.id,
-                name: c.name,
-                isActive: c.isActive !== false,
-                coordinates: c.coordinates || null
-            }));
+            const clientsData = ClientsModule.clients.map(c => {
+                let coords = null;
+                if (c.coordinates) {
+                    const lat = parseFloat(c.coordinates.lat);
+                    const lng = parseFloat(c.coordinates.lng);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        coords = { lat, lng };
+                    }
+                }
+                return {
+                    id: c.id,
+                    name: c.name,
+                    isActive: c.isActive !== false,
+                    coordinates: coords
+                };
+            });
+            console.log('🔄 Sincronizando', clientsData.length, 'clientes,',
+                clientsData.filter(c => c.coordinates).length, 'con coordenadas');
             plugin.syncClients({ clientsJson: JSON.stringify(clientsData) }).catch(() => {});
         }
 

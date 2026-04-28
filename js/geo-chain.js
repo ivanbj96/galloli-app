@@ -6,7 +6,7 @@ const GeoChain = {
     // Configuración
     MIN_WEIGHT_LB: 3.50,        // Peso mínimo para registrar venta
     STABLE_MS: 1500,            // ms que el peso debe estar estable
-    CLIENT_RADIUS_M: 150,       // metros de radio para detectar cliente cercano
+    CLIENT_RADIUS_M: 500,       // metros de radio para detectar cliente cercano
     GPS_POLL_MS: 4000,          // ms entre lecturas GPS en modo activo
     WEIGHT_ZERO_THRESHOLD: 0.5, // lb — por debajo de esto se considera "balanza vacía"
 
@@ -275,12 +275,11 @@ const GeoChain = {
     // ─── Utilidades ─────────────────────────────────────────────────────────
 
     _findNearestClient(lat, lng) {
-        // Los clientes guardan coordenadas en c.coordinates.lat / c.coordinates.lng
         const clients = ClientsModule.clients.filter(c =>
             c.isActive !== false &&
             c.coordinates &&
-            c.coordinates.lat &&
-            c.coordinates.lng
+            c.coordinates.lat !== null && c.coordinates.lat !== undefined &&
+            c.coordinates.lng !== null && c.coordinates.lng !== undefined
         );
 
         let nearest = null;
@@ -291,7 +290,6 @@ const GeoChain = {
                 const cLat = parseFloat(client.coordinates.lat);
                 const cLng = parseFloat(client.coordinates.lng);
                 if (isNaN(cLat) || isNaN(cLng)) return;
-
                 const dist = this._haversineM(lat, lng, cLat, cLng);
                 if (dist < this.CLIENT_RADIUS_M && dist < minDist) {
                     minDist = dist;
@@ -349,8 +347,8 @@ const GeoChain = {
         const clients = ClientsModule.clients.filter(c =>
             c.isActive !== false &&
             c.coordinates &&
-            c.coordinates.lat &&
-            c.coordinates.lng
+            c.coordinates.lat !== null && c.coordinates.lat !== undefined &&
+            c.coordinates.lng !== null && c.coordinates.lng !== undefined
         );
         const result = [];
         clients.forEach(client => {

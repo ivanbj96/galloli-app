@@ -69,6 +69,18 @@ const App = {
         setTimeout(() => {
             App._syncDataToNativeService();
             App._processPendingNativeSales();
+            // Iniciar motor de venta automática (solo APK nativo, se autodescarta en TWA)
+            if (typeof initNativeAutoSale === 'function') {
+                initNativeAutoSale({
+                    mode: 'auto',
+                    minWeightLb: 3.50,
+                    stableReadings: 3,
+                    stableWindowMs: 2000,
+                    minIntervalSamePlaceMs: 60000,
+                    geofenceRadiusM: 150,
+                    sriEnabled: false
+                });
+            }
         }, 2000);
         
         // SINCRONIZAR CON SERVICE WORKER

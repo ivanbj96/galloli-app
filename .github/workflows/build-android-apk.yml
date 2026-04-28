@@ -1,0 +1,248 @@
+name: Build GallOli APK Nativo (apk-native branch)
+
+on:
+  push:
+    branches: [apk-native]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install TypeScript
+        run: npm install -D typescript --legacy-peer-deps
+
+      - name: Install Capacitor plugins (APK nativo)
+        run: |
+          npm install @capacitor-community/bluetooth-le --legacy-peer-deps
+          npm install @capacitor/geolocation --legacy-peer-deps
+          npm install @capacitor/local-notifications --legacy-peer-deps
+          npm install @capacitor/push-notifications --legacy-peer-deps
+          npm install @capacitor/app --legacy-peer-deps
+          npm install @capacitor/preferences --legacy-peer-deps
+          npm install @capacitor-firebase/messaging --legacy-peer-deps
+
+      - name: Bundle BleClient for vanilla JS
+        run: |
+          npm install -D esbuild --legacy-peer-deps
+          npx esbuild js/ble-entry.js \
+            --bundle \
+            --format=iife \
+            --global-name=__BleBundle \
+            --outfile=js/ble-bundle.js \
+            --platform=browser \
+            --target=es2017
+          echo "ble-bundle.js generado"
+
+      - name: Prepare www folder
+        run: |
+          mkdir -p www
+          cp index.html www/
+          cp -r css www/
+          cp -r js www/
+          cp -r icons www/
+          cp -r src www/ 2>/dev/null || true
+          cp manifest.json www/
+          cp sw.js www/
+          cp _headers www/ 2>/dev/null || true
+          cp -r .well-known www/ 2>/dev/null || true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Add Android platform
+        run: npx cap add android || echo "Platform already exists"
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Install ImageMagick
+        run: sudo apt-get install -y imagemagick
+
+      - name: Generate app icons
+        run: |
+          SRC="icons/favicon.pub/android-chrome-512x512.png"
+          RES="android/app/src/main/res"
+          for size in 48 72 96 144 192; do
+            case $size in
+              48)  d="mdpi"    ;;
+              72)  d="hdpi"    ;;
+              96)  d="xhdpi"   ;;
+              144) d="xxhdpi"  ;;
+              192) d="xxxhdpi" ;;
+            esac
+            mkdir -p "$RES/mipmap-$d"
+            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher.png"
+            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher_round.png"
+            fg=$((size * 108 / 48))
+            convert "$SRC" -resize ${fg}x${fg} -gravity center -extent ${fg}x${fg} "$RES/mipmap-$d/ic_launcher_foreground.png"
+          done
+          mkdir -p "$RES/mipmap-anydpi-v26"
+          for icon in ic_launcher ic_launcher_round; do
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/${icon}.xml"
+          done
+          mkdir -p "$RES/values"
+          if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
+            sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#185a83</color>|' "$RES/values/colors.xml"
+          else
+            sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#185a83</color>\n</resources>\n' > "$RES/values/colors.xml"
+          fi
+          mkdir -p "$RES/drawable"
+          convert "$SRC" -resize 96x96 -colorspace Gray -threshold 50% \
+            -background transparent -alpha on -channel RGB -evaluate set 100% \
+            "$RES/drawable/ic_notification.png"
+
+      - name: Disable Capacitor splash screen
+        run: |
+          python3 .github/scripts/disable_splash.py
+          sed -i 's|AppTheme\.NoActionBarLaunch|AppTheme.NoActionBar|g' android/app/src/main/AndroidManifest.xml
+
+      - name: Generate splash screens
+        run: |
+          SRC="icons/favicon.pub/android-chrome-512x512.png"
+          RES="android/app/src/main/res"
+          for cfg in "port-mdpi:320x480" "port-hdpi:480x800" "port-xhdpi:720x1280" "port-xxhdpi:960x1600" "port-xxxhdpi:1280x1920"; do
+            d="${cfg%%:*}"; dims="${cfg##*:}"; w="${dims%%x*}"; h="${dims##*x}"; s=$((w * 40 / 100))
+            mkdir -p "$RES/drawable-$d"
+            convert -size ${w}x${h} xc:"#185a83" \( "$SRC" -resize ${s}x${s} \) -gravity center -composite "$RES/drawable-$d/splash.png"
+          done
+
+      - name: Copy native Java/Kotlin files
+        run: |
+          JAVA_DIR="android/app/src/main/java/store/ivapps/galloli"
+          mkdir -p "$JAVA_DIR"
+          cp .github/android-src/BleForegroundPlugin.java   "$JAVA_DIR/"
+          cp .github/android-src/BleForegroundService.java  "$JAVA_DIR/"
+          cp .github/android-src/MainActivityFcm.java       "$JAVA_DIR/MainActivity.java"
+          cp .github/android-src/GalloliFirebaseService.java "$JAVA_DIR/"
+          # Archivos Kotlin del parche APK nativo
+          cp .github/android-src/GeofenceBleService.kt      "$JAVA_DIR/"
+          cp .github/android-src/BootReceiver.kt            "$JAVA_DIR/"
+          ls -la "$JAVA_DIR"
+
+      - name: Setup Firebase
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          python .github/scripts/patch_firebase.py
+
+      - name: Patch AndroidManifest
+        run: |
+          python3 - <<'PYEOF'
+          import re
+
+          manifest_path = "android/app/src/main/AndroidManifest.xml"
+          with open(manifest_path, "r") as f:
+              content = f.read()
+
+          permissions = """
+              <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+              <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+              <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />"""
+
+          content = re.sub(r'(<manifest[^>]*>)', r'\1' + permissions, content, count=1)
+
+          services = """
+              <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="galloli_push_channel" />
+              <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|location" />
+              <service android:name=".GeofenceBleService" android:enabled="true" android:exported="false" android:foregroundServiceType="location|connectedDevice" />
+              <service android:name=".GalloliFirebaseService" android:exported="false">
+                  <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
+              </service>
+              <receiver android:name=".BootReceiver" android:enabled="true" android:exported="true">
+                  <intent-filter>
+                      <action android:name="android.intent.action.BOOT_COMPLETED" />
+                      <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                  </intent-filter>
+              </receiver>
+          """
+
+          content = content.replace("</application>", services + "\n    </application>")
+
+          with open(manifest_path, "w") as f:
+              f.write(content)
+
+          print("AndroidManifest parcheado para APK nativo")
+          PYEOF
+
+      - name: Make Gradle executable
+        run: chmod +x android/gradlew
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/GallOli-Native.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GallOli-Native-APK
+          path: android/app/build/outputs/apk/debug/GallOli-Native.apk
+          retention-days: 30
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Telethon
+        run: pip install telethon
+
+      - name: Get app version
+        id: version
+        run: echo "APP_VERSION=$(grep -o 'APP_VERSION.*=.*' sw.js | head -1 | grep -o \"'[^']*'\" | head -1 | tr -d \"'\")" >> $GITHUB_OUTPUT
+
+      - name: Send APK to Telegram
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          TELEGRAM_SESSION: ${{ secrets.TELEGRAM_SESSION }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
+        run: |
+          # Modificar send_apk.py para usar el nombre correcto
+          sed 's/GallOli\.apk/GallOli-Native.apk/g; s/APK_PATH = .*/APK_PATH = "android\/app\/build\/outputs\/apk\/debug\/GallOli-Native.apk"/' .github/scripts/send_apk.py > /tmp/send_native_apk.py
+          python /tmp/send_native_apk.py

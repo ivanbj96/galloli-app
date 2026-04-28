@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.22'; // fix GPS: radio 500m, debug visible, filtro coordenadas correcto
+const APP_VERSION = '7.20.23'; // branch apk-native: motor venta automatica + FCM + BootReceiver
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

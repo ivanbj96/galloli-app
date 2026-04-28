@@ -403,3 +403,96 @@ C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\a
 - Merma = diferencia peso vivo vs pelado
 - Diezmos = % configurable de ganancia neta
 - Facturación electrónica SRI Ecuador (en desarrollo, `sriEnabled: false`)
+
+---
+
+## Cómo comunicarse con Kiro en este proyecto
+
+### Formato de indicación efectiva
+
+Para que Kiro trabaje bien, una indicación debe tener:
+
+1. **Qué** — qué quieres que haga (acción concreta)
+2. **Dónde** — en qué parte del proyecto (branch, archivo, módulo)
+3. **Contexto** — qué está pasando ahora o qué no funciona
+
+**Ejemplo malo:** `arregla el gps`
+**Ejemplo bueno:** `en el modo pesaje en cadena (app.js) el indicador GPS siempre dice "sin cliente cercano" aunque estoy en el mismo lugar donde creé los clientes`
+
+---
+
+### Indicar el branch activo
+
+Siempre especifica si el cambio es para:
+- **`main`** → PWA, TWA, APK básico
+- **`apk-native`** → APK de producción del dueño
+
+Si no lo dices, Kiro asume `main`.
+
+---
+
+### Pegar errores de consola
+
+Cuando algo no funciona, pega el error exacto de la consola del navegador o de Android Studio. Kiro puede diagnosticar mucho más rápido con el stack trace que con una descripción.
+
+**Formato útil:**
+```
+Error: RutasModule.inicializarMapa is not a function
+  at app.js:3567
+```
+
+---
+
+### Describir el comportamiento esperado vs actual
+
+| Campo | Ejemplo |
+|-------|---------|
+| **Esperado** | Al poner un pollo en la balanza, la venta se registra sola |
+| **Actual** | El indicador dice "estabilizando" pero nunca registra |
+| **Condición** | App abierta, balanza conectada, cliente seleccionado |
+
+---
+
+### Indicar si ya desplegaste o no
+
+- `ya desplegaste` → Kiro hace commit + push + wrangler deploy
+- `solo haz los cambios` → Kiro modifica archivos sin desplegar
+- Si no dices nada, Kiro despliega por defecto
+
+---
+
+### Palabras clave útiles para este proyecto
+
+| Palabra | Kiro entiende |
+|---------|---------------|
+| `apk` | Branch `apk-native`, archivos Java/Kotlin, CI `build-android-apk.yml` |
+| `twa` | Branch `main`, Play Store, Bubblewrap |
+| `pwa` | Branch `main`, Cloudflare Pages, Service Worker |
+| `worker` | `workers/index.js`, Cloudflare Workers, D1 |
+| `balanza` | `js/bluetooth-scale.js`, BLE, CAMRY |
+| `pesaje en cadena` | `App.startChainWeighing()` en `js/app.js` |
+| `modo automatico` | `src/native/auto-sale-engine.js` + `BleForegroundService` |
+| `servicio nativo` | `BleForegroundService.java` + `GeofenceBleService.kt` |
+| `notificaciones` | VAPID (PWA) o FCM (APK) según contexto |
+| `coordenadas` | `c.coordinates.lat` / `c.coordinates.lng` — NUNCA `c.gps` |
+| `steering` | `.kiro/steering/galloli-project.md` |
+
+---
+
+### Lo que Kiro hace automáticamente sin que lo pidas
+
+- Incrementar `APP_VERSION` en `sw.js` antes de cada deploy
+- Actualizar el steering cuando hay cambios arquitectónicos importantes
+- Leer el código antes de modificarlo (nunca escribe a ciegas)
+- Usar Python en vez de `sed` para parchear XML/manifests
+- Usar `strReplace` o `fsWrite` para archivos con caracteres especiales (nunca PowerShell)
+
+---
+
+### Lo que Kiro NO hace sin que lo pidas explícitamente
+
+- Crear tests
+- Mergear branches
+- Subir a Play Store
+- Modificar secrets de GitHub o Cloudflare
+- Activar facturación SRI (`sriEnabled` está en `false` por diseño)

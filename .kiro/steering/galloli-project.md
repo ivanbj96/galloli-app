@@ -19,59 +19,97 @@ PWA + TWA (Google Play) + APK nativo Capacitor de gestión integral para venta d
 - **Realtime**: Durable Objects `SessionManager` para WebSockets
 - **Auth**: JWT HMAC-SHA256, login con Telegram / Email / PIN
 - **TWA**: Bubblewrap CLI → `GallOli - Google Play package2/`
-- **APK nativo**: Capacitor → generado por CI en cada push a `main`, enviado a Telegram
+- **APK nativo**: Capacitor → branch `apk-native`, CI en cada push, enviado a Telegram
 
 ---
 
-## Dos versiones del APK
+## Tres versiones de la app
 
-### 1. TWA (Google Play Store)
-- Carpeta: `GallOli - Google Play package2/`
-- Build manual con Bubblewrap/Gradle
-- App ID: `dev.pages.galloli.twa`
-- Es básicamente un Chrome que carga `galloli.ivapps.store`
-- Limitaciones: sin acceso a APIs nativas de Capacitor
+### 1. PWA / TWA (Google Play Store) — branch `main`
+- Desplegada en Cloudflare Pages
+- TWA en Play Store: App ID `dev.pages.galloli.twa`, carga `galloli.ivapps.store`
+- Sin acceso a APIs nativas de Capacitor
+- Notificaciones push via VAPID (Service Worker)
+- Pesaje en cadena con GPS funciona solo con app en primer plano
 
-### 2. APK Capacitor (CI/CD → Telegram)
-- Generado automáticamente en cada push a `main` por `.github/workflows/build-android.yml`
-- Enviado al canal privado de Telegram "GallOli Builds" via Telethon
+### 2. APK Capacitor básico — branch `main`
+- Generado por `.github/workflows/build-android.yml` en cada push a `main`
 - App ID: `store.ivapps.galloli`
-- **Capacidades nativas reales**:
-  - BLE Bluetooth con foreground service (balanza funciona con app minimizada)
-  - Firebase Cloud Messaging (FCM) para push notifications nativas
-  - Permisos Android completos: BLE, GPS, notificaciones
-  - `BleForegroundService` mantiene conexión BLE activa en segundo plano
-  - `GalloliFirebaseService` recibe push aunque la app esté cerrada
-  - `BleForegroundPlugin` expuesto a JS via `window.Capacitor.Plugins.BleForeground`
-- El `ble-bundle.js` se genera en CI con esbuild desde `js/ble-entry.js`
+- Incluye: BLE foreground service, FCM básico, GPS background
+- Enviado al canal Telegram "GallOli Builds"
+
+### 3. APK Nativo completo — branch `apk-native` ← APK de producción del dueño
+- Generado por `.github/workflows/build-android-apk.yml` en cada push a `apk-native`
+- **NUNCA** mergear `apk-native` → `main`
+- Incluye todo lo del APK básico MÁS:
+  - `GeofenceBleService.kt` — foreground service Kotlin con wakelock, sobrevive a Doze
+  - `BootReceiver.kt` — arranca el servicio automáticamente al reiniciar el teléfono
+  - `src/native/auto-sale-engine.js` — motor de venta automática (geofence + balanza)
+  - `src/native/platform-guard.js` — garantiza que solo corra en APK nativo
+  - `src/native/geofence-manager.js` — geofence via `@capacitor/geolocation`
+  - `src/native/fcm-handler.js` — FCM via `@capacitor-firebase/messaging`
+  - `workers/fcm-send.js` — endpoint Worker para enviar comandos FCM al APK
+- Plugins adicionales: `@capacitor/geolocation`, `@capacitor/local-notifications`, `@capacitor/push-notifications`, `@capacitor/app`, `@capacitor/preferences`, `@capacitor-firebase/messaging`
+
+---
+
+## Flujo de venta automática (APK nativo)
+
+```
+GeofenceBleService (Kotlin, siempre activo)
+    ├── GPS watcher → detecta cliente cercano en radio 150m
+    ├── BLE → recibe peso de balanza CAMRY
+    └── auto-sale-engine.js (orquestador JS)
+            ├── peso > 3.50 lb estable 2s → commitSale()
+            ├── guarda en SalesModule (IndexedDB)
+            └── notificación: "Venta registrada — Juan Pérez · 4.32 lb · $18.50"
+```
+
+**Garantías:**
+- App minimizada ✅ — FG service independiente del Activity
+- App cerrada ✅ — FG service sobrevive
+- Pantalla bloqueada ✅ — wakelock parcial activo
+- Doze mode ✅ — FG service exento
+- Reinicio del teléfono ✅ — BootReceiver reanuda el servicio
+- TWA pública ✅ — platform-guard desactiva todo automáticamente
+
+**Salvaguardas anti-error:**
+- Mínimo 3 lecturas estables (spread < 0.07 lb) en 2s
+- 1 venta máx por cliente cada 60s
+- Solo dispara dentro de geofence activo
 
 ---
 
 ## CI/CD — GitHub Actions
 
-### Workflow: `build-android.yml`
-**Trigger**: push a `main` o manual (`workflow_dispatch`)
+### Workflow `build-android.yml` (branch `main`)
+Genera APK básico con BLE + FCM básico + GPS. Envía a Telegram como `GallOli.apk`.
 
-**Pasos clave**:
+### Workflow `build-android-apk.yml` (branch `apk-native`)
+Genera APK nativo completo con todos los plugins y archivos Kotlin. Envía a Telegram como `GallOli-Native.apk`.
+
+**Pasos clave de ambos workflows:**
 1. `npm install` + build BLE bundle con esbuild
-2. Copia archivos web a `www/`
+2. Copia archivos web a `www/` (incluyendo `src/native/` en apk-native)
 3. `npx cap add android` + `npx cap sync android`
 4. Genera iconos y splash screens con ImageMagick
-5. Copia archivos Java nativos desde `.github/android-src/` al proyecto Android
+5. Copia archivos Java/Kotlin desde `.github/android-src/`
 6. Inyecta `google-services.json` desde secret `GOOGLE_SERVICES_JSON`
-7. Parchea `AndroidManifest.xml` con permisos BLE, GPS, FCM
-8. Parchea `build.gradle` con Firebase dependencies
-9. `./gradlew assembleDebug` → `GallOli.apk`
+7. Parchea `AndroidManifest.xml` con Python (evita problemas de escaping de `sed`)
+8. Parchea `build.gradle` con Firebase via `patch_firebase.py`
+9. `./gradlew assembleDebug` → APK
 10. Envía APK a canal Telegram via `send_apk.py`
 
-### Archivos Java nativos (`.github/android-src/`)
-| Archivo | Función |
-|---------|---------|
-| `MainActivity.java` | Registra `BleForegroundPlugin`, pide permisos BLE/notificaciones al inicio |
-| `BleForegroundService.java` | Foreground service que mantiene BLE activo con app minimizada |
-| `BleForegroundPlugin.java` | Plugin Capacitor que expone `start()`/`stop()` al JS |
-| `GalloliFirebaseService.java` | Recibe FCM push, guarda token en SharedPreferences |
-| `MainActivityFcm.java` | Versión alternativa de MainActivity (no usada actualmente) |
+### Archivos nativos (`.github/android-src/`)
+| Archivo | Branch | Función |
+|---------|--------|---------|
+| `MainActivity.java` | ambos | Registra plugins, pide permisos BLE/GPS/notificaciones |
+| `BleForegroundService.java` | ambos | Foreground service BLE + GPS + pesaje automático en Java |
+| `BleForegroundPlugin.java` | ambos | Plugin Capacitor — expone métodos al JS |
+| `GalloliFirebaseService.java` | ambos | Recibe FCM push, guarda token en SharedPreferences |
+| `MainActivityFcm.java` | ambos | MainActivity con FCM (usado como MainActivity.java en CI) |
+| `GeofenceBleService.kt` | apk-native | Foreground service Kotlin con wakelock, sobrevive a Doze |
+| `BootReceiver.kt` | apk-native | Arranca el servicio al reiniciar el teléfono |
 
 ### Secrets requeridos en GitHub
 | Secret | Descripción |
@@ -88,57 +126,67 @@ PWA + TWA (Google Play) + APK nativo Capacitor de gestión integral para venta d
 ```
 /
 ├── index.html
-├── sw.js                          # APP_VERSION aquí — incrementar SIEMPRE antes de deploy
+├── sw.js                          # APP_VERSION — incrementar SIEMPRE antes de deploy
 ├── manifest.json                  # start_url y scope apuntan a galloli.ivapps.store
-├── capacitor.config.ts            # Config Capacitor (appId: store.ivapps.galloli)
+├── capacitor.config.ts            # appId: store.ivapps.galloli
 ├── _headers                       # Headers Cloudflare Pages
 ├── css/styles.css
 ├── js/
-│   ├── app.js                     # App object — controlador principal
-│   ├── modules.js                 # Todos los módulos de datos
+│   ├── app.js                     # App object — controlador principal (~6k LoC)
+│   ├── modules.js                 # Todos los módulos de datos (~4.5k LoC)
 │   ├── auth.js                    # AuthManager (window.AuthManager)
 │   ├── sync-engine.js             # SyncEngine (WebSocket + REST)
 │   ├── auto-backup.js             # AutoBackup (10 PM diario)
 │   ├── db.js                      # IndexedDB wrapper
-│   ├── utils.js
+│   ├── utils.js                   # Utils + LocationModule
 │   ├── creditos.js
-│   ├── notify-system.js           # PushNotifications / NotificationsModule
+│   ├── notify-system.js           # PushNotifications / NotificationsModule (VAPID)
 │   ├── payment-processor.js
 │   ├── pdf-generator.js
 │   ├── offline-queue.js
-│   ├── offline-maps.js
+│   ├── offline-maps.js            # OfflineMaps (Leaflet wrapper)
 │   ├── facturacion-electronica.js
 │   ├── facturacion-ui.js
 │   ├── bluetooth-scale.js         # BluetoothScale — BLE balanza CAMRY
+│   ├── geo-chain.js               # GeoChain — pesaje automático por GPS (TWA/PWA)
 │   ├── ble-entry.js               # Entry point para esbuild → ble-bundle.js
-│   ├── ble-bundle.js              # Generado por CI (esbuild). Stub en PWA/TWA
-│   └── geo-chain.js               # GeoChain — pesaje automático por GPS (detecta cliente cercano)
+│   └── ble-bundle.js              # Generado por CI. Stub vacío en PWA/TWA
+├── src/
+│   └── native/                    # Solo activo en APK nativo (platform-guard lo verifica)
+│       ├── auto-sale-engine.js    # Motor de venta automática (orquestador)
+│       ├── platform-guard.js      # Guard: solo corre en APK nativo
+│       ├── geofence-manager.js    # Geofence via @capacitor/geolocation
+│       └── fcm-handler.js         # FCM via @capacitor-firebase/messaging
 ├── .github/
-│   ├── workflows/build-android.yml  # CI: genera APK y envía a Telegram en cada push
-│   ├── android-src/               # Archivos Java nativos copiados al build
+│   ├── workflows/
+│   │   ├── build-android.yml      # CI APK básico (branch main)
+│   │   └── build-android-apk.yml  # CI APK nativo completo (branch apk-native)
+│   ├── android-src/               # Archivos Java/Kotlin copiados al build
 │   │   ├── MainActivity.java
 │   │   ├── BleForegroundPlugin.java
 │   │   ├── BleForegroundService.java
 │   │   ├── GalloliFirebaseService.java
-│   │   └── MainActivityFcm.java
+│   │   ├── MainActivityFcm.java
+│   │   ├── GeofenceBleService.kt  # Solo usado en build-android-apk.yml
+│   │   └── BootReceiver.kt        # Solo usado en build-android-apk.yml
 │   └── scripts/
-│       ├── send_apk.py            # Envía APK a canal Telegram
-│       ├── patch_firebase.py      # Parchea build.gradle con Firebase
-│       ├── disable_splash.py      # Desactiva splash nativo de Capacitor
-│       └── gen_session.py         # Genera TELEGRAM_SESSION (solo local, una vez)
+│       ├── send_apk.py
+│       ├── patch_firebase.py
+│       ├── disable_splash.py
+│       └── gen_session.py
 ├── workers/
 │   ├── index.js                   # Worker API REST + WebSocket + Cron
 │   ├── session-manager.js
+│   ├── fcm-send.js                # Endpoint para enviar comandos FCM al APK
 │   ├── wrangler.toml
 │   └── schema.sql
-├── .well-known/assetlinks.json    # Fingerprint Google Play Signing — NO el del keystore local
+├── branch-apk/                    # Documentación y parche del APK nativo
+│   ├── ARCHITECTURE.md
+│   ├── INSTALL.md
+│   ├── SECURITY_GUIDE.md
+│   └── galloli-apk-patch/         # Archivos fuente del parche (ya aplicados)
+├── .well-known/assetlinks.json    # Fingerprint Google Play Signing
 ├── GallOli - Google Play package2/ # Proyecto Android TWA (en .gitignore)
-│   ├── app/src/main/AndroidManifest.xml
-│   ├── app/build.gradle
-│   ├── gradle.properties          # Debe tener android.overridePathCheck=true
-│   ├── twa-manifest.json
-│   ├── signing.keystore           # NUNCA commitear
-│   └── signing-key-info.txt       # NUNCA commitear
 ├── privacy.html
 ├── terms.html
 ├── feedback.html
@@ -151,7 +199,7 @@ PWA + TWA (Google Play) + APK nativo Capacitor de gestión integral para venta d
 
 | Módulo | Store IndexedDB | Contenido |
 |--------|----------------|-----------|
-| `ClientsModule` | `clients` | Clientes, GPS, activo/archivado |
+| `ClientsModule` | `clients` | Clientes, coordenadas GPS, activo/archivado |
 | `SalesModule` | `sales` | Ventas, historial pagos, créditos |
 | `OrdersModule` | `orders` | Pedidos |
 | `AccountingModule` | `expenses` | Gastos |
@@ -161,6 +209,7 @@ PWA + TWA (Google Play) + APK nativo Capacitor de gestión integral para venta d
 | `PaymentHistoryModule` | `paymentHistory` | Historial pagos |
 | `BackupModule` | — | Backup Telegram + importación |
 | `ConfigModule` | `config` | Colores, nombre, logo |
+| `RutasModule` | — | Mapa de rutas con pedidos pendientes |
 
 ---
 
@@ -198,15 +247,47 @@ Cuando se agregue cualquier dato nuevo, actualizar TODOS estos puntos:
 
 ---
 
-## Notificaciones Push (VAPID)
+## Notificaciones Push
 
-- VAPID keys guardadas como secrets en el Worker (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_X`, `VAPID_PUBLIC_Y`)
+### VAPID (PWA/TWA)
+- Keys guardadas como secrets en el Worker (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_X`, `VAPID_PUBLIC_Y`)
 - Suscripciones en D1 tabla `push_subscriptions`
 - Crons: 8AM, 12PM, 6PM, 10PM hora Ecuador (UTC-5 = UTC+0: 13, 17, 23, 03)
 - Toggle en sidebar — `App.initNotifToggle()` se llama 3s después del init
-- El SW se registra al inicio de `App.init()` y se guarda en `App._swRegistration`
-- `window.AuthManager.token` (NO `AuthManager.getToken()`) para obtener el JWT
-- En APK Capacitor: FCM via `GalloliFirebaseService`, token guardado en SharedPreferences
+
+### FCM (APK nativo)
+- `GalloliFirebaseService.java` recibe push y muestra notificación aunque la app esté cerrada
+- Token FCM guardado en SharedPreferences al recibirlo
+- `auto-sale-engine.js` registra el token en el Worker via `/api/fcm/register`
+- `workers/fcm-send.js` envía comandos remotos al APK (pause/resume/reload/set-radius)
+- Secret requerido: `FCM_SERVICE_ACCOUNT_JSON` (service account de Firebase) y `FCM_PROJECT_ID`
+
+### Notificaciones del foreground service (APK nativo)
+- Canal persistente (baja prioridad, sin sonido): muestra estado en tiempo real
+  - `GallOli — Juan Pérez | Pon un pollo | Hoy: 5 ventas $47.30`
+  - `GallOli — Balanza desconectada | Reconectando...`
+  - `GallOli — Pesaje activo | Pesando: 4.320 lb — estabilizando...`
+- Canal de alertas (alta prioridad, vibra): heads-up al registrar venta
+  - `Venta registrada — Juan Pérez`
+  - `4.320 lb — $18.50 | Hoy: 6 ventas $65.80`
+
+---
+
+## BleForegroundPlugin — Métodos expuestos al JS
+
+| Método | Descripción |
+|--------|-------------|
+| `start()` | Inicia el foreground service |
+| `stop()` | Detiene el foreground service |
+| `updateWeight({weight})` | JS pasa el peso actual al servicio |
+| `getLocation()` | → `{lat, lng, hasLocation}` |
+| `getWeight()` | → `{weight}` |
+| `syncClients({clientsJson})` | Sincroniza lista de clientes al servicio |
+| `syncSalePrice({price})` | Sincroniza precio del día al servicio |
+| `saveBleDeviceId({deviceId})` | Guarda device ID para reconexión automática |
+| `getPendingSales()` | → `{sales}` JSON de ventas registradas en background |
+| `clearPendingSales()` | Limpia la cola de ventas pendientes |
+| `resetDayCounters()` | Resetea contadores del día en el servicio |
 
 ---
 
@@ -223,36 +304,41 @@ Cuando se agregue cualquier dato nuevo, actualizar TODOS estos puntos:
 
 ## Despliegue
 
-### Solo cambios en PWA (JS/CSS/HTML) — comando único:
+### PWA/TWA — cambios en JS/CSS/HTML (branch `main`):
 ```bash
-git add . ; git commit -m "vX.X.X - descripcion" ; wrangler pages deploy . --project-name=galloli --branch=main
+git add . ; git commit -m "vX.X.X - descripcion" ; git push origin main ; wrangler pages deploy . --project-name=galloli --branch=main
 ```
-El push a `main` también dispara el CI que genera el APK Capacitor y lo envía a Telegram.
+El push a `main` también dispara `build-android.yml` → APK básico a Telegram.
 
 ### Worker modificado — primero Worker, luego Pages:
 ```bash
 # Desde workers/
 wrangler deploy
 # Luego desde raiz:
-git add . ; git commit -m "vX.X.X - descripcion" ; wrangler pages deploy . --project-name=galloli --branch=main
+git add . ; git commit -m "vX.X.X - descripcion" ; git push origin main ; wrangler pages deploy . --project-name=galloli --branch=main
 ```
 
-### Nuevo build TWA para Play Store:
+### APK nativo (branch `apk-native`):
+```bash
+git checkout apk-native
+# hacer cambios...
+git add . ; git commit -m "vX.X.X - descripcion" ; git push origin apk-native
+# El workflow build-android-apk.yml se dispara automáticamente → GallOli-Native.apk a Telegram
+```
+
+### TWA para Play Store (build manual):
 ```powershell
 # Desde GallOli - Google Play package2/
 # 1. Incrementar versionCode y versionName en app/build.gradle y twa-manifest.json
-# 2. Build:
 $keystore = "C:\Users\Ivan Quiñonez\Desktop\github-repos\GalloApp\GallOli - Google Play package2\signing.keystore"
 .\gradlew clean bundleRelease "-Pandroid.injected.signing.store.file=$keystore" "-Pandroid.injected.signing.store.password=PASS" "-Pandroid.injected.signing.key.alias=galloli-iQ-Apps" "-Pandroid.injected.signing.key.password=PASS"
-# 3. AAB en: app\build\outputs\bundle\release\app-release.aab
-# 4. Probar APK antes de subir:
-.\gradlew assembleRelease ...
+# AAB en: app\build\outputs\bundle\release\app-release.aab
+# Probar con ADB antes de subir a Play Store
 C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\app-release.apk"
-# 5. Si ADB dice Success, subir AAB a Play Store
 ```
 
 ### Versionado:
-- `sw.js` → `const APP_VERSION = 'X.X.X'` — incrementar SIEMPRE
+- `sw.js` → `const APP_VERSION = 'X.X.X'` — incrementar SIEMPRE en ambos branches
 - Commit: `"vX.X.X - descripcion breve"`
 - TWA: `versionCode` entero creciente en `build.gradle` y `twa-manifest.json`
 
@@ -269,6 +355,8 @@ C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\a
 | `VAPID_PRIVATE_KEY` | Secret | Clave privada VAPID push |
 | `VAPID_PUBLIC_X` | Secret | Coordenada X de la clave pública |
 | `VAPID_PUBLIC_Y` | Secret | Coordenada Y de la clave pública |
+| `FCM_SERVICE_ACCOUNT_JSON` | Secret | Service account Firebase para FCM HTTP v1 |
+| `FCM_PROJECT_ID` | Var | ID del proyecto Firebase |
 | `DB` | D1 | Base de datos |
 | `SESSION_MANAGER` | Durable Object | WebSockets |
 | `ENVIRONMENT` | Var | `"production"` |
@@ -277,7 +365,7 @@ C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\a
 
 ## Reglas de Desarrollo
 
-1. **Incrementar `APP_VERSION` en `sw.js`** antes de cada deploy
+1. **Incrementar `APP_VERSION` en `sw.js`** antes de cada deploy (en ambos branches)
 2. **No crear archivos markdown de resumen** — informar solo en el chat
 3. **No crear** `CHANGES.md`, `SUMMARY.md`, `UPDATE.md`, `CHANGELOG.md`
 4. **Backup completeness**: dato nuevo = actualizar los 5 puntos de backup
@@ -289,16 +377,21 @@ C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\a
 10. **AndroidManifest**: NUNCA usar `.json` como mimeType — causa `INSTALL_PARSE_FAILED_MANIFEST_MALFORMED`
 11. **gradle.properties**: siempre tener `android.overridePathCheck=true`
 12. **AuthManager**: acceder token con `window.AuthManager.token`, no con `.getToken()`
-13. **ENCODING CRÍTICO**: NUNCA usar PowerShell para reescribir archivos JS/HTML con caracteres especiales (ó, á, ú, ñ, ¿, emojis). PowerShell corrompe el encoding UTF-8. Usar SIEMPRE `strReplace` o `fsWrite` de Kiro. Si se necesita reemplazar texto con regex en un archivo grande, usar `git checkout HEAD~1 -- archivo.js` para restaurar y luego aplicar cambios con `strReplace`.
-14. **APK Capacitor vs TWA**: Son dos APKs distintos. El APK Capacitor (`store.ivapps.galloli`) tiene acceso a APIs nativas reales (BLE foreground, FCM, GPS background). El TWA (`dev.pages.galloli.twa`) es solo un wrapper de Chrome. Las funciones nativas como `window.Capacitor.Plugins.BleForeground` solo funcionan en el APK Capacitor.
-15. **ble-bundle.js**: En PWA/TWA es un stub vacío. En APK Capacitor es generado por esbuild en CI desde `js/ble-entry.js` con `@capacitor-community/bluetooth-le`.
-16. **Modificar archivos Java nativos**: Editar en `.github/android-src/` — el CI los copia al proyecto Android en cada build. NUNCA editar directamente en `android/` (no está en git).
-17. **GeoChain (js/geo-chain.js)**: Módulo de pesaje automático por GPS. En APK Capacitor lee GPS desde `BleForegroundService` via `BleForeground.getLocation()`. En PWA usa `navigator.geolocation`. Detecta cliente más cercano en radio de 150m usando `c.coordinates.lat/lng`. Registra venta automáticamente cuando peso > 3.50 lb es estable 1.5s.
-18. **BleForegroundPlugin métodos**: `start()`, `stop()`, `updateWeight({weight})`, `getLocation()` → `{lat, lng, hasLocation}`, `getWeight()` → `{weight}`, `syncClients({clientsJson})`, `syncSalePrice({price})`, `saveBleDeviceId({deviceId})`, `getPendingSales()` → `{sales}`, `clearPendingSales()`.
-19. **Pesaje en segundo plano (APK nativo)**: `BleForegroundService` recibe datos BLE directamente en Java, detecta peso estable > 3.50 lb, busca cliente más cercano en 150m usando `coordinates` de SharedPreferences, guarda venta en cola JSON (`KEY_PENDING_SALES`). Al volver la app a primer plano, `App._processPendingNativeSales()` lee la cola y la procesa en IndexedDB.
-20. **Sincronización al servicio nativo**: Al iniciar la app y al conectar la balanza, `App._syncDataToNativeService()` envía clientes y precio del día al servicio via `syncClients` y `syncSalePrice`. El device ID BLE se guarda via `saveBleDeviceId` para reconexión automática.
-21. **Activación automática del modo cadena**: Al conectar la balanza, `BluetoothScale._activateAutoMode()` abre `App.startChainWeighing()` automáticamente si hay precio del día configurado. Sin presionar ningún botón.
-22. **Coordenadas de clientes**: Siempre usar `c.coordinates.lat` y `c.coordinates.lng` (objeto). El campo `c.gps` NO existe — es un error histórico ya corregido.
+13. **ENCODING CRÍTICO**: NUNCA usar PowerShell para reescribir archivos JS/HTML con caracteres especiales (ó, á, ú, ñ, ¿, emojis). PowerShell corrompe el encoding UTF-8. Usar SIEMPRE `strReplace` o `fsWrite` de Kiro.
+14. **Branches**: `main` = PWA + TWA + APK básico. `apk-native` = APK de producción del dueño. NUNCA mergear `apk-native` → `main`.
+15. **APK Capacitor vs TWA**: El APK (`store.ivapps.galloli`) tiene APIs nativas reales. El TWA (`dev.pages.galloli.twa`) es solo Chrome. `window.Capacitor.Plugins.BleForeground` solo funciona en APK.
+16. **ble-bundle.js**: Stub en PWA/TWA. En APK generado por esbuild en CI desde `js/ble-entry.js`.
+17. **Archivos Java/Kotlin nativos**: Editar en `.github/android-src/`. El CI los copia al proyecto Android. NUNCA editar directamente en `android/` (no está en git).
+18. **AndroidManifest patch**: Usar Python (no `sed`) para evitar problemas de escaping con caracteres como `|` en `foregroundServiceType`.
+19. **Coordenadas de clientes**: Siempre usar `c.coordinates.lat` y `c.coordinates.lng` (objeto numérico). El campo `c.gps` NO existe — error histórico corregido.
+20. **GeoChain (js/geo-chain.js)**: Pesaje automático por GPS para PWA/TWA. Radio 500m. Detecta cliente más cercano usando `c.coordinates`. Registra venta cuando peso > 3.50 lb estable 1.5s.
+21. **auto-sale-engine.js (src/native/)**: Motor de venta automática para APK nativo. Se autodescarta en TWA/PWA via `platform-guard.js`. Usa `@capacitor/geolocation` + `@capacitor/local-notifications`. Radio 150m, 3 lecturas estables, 1 venta/cliente/60s.
+22. **BleForegroundService**: Dos canales de notificación — `galloli_ble_channel` (persistente, baja prioridad) y `galloli_alerts_channel` (heads-up, alta prioridad con vibración al registrar venta).
+23. **Pesaje en segundo plano**: `BleForegroundService.java` recibe BLE en Java, detecta peso estable > 3.50 lb, busca cliente en 500m via SharedPreferences, guarda en `KEY_PENDING_SALES`. Al abrir la app, `App._processPendingNativeSales()` procesa la cola.
+24. **Sincronización al servicio nativo**: `App._syncDataToNativeService()` envía clientes + precio del día al servicio al iniciar. `BluetoothScale._syncToNativeService(deviceId)` lo llama también al conectar la balanza.
+25. **Activación automática**: Al conectar la balanza, `BluetoothScale._activateAutoMode()` abre `App.startChainWeighing()` automáticamente si hay precio del día. Sin presionar ningún botón.
+26. **FCM en APK**: El token FCM se genera en `GalloliFirebaseService.java` y se registra en el Worker via `auto-sale-engine.js` → `/api/fcm/register`. `workers/fcm-send.js` envía comandos remotos (pause/resume/reload/set-radius/force-sync).
+27. **branch-apk/**: Carpeta de documentación del parche APK nativo. Contiene `ARCHITECTURE.md`, `INSTALL.md`, `SECURITY_GUIDE.md` y los archivos fuente originales del parche (ya aplicados al proyecto).
 
 ---
 
@@ -309,217 +402,4 @@ C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\a
 - Vendedor en campo con rutas diarias
 - Merma = diferencia peso vivo vs pelado
 - Diezmos = % configurable de ganancia neta
-- Facturación electrónica SRI Ecuador (en desarrollo)
-
----
-
-## Stack
-
-- **Frontend**: HTML/CSS/JS vanilla, IndexedDB, Service Worker, Leaflet.js, jsPDF
-- **Hosting**: Cloudflare Pages → `https://galloli.pages.dev` y `https://galloli.ivapps.store`
-- **Worker API**: `https://galloli-sync.ivanbj-96.workers.dev` (nombre: `galloli-sync`, archivo: `workers/index.js`)
-- **DB**: Cloudflare D1 SQLite → `galloli` (id: `c5dd06b9-2998-49d5-834e-fd0d5f7f8da1`)
-- **Realtime**: Durable Objects `SessionManager` para WebSockets
-- **Auth**: JWT HMAC-SHA256, login con Telegram / Email / PIN
-- **TWA**: Bubblewrap CLI → `GallOli - Google Play package2/`
-
----
-
-## Estructura de Archivos
-
-```
-/
-├── index.html
-├── sw.js                          # APP_VERSION aquí — incrementar SIEMPRE antes de deploy
-├── manifest.json                  # start_url y scope apuntan a galloli.ivapps.store
-├── _headers                       # Headers Cloudflare Pages
-├── css/styles.css
-├── js/
-│   ├── app.js                     # App object — controlador principal
-│   ├── modules.js                 # Todos los módulos de datos
-│   ├── auth.js                    # AuthManager (window.AuthManager)
-│   ├── sync-engine.js             # SyncEngine (WebSocket + REST)
-│   ├── auto-backup.js             # AutoBackup (10 PM diario)
-│   ├── db.js                      # IndexedDB wrapper
-│   ├── utils.js
-│   ├── creditos.js
-│   ├── notify-system.js           # PushNotifications / NotificationsModule
-│   ├── payment-processor.js
-│   ├── pdf-generator.js
-│   ├── offline-queue.js
-│   ├── offline-maps.js
-│   ├── facturacion-electronica.js
-│   └── facturacion-ui.js
-├── workers/
-│   ├── index.js                   # Worker API REST + WebSocket + Cron
-│   ├── session-manager.js
-│   ├── wrangler.toml
-│   └── schema.sql
-├── .well-known/assetlinks.json    # Fingerprint Google Play Signing — NO el del keystore local
-├── GallOli - Google Play package2/ # Proyecto Android TWA (en .gitignore)
-│   ├── app/src/main/AndroidManifest.xml
-│   ├── app/build.gradle
-│   ├── gradle.properties          # Debe tener android.overridePathCheck=true
-│   ├── twa-manifest.json
-│   ├── signing.keystore           # NUNCA commitear
-│   └── signing-key-info.txt       # NUNCA commitear
-├── privacy.html
-├── terms.html
-├── feedback.html
-└── wrangler.toml                  # Cloudflare Pages config
-```
-
----
-
-## Módulos (js/modules.js)
-
-| Módulo | Store IndexedDB | Contenido |
-|--------|----------------|-----------|
-| `ClientsModule` | `clients` | Clientes, GPS, activo/archivado |
-| `SalesModule` | `sales` | Ventas, historial pagos, créditos |
-| `OrdersModule` | `orders` | Pedidos |
-| `AccountingModule` | `expenses` | Gastos |
-| `MermaModule` | `prices` + `mermaRecords` | Precios diarios, cálculo merma |
-| `DiezmosModule` | `diezmos` | Diezmos y ofrendas |
-| `CreditosModule` | (usa SalesModule) | Créditos pendientes |
-| `PaymentHistoryModule` | `paymentHistory` | Historial pagos |
-| `BackupModule` | — | Backup Telegram + importación |
-| `ConfigModule` | `config` | Colores, nombre, logo |
-
----
-
-## Páginas SPA (App.loadPage)
-
-`dashboard`, `sales`, `orders`, `clients`, `merma`, `stats`, `accounting`, `diezmos`, `backup`, `cloud-sync`, `rutas`, `creditos`, `payment-history`, `config`
-
----
-
-## Layout Visual
-
-- **Desktop (>1024px)**: sidebar fijo izquierda, hamburguesa lo colapsa con clase `collapsed`
-- **Móvil (≤1024px)**: sidebar oculto, se abre con clase `active` + overlay. Bottom nav visible
-- **Header**: logo + hamburguesa + botón sync (`SyncEngine.forceFullSync()`)
-
----
-
-## Sistema de Backup — MÁXIMA PRIORIDAD
-
-Cuando se agregue cualquier dato nuevo, actualizar TODOS estos puntos:
-
-1. `BackupModule.createBackup()` en `js/modules.js`
-2. `runScheduledBackup()` en `workers/index.js`
-3. `handleBackup()` en `workers/index.js`
-4. `getLocalData()` en `js/sync-engine.js`
-5. `BackupModule.importFromData()` en `js/modules.js`
-
----
-
-## Sistema de Sincronización
-
-- WebSocket: `wss://galloli-sync.ivanbj-96.workers.dev/ws`
-- REST: `https://galloli-sync.ivanbj-96.workers.dev/api/sync/`
-- Tipos: clients, sales, orders, expenses, prices, mermaRecords, diezmos, paymentHistory, config, telegramCredentials
-
----
-
-## Notificaciones Push (VAPID)
-
-- VAPID keys guardadas como secrets en el Worker (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_X`, `VAPID_PUBLIC_Y`)
-- Suscripciones en D1 tabla `push_subscriptions`
-- Crons: 8AM, 12PM, 6PM, 10PM hora Ecuador (UTC-5 = UTC+0: 13, 17, 23, 03)
-- Toggle en sidebar — `App.initNotifToggle()` se llama 3s después del init
-- El SW se registra al inicio de `App.init()` y se guarda en `App._swRegistration`
-- `window.AuthManager.token` (NO `AuthManager.getToken()`) para obtener el JWT
-
----
-
-## Google Play Store / TWA
-
-- App ID: `dev.pages.galloli.twa`
-- Dominio TWA: `galloli.ivapps.store`
-- Keystore: `GallOli - Google Play package2\signing.keystore`
-- Key alias: `galloli-iQ-Apps`
-- Fingerprint assetlinks (Google Play Signing): `B5:09:51:3F:F2:D5:DF:34:A2:0D:9F:EE:CE:5C:1C:07:7A:40:09:60:9B:DF:F0:48:FE:C7:C2:4A:8E:56:C6:CF`
-- Carpetas `GallOli - Google Play package*/` y `*.keystore` en `.gitignore` — NUNCA trackear
-
----
-
-## Despliegue
-
-### Solo cambios en PWA (JS/CSS/HTML) — comando único:
-```bash
-git add . ; git commit -m "vX.X.X - descripcion" ; wrangler pages deploy . --project-name=galloli --branch=main
-```
-
-### Worker modificado — primero Worker, luego Pages:
-```bash
-# Desde workers/
-wrangler deploy
-# Luego desde raiz:
-git add . ; git commit -m "vX.X.X - descripcion" ; wrangler pages deploy . --project-name=galloli --branch=main
-```
-
-### Nuevo build TWA para Play Store:
-```powershell
-# Desde GallOli - Google Play package2/
-# 1. Incrementar versionCode y versionName en app/build.gradle y twa-manifest.json
-# 2. Build:
-$keystore = "C:\Users\Ivan Quiñonez\Desktop\github-repos\GalloApp\GallOli - Google Play package2\signing.keystore"
-.\gradlew clean bundleRelease "-Pandroid.injected.signing.store.file=$keystore" "-Pandroid.injected.signing.store.password=PASS" "-Pandroid.injected.signing.key.alias=galloli-iQ-Apps" "-Pandroid.injected.signing.key.password=PASS"
-# 3. AAB en: app\build\outputs\bundle\release\app-release.aab
-# 4. Probar APK antes de subir:
-.\gradlew assembleRelease ...
-C:\AndroidSDK\platform-tools\adb.exe install -r "app\build\outputs\apk\release\app-release.apk"
-# 5. Si ADB dice Success, subir AAB a Play Store
-```
-
-### Versionado:
-- `sw.js` → `const APP_VERSION = 'X.X.X'` — incrementar SIEMPRE
-- Commit: `"vX.X.X - descripcion breve"`
-- TWA: `versionCode` entero creciente en `build.gradle` y `twa-manifest.json`
-
----
-
-## Variables del Worker
-
-| Variable | Tipo | Descripción |
-|----------|------|-------------|
-| `JWT_SECRET` | Secret | Firma JWT |
-| `TELEGRAM_BOT_TOKEN` | Secret | Bot auth Telegram |
-| `FEEDBACK_BOT_TOKEN` | Secret | Bot feedback usuarios |
-| `VAPID_PUBLIC_KEY` | Secret | Clave pública VAPID push |
-| `VAPID_PRIVATE_KEY` | Secret | Clave privada VAPID push |
-| `VAPID_PUBLIC_X` | Secret | Coordenada X de la clave pública |
-| `VAPID_PUBLIC_Y` | Secret | Coordenada Y de la clave pública |
-| `DB` | D1 | Base de datos |
-| `SESSION_MANAGER` | Durable Object | WebSockets |
-| `ENVIRONMENT` | Var | `"production"` |
-
----
-
-## Reglas de Desarrollo
-
-1. **Incrementar `APP_VERSION` en `sw.js`** antes de cada deploy
-2. **No crear archivos markdown de resumen** — informar solo en el chat
-3. **No crear** `CHANGES.md`, `SUMMARY.md`, `UPDATE.md`, `CHANGELOG.md`
-4. **Backup completeness**: dato nuevo = actualizar los 5 puntos de backup
-5. **No exponer secrets en frontend** — usar Worker como proxy
-6. **Google Play carpetas son sensibles** — en `.gitignore`
-7. **Modificar Worker** → `wrangler deploy` desde `workers/` ANTES de Pages
-8. **TWA build**: siempre probar con ADB antes de subir a Play Store
-9. **assetlinks.json**: usar fingerprint de Google Play Signing, NO del keystore local
-10. **AndroidManifest**: NUNCA usar `.json` como mimeType — causa `INSTALL_PARSE_FAILED_MANIFEST_MALFORMED`
-11. **gradle.properties**: siempre tener `android.overridePathCheck=true`
-12. **AuthManager**: acceder token con `window.AuthManager.token`, no con `.getToken()`
-13. **ENCODING CRÍTICO**: NUNCA usar PowerShell para reescribir archivos JS/HTML con caracteres especiales (ó, á, ú, ñ, ¿, emojis). PowerShell corrompe el encoding UTF-8. Usar SIEMPRE `strReplace` o `fsWrite` de Kiro. Si se necesita reemplazar texto con regex en un archivo grande, usar `git checkout HEAD~1 -- archivo.js` para restaurar y luego aplicar cambios con `strReplace`.
-
----
-
-## Contexto de Negocio
-
-- Venta de pollos pelados en Guatemala/Ecuador
-- Moneda configurable (GTQ / USD)
-- Vendedor en campo con rutas diarias
-- Merma = diferencia peso vivo vs pelado
-- Diezmos = % configurable de ganancia neta
-- Facturación electrónica SRI Ecuador (en desarrollo)
+- Facturación electrónica SRI Ecuador (en desarrollo, `sriEnabled: false`)

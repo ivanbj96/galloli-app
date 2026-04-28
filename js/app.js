@@ -64,6 +64,12 @@ const App = {
 
         // Inicializar balanza BLE
         BluetoothScale.init();
+
+        // Sincronizar datos al servicio nativo (APK) y procesar ventas pendientes
+        setTimeout(() => {
+            App._syncDataToNativeService();
+            App._processPendingNativeSales();
+        }, 2000);
         
         // SINCRONIZAR CON SERVICE WORKER
         this.syncDevModeWithServiceWorker();
@@ -140,6 +146,9 @@ const App = {
                 
                 console.log('👁️ App visible - Tiempo desde último cambio:', timeSinceLastChange, 'ms');
                 
+                // Procesar ventas registradas en segundo plano (APK nativo)
+                await App._processPendingNativeSales();
+
                 // Si pasaron mas de 2 segundos desde el último cambio, recargar datos
                 if (timeSinceLastChange > 2000) {
                     console.log('🔄 Recargando datos...');
@@ -164,6 +173,7 @@ const App = {
             
             if (timeSinceLastChange > 2000) {
                 console.log('🔄 Ventana enfocada - Recargando datos...');
+                await App._processPendingNativeSales();
                 await this.loadAllData();
                 this.loadPage(this.currentPage);
                 console.log('✅ Datos actualizados');
@@ -6039,6 +6049,110 @@ App._haversineM = function(lat1, lon1, lat2, lon2) {
               Math.sin(dLon/2) * Math.sin(dLon/2);
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
+
+// ─── Ventas en segundo plano (APK nativo) ────────────────────────────────────
+
+/**
+ * Procesa ventas registradas por el servicio nativo mientras la app estaba minimizada.
+ * Se llama automaticamente al volver a primer plano.
+ */
+App._processPendingNativeSales = async function() {
+    try {
+        const plugin = window.Capacitor &&
+                       window.Capacitor.isNativePlatform &&
+                       window.Capacitor.isNativePlatform() &&
+                       window.Capacitor.Plugins &&
+                       window.Capacitor.Plugins.BleForeground;
+        if (!plugin) return;
+
+        const result = await plugin.getPendingSales();
+        if (!result || !result.sales) return;
+
+        let sales;
+        try { sales = JSON.parse(result.sales); } catch(e) { return; }
+        if (!Array.isArray(sales) || sales.length === 0) return;
+
+        console.log('📦 Procesando', sales.length, 'ventas de segundo plano...');
+
+        let processed = 0;
+        for (const s of sales) {
+            try {
+                const clientId = parseInt(s.clientId) || s.clientId;
+                const client = ClientsModule.getClientById(clientId);
+                if (!client) { console.warn('Cliente no encontrado:', s.clientId); continue; }
+
+                const sale = SalesModule.addSale(
+                    clientId,
+                    s.weight,
+                    s.quantity || 1,
+                    s.salePrice,
+                    null,
+                    s.isPaid !== false
+                );
+                ClientsModule.updateClientStats(clientId, s.weight, s.quantity || 1, sale.total);
+                processed++;
+
+                console.log('✅ Venta background procesada:', client.name, s.weight + 'lb', Utils.formatCurrency(sale.total));
+            } catch(e) {
+                console.error('Error procesando venta background:', e);
+            }
+        }
+
+        if (processed > 0) {
+            // Limpiar cola en el servicio nativo
+            await plugin.clearPendingSales();
+
+            Utils.showNotification(
+                processed + ' venta' + (processed > 1 ? 's' : '') + ' registrada' + (processed > 1 ? 's' : '') + ' en segundo plano',
+                'success', 4000
+            );
+
+            // Recargar datos para reflejar las nuevas ventas
+            await App.loadAllData();
+            App.loadPage(App.currentPage);
+        }
+    } catch(e) {
+        console.warn('Error procesando ventas background:', e);
+    }
+};
+
+/**
+ * Sincroniza clientes y precio al servicio nativo.
+ * Se llama al iniciar la app y cuando se conecta la balanza.
+ */
+App._syncDataToNativeService = function() {
+    try {
+        const plugin = window.Capacitor &&
+                       window.Capacitor.isNativePlatform &&
+                       window.Capacitor.isNativePlatform() &&
+                       window.Capacitor.Plugins &&
+                       window.Capacitor.Plugins.BleForeground;
+        if (!plugin) return;
+
+        // Sincronizar clientes
+        if (ClientsModule && ClientsModule.clients) {
+            const clientsData = ClientsModule.clients.map(c => ({
+                id: c.id,
+                name: c.name,
+                isActive: c.isActive !== false,
+                coordinates: c.coordinates || null
+            }));
+            plugin.syncClients({ clientsJson: JSON.stringify(clientsData) }).catch(() => {});
+        }
+
+        // Sincronizar precio del dia
+        const price = MermaModule.getTodaySalePrice();
+        if (price > 0) {
+            plugin.syncSalePrice({ price }).catch(() => {});
+        }
+
+        console.log('🔄 Datos sincronizados al servicio nativo');
+    } catch(e) {
+        console.warn('Error sincronizando al servicio nativo:', e);
+    }
+};
+
+// ─── Fin ventas en segundo plano ─────────────────────────────────────────────
 
 App.updateChainPreview = function() {
     const weightEl = document.getElementById('chain-manual-weight');

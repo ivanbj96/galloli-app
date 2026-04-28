@@ -278,7 +278,14 @@ const BluetoothScale = {
         // Iniciar foreground service para mantener conexión en segundo plano
         this._startForeground();
 
+        // Sincronizar datos al servicio nativo para pesaje en segundo plano
+        this._syncToNativeService(deviceId);
+
         Utils.showNotification('Balanza "' + (deviceName || 'Desconocida') + '" conectada', 'success', 3000);
+
+        // Activar modo automatico si hay precio del dia configurado
+        this._activateAutoMode();
+
         return true;
     },
 
@@ -300,6 +307,10 @@ const BluetoothScale = {
         this.activeScaleId = this.device.id;
         this._saveSavedScales();
         Utils.showNotification('Balanza "' + (this.device.name || 'Desconocida') + '" conectada', 'success', 3000);
+
+        // Activar modo automatico si hay precio del dia configurado
+        this._activateAutoMode();
+
         return true;
     },
 
@@ -439,6 +450,66 @@ const BluetoothScale = {
         this.weightListeners.push(fn);
         var self = this;
         return function() { self.weightListeners = self.weightListeners.filter(function(f) { return f !== fn; }); };
+    },
+
+    // Activar modo pesaje automatico al conectar la balanza (sin presionar nada)
+    _activateAutoMode() {
+        var self = this;
+        // Pequeño delay para que la UI esté lista
+        setTimeout(function() {
+            try {
+                if (!window.App || !window.MermaModule) return;
+                var price = MermaModule.getTodaySalePrice();
+                if (!price) return; // Sin precio del dia, no activar
+
+                // Si ya hay un modal de cadena abierto, no abrir otro
+                if (document.getElementById('chain-weighing-modal')) return;
+
+                // Activar modo cadena automaticamente
+                App.startChainWeighing();
+                Utils.showNotification('Modo pesaje automatico activado', 'success', 2000);
+            } catch(e) {
+                // silencioso — puede que App no esté listo aún
+            }
+        }, 500);
+    },
+
+    // Sincronizar clientes y precio al servicio nativo para pesaje en segundo plano
+    _syncToNativeService(deviceId) {
+        var plugin = this._getBleClient ? null : null;
+        if (!this.isNative()) return;
+        try {
+            var BleForeground = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+            if (!BleForeground) return;
+
+            // Guardar device ID para reconexión automática
+            if (deviceId) {
+                BleForeground.saveBleDeviceId({ deviceId: deviceId }).catch(function(){});
+            }
+
+            // Sincronizar clientes
+            if (window.ClientsModule && ClientsModule.clients) {
+                var clientsData = ClientsModule.clients.map(function(c) {
+                    return {
+                        id: c.id,
+                        name: c.name,
+                        isActive: c.isActive !== false,
+                        coordinates: c.coordinates || null
+                    };
+                });
+                BleForeground.syncClients({ clientsJson: JSON.stringify(clientsData) }).catch(function(){});
+            }
+
+            // Sincronizar precio de venta del día
+            if (window.MermaModule) {
+                var price = MermaModule.getTodaySalePrice();
+                if (price > 0) {
+                    BleForeground.syncSalePrice({ price: price }).catch(function(){});
+                }
+            }
+        } catch(e) {
+            console.warn('Error sincronizando con servicio nativo:', e);
+        }
     },
 
     async disconnect() {

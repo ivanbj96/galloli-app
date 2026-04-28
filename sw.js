@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.25'; // fix FCM: getFcmToken nativo, registro automatico, UI APK sin modal redundante
+const APP_VERSION = '7.20.26'; // notificaciones push utiles: resumen dia, creditos con nombres, merma
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

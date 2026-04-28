@@ -174,17 +174,18 @@ export default {
     console.log(`⏰ Cron ejecutado: ${cron}`);
 
     if (cron === '0 3 * * *') {
-      // 10 PM Ecuador — backup + push noche (merma + créditos)
+      // 10 PM Ecuador — backup + resumen completo del dia
       await runScheduledBackup(env);
+      // runScheduledBackup ya llama runScheduledPushNotifications internamente
     } else if (cron === '0 13 * * *') {
-      // 8 AM Ecuador — recordatorio créditos pendientes del día
-      await runScheduledPushNotifications(env, { merma: false, creditos: true });
+      // 8 AM Ecuador — buenos dias + creditos urgentes
+      await runScheduledPushNotifications(env, { merma: false, creditos: true, resumen: false });
     } else if (cron === '0 17 * * *') {
-      // 12 PM Ecuador — recordatorio merma si no se calculó
-      await runScheduledPushNotifications(env, { merma: true, creditos: false });
+      // 12 PM Ecuador — estado del dia + merma pendiente
+      await runScheduledPushNotifications(env, { merma: true, creditos: false, resumen: false });
     } else if (cron === '0 23 * * *') {
-      // 6 PM Ecuador — último aviso merma + créditos
-      await runScheduledPushNotifications(env, { merma: true, creditos: true });
+      // 6 PM Ecuador — alertas finales del dia
+      await runScheduledPushNotifications(env, { merma: true, creditos: true, resumen: false });
     }
   }
 };
@@ -370,8 +371,8 @@ async function runScheduledBackup(env) {
     
     console.log('✅ Backup automático completado');
     
-    // Enviar notificaciones push de recordatorio (merma + créditos)
-    await runScheduledPushNotifications(env, { merma: true, creditos: true });
+    // Enviar notificacion de resumen completo del dia (junto con el backup)
+    await runScheduledPushNotifications(env, { merma: true, creditos: true, resumen: true });
     
   } catch (error) {
     console.error('❌ Error en backup automático:', error);
@@ -380,8 +381,8 @@ async function runScheduledBackup(env) {
   }
 }
 
-// Notificaciones push programadas: merma sin calcular + créditos pendientes
-async function runScheduledPushNotifications(env, { merma = true, creditos = true } = {}) {
+// Notificaciones push programadas con contenido util para el negocio
+async function runScheduledPushNotifications(env, { merma = true, creditos = true, resumen = false } = {}) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const businesses = await env.DB.prepare(`
@@ -392,48 +393,152 @@ async function runScheduledPushNotifications(env, { merma = true, creditos = tru
 
     for (const business of (businesses.results || [])) {
       try {
-        // Verificar si hay ventas hoy pero no merma calculada
-        const salesToday = await env.DB.prepare(`
-          SELECT COUNT(*) as cnt FROM sync_data
+
+        // ── Ventas del dia ────────────────────────────────────────────────
+        const ventasHoy = await env.DB.prepare(`
+          SELECT
+            COUNT(*) as total,
+            SUM(CAST(json_extract(data, '$.total') AS REAL)) as monto,
+            SUM(CAST(json_extract(data, '$.weight') AS REAL)) as libras,
+            SUM(CASE WHEN json_extract(data, '$.isPaid') = 0 THEN 1 ELSE 0 END) as creditos_hoy
+          FROM sync_data
           WHERE business_id = ? AND data_type = 'sales' AND deleted = 0
           AND json_extract(data, '$.date') = ?
         `).bind(business.id, today).first();
 
-        const mermaToday = await env.DB.prepare(`
-          SELECT COUNT(*) as cnt FROM sync_data
-          WHERE business_id = ? AND data_type = 'mermaRecords' AND deleted = 0
-          AND json_extract(data, '$.date') = ?
-        `).bind(business.id, today).first();
+        const totalVentas = ventasHoy?.total || 0;
+        const montoHoy = (ventasHoy?.monto || 0).toFixed(2);
+        const librasHoy = (ventasHoy?.libras || 0).toFixed(1);
+        const creditosHoy = ventasHoy?.creditos_hoy || 0;
 
-        if ((salesToday?.cnt || 0) > 0 && (mermaToday?.cnt || 0) === 0) {
-          await sendPushToAllSubs(
-            business.id,
-            'Merma Sin Calcular',
-            `Tienes ${salesToday.cnt} ventas hoy. Calcula la merma!`,
-            { tag: 'merma-urgent', action: 'calculate-merma' },
-            env
-          );
-        }
-
-        // Verificar créditos pendientes
-        const credits = await env.DB.prepare(`
-          SELECT COUNT(*) as cnt FROM sync_data
+        // ── Creditos pendientes totales ───────────────────────────────────
+        const creditosPendientes = await env.DB.prepare(`
+          SELECT
+            COUNT(*) as cnt,
+            SUM(CAST(json_extract(data, '$.remainingDebt') AS REAL)) as deuda_total
+          FROM sync_data
           WHERE business_id = ? AND data_type = 'sales' AND deleted = 0
           AND json_extract(data, '$.isPaid') = 0
-          AND json_extract(data, '$.paymentType') = 'credit'
         `).bind(business.id).first();
 
-        if ((credits?.cnt || 0) > 0) {
-          await sendPushToAllSubs(
-            business.id,
-            'Creditos Pendientes',
-            `Tienes ${credits.cnt} venta${credits.cnt > 1 ? 's' : ''} a crédito sin cobrar`,
-            { tag: 'credits-pending', action: 'view-credits' },
-            env
-          );
+        const totalCreditos = creditosPendientes?.cnt || 0;
+        const deudaTotal = (creditosPendientes?.deuda_total || 0).toFixed(2);
+
+        // ── Credito mas antiguo sin cobrar ────────────────────────────────
+        const creditoAntiguo = await env.DB.prepare(`
+          SELECT
+            json_extract(data, '$.clientName') as cliente,
+            json_extract(data, '$.remainingDebt') as deuda,
+            json_extract(data, '$.date') as fecha
+          FROM sync_data
+          WHERE business_id = ? AND data_type = 'sales' AND deleted = 0
+          AND json_extract(data, '$.isPaid') = 0
+          ORDER BY json_extract(data, '$.date') ASC
+          LIMIT 1
+        `).bind(business.id).first();
+
+        // ── Merma del dia ─────────────────────────────────────────────────
+        const mermaHoy = await env.DB.prepare(`
+          SELECT
+            json_extract(data, '$.pesoVivo') as vivo,
+            json_extract(data, '$.pesoPelado') as pelado,
+            json_extract(data, '$.porcentajeMerma') as porcentaje
+          FROM sync_data
+          WHERE business_id = ? AND data_type = 'mermaRecords' AND deleted = 0
+          AND json_extract(data, '$.date') = ?
+          LIMIT 1
+        `).bind(business.id, today).first();
+
+        // ── Precio del dia ────────────────────────────────────────────────
+        const precioHoy = await env.DB.prepare(`
+          SELECT json_extract(data, '$.salePrice') as precio
+          FROM sync_data
+          WHERE business_id = ? AND data_type = 'prices' AND deleted = 0
+          AND json_extract(data, '$.date') = ?
+          LIMIT 1
+        `).bind(business.id, today).first();
+
+        // ── Construir notificaciones segun el momento del dia ─────────────
+
+        // 8 AM — Buenos dias + creditos urgentes
+        if (creditos && !merma && !resumen) {
+          if (totalCreditos > 0) {
+            let body = `${totalCreditos} credito${totalCreditos > 1 ? 's' : ''} pendiente${totalCreditos > 1 ? 's' : ''} — $${deudaTotal} por cobrar`;
+            if (creditoAntiguo?.cliente) {
+              body += `\nMas antiguo: ${creditoAntiguo.cliente} ($${parseFloat(creditoAntiguo.deuda || 0).toFixed(2)}) desde ${creditoAntiguo.fecha}`;
+            }
+            await sendPushToAllSubs(business.id, 'Buenos dias — Creditos pendientes', body,
+              { tag: 'creditos-manana', action: 'view-credits' }, env);
+          } else {
+            // Sin creditos — motivacional
+            await sendPushToAllSubs(business.id, 'Buenos dias GallOli',
+              'Sin creditos pendientes. Buen dia de ventas!',
+              { tag: 'buenos-dias' }, env);
+          }
         }
+
+        // 12 PM — Estado del dia
+        if (merma && !creditos && !resumen) {
+          if (totalVentas > 0 && !mermaHoy) {
+            const body = `${totalVentas} venta${totalVentas > 1 ? 's' : ''} registrada${totalVentas > 1 ? 's' : ''} — $${montoHoy} — ${librasHoy} lb\nNo has calculado la merma de hoy`;
+            await sendPushToAllSubs(business.id, 'Merma pendiente', body,
+              { tag: 'merma-mediodia', action: 'calculate-merma' }, env);
+          } else if (totalVentas > 0 && mermaHoy) {
+            const pct = mermaHoy.porcentaje ? parseFloat(mermaHoy.porcentaje).toFixed(1) : '?';
+            const body = `${totalVentas} ventas — $${montoHoy} — ${librasHoy} lb\nMerma calculada: ${pct}%`;
+            await sendPushToAllSubs(business.id, 'Resumen del mediodia', body,
+              { tag: 'resumen-mediodia' }, env);
+          } else {
+            await sendPushToAllSubs(business.id, 'Sin ventas aun',
+              'No hay ventas registradas hoy. Recuerda configurar el precio del dia.',
+              { tag: 'sin-ventas' }, env);
+          }
+        }
+
+        // 6 PM — Alerta final del dia
+        if (merma && creditos && !resumen) {
+          const alertas = [];
+
+          if (totalVentas > 0 && !mermaHoy) {
+            alertas.push(`Merma sin calcular (${totalVentas} ventas)`);
+          }
+          if (creditosHoy > 0) {
+            alertas.push(`${creditosHoy} venta${creditosHoy > 1 ? 's' : ''} de hoy a credito`);
+          }
+          if (totalCreditos > 0) {
+            alertas.push(`$${deudaTotal} pendiente de cobro en total`);
+          }
+
+          if (alertas.length > 0) {
+            await sendPushToAllSubs(business.id, 'Pendientes del dia',
+              alertas.join('\n'),
+              { tag: 'pendientes-tarde', action: 'dashboard' }, env);
+          } else if (totalVentas > 0) {
+            const pct = mermaHoy?.porcentaje ? parseFloat(mermaHoy.porcentaje).toFixed(1) + '% merma' : '';
+            await sendPushToAllSubs(business.id, 'Buen dia de trabajo',
+              `${totalVentas} ventas — $${montoHoy} cobrado — ${librasHoy} lb ${pct}`.trim(),
+              { tag: 'cierre-tarde' }, env);
+          }
+        }
+
+        // 10 PM — Resumen completo del dia (junto con el backup)
+        if (resumen) {
+          if (totalVentas > 0) {
+            const pct = mermaHoy?.porcentaje ? ` — Merma ${parseFloat(mermaHoy.porcentaje).toFixed(1)}%` : ' — Merma sin calcular';
+            const creditoStr = totalCreditos > 0 ? `\n${totalCreditos} creditos pendientes: $${deudaTotal}` : '\nSin creditos pendientes';
+            const precioStr = precioHoy?.precio ? ` a $${parseFloat(precioHoy.precio).toFixed(2)}/lb` : '';
+            const body = `${totalVentas} ventas${precioStr} — $${montoHoy}${pct}\n${librasHoy} lb vendidas${creditoStr}`;
+            await sendPushToAllSubs(business.id, 'Resumen del dia — Backup enviado', body,
+              { tag: 'resumen-noche', action: 'dashboard' }, env);
+          } else {
+            await sendPushToAllSubs(business.id, 'Backup enviado',
+              'Sin ventas hoy. Backup guardado en Telegram.',
+              { tag: 'backup-noche' }, env);
+          }
+        }
+
       } catch (e) {
-        console.error(`Push notifications error for ${business.name}:`, e.message);
+        console.error(`Push error for ${business.name}:`, e.message);
       }
     }
   } catch (e) {

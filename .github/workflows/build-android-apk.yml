@@ -107,6 +107,8 @@ jobs:
             printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/${icon}.xml"
           done
           mkdir -p "$RES/values"
+          # Eliminar ic_launcher_background.xml que Capacitor genera (evita duplicado con colors.xml)
+          rm -f "$RES/values/ic_launcher_background.xml"
           if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
             sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#185a83</color>|' "$RES/values/colors.xml"
           else

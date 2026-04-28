@@ -258,7 +258,7 @@ async function runScheduledBackup(env) {
           }
         }
         
-        // Construir backup
+        // Construir backup completo
         const backupData = {
           clients: groupedData.clients,
           sales: groupedData.sales,
@@ -267,13 +267,16 @@ async function runScheduledBackup(env) {
           mermaPrices: groupedData.prices,
           mermaRecords: groupedData.mermaRecords,
           diezmosRecords: groupedData.diezmos,
-          diezmosConfig: groupedData.config.find(c => c.key === 'diezmos') || { diezmoPercent: 10, ofrendaPercent: 5 },
+          diezmosConfig: groupedData.config.find(c => c.key === 'diezmos-config')?.value ||
+                         groupedData.config.find(c => c.key === 'diezmos') ||
+                         { diezmoPercent: 10, ofrendaPercent: 5 },
           paymentHistory: groupedData.paymentHistory,
           creditosData: {
             creditSales: groupedData.sales.filter(s => !s.isPaid),
             paymentHistory: groupedData.sales.filter(s => s.paymentHistory && s.paymentHistory.length > 0)
           },
-          config: groupedData.config.find(c => c.key === 'app') || {},
+          config: groupedData.config.find(c => c.key === 'app') ||
+                  groupedData.config.find(c => c.type === 'config') || {},
           telegramConfig: {
             botToken: creds.botToken,
             chatId: creds.chatId
@@ -286,6 +289,8 @@ async function runScheduledBackup(env) {
             totalOrders: groupedData.orders.length,
             totalExpenses: groupedData.expenses.length,
             totalPayments: groupedData.paymentHistory.length,
+            totalMermaRecords: groupedData.mermaRecords.length,
+            totalDiezmos: groupedData.diezmos.length,
             appName: 'GallOli',
             businessId: business.id,
             businessName: business.name,
@@ -299,22 +304,27 @@ async function runScheduledBackup(env) {
         console.log(`📤 Enviando backup a Telegram: ${filename}`);
         console.log(`📊 Tamaño: ${(new Blob([dataStr]).size / 1024).toFixed(2)} KB`);
         
-        // Enviar a Telegram
-        const formData = new FormData();
-        formData.append('chat_id', creds.chatId);
-        formData.append('document', new Blob([dataStr], { type: 'application/json' }), filename);
-        formData.append('caption', 
+        // Caption sin emojis ni tildes para evitar encoding roto en Cloudflare Workers
+        const caption =
           `Backup Automatico GallOli\n` +
           `Negocio: ${business.name}\n` +
-          `Fecha: ${new Date().toLocaleString('es-ES')}\n\n` +
+          `Fecha: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC\n\n` +
           `Estadisticas:\n` +
           `Clientes: ${groupedData.clients.length}\n` +
           `Ventas: ${groupedData.sales.length}\n` +
           `Pedidos: ${groupedData.orders.length}\n` +
           `Gastos: ${groupedData.expenses.length}\n` +
-          `Tamano: ${(new Blob([dataStr]).size / 1024).toFixed(2)} KB`
-        );
-        
+          `Merma: ${groupedData.mermaRecords.length}\n` +
+          `Diezmos: ${groupedData.diezmos.length}\n` +
+          `Historial pagos: ${groupedData.paymentHistory.length}\n` +
+          `Tamano: ${(dataStr.length / 1024).toFixed(2)} KB`;
+
+        // Construir FormData con encoding correcto
+        const formData = new FormData();
+        formData.append('chat_id', creds.chatId);
+        formData.append('document', new Blob([dataStr], { type: 'application/json' }), filename);
+        formData.append('caption', caption);
+
         const telegramResponse = await fetch(
           `https://api.telegram.org/bot${creds.botToken}/sendDocument`,
           {

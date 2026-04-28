@@ -81,41 +81,31 @@ const AutoBackup = {
     async checkBackupTime() {
         const now = new Date();
         const hour = now.getHours();
-        const minute = now.getMinutes();
-        
-        // Verificar si son las 10 PM (22:00)
-        if (hour === 22 && minute < 60) {
-            console.log('🕙 Son las 10 PM - Verificando si hay cambios para backup...');
-            
-            // Verificar si ya se hizo backup hoy
-            const lastBackup = await this.getFromDB('lastAutoBackupDate');
-            const today = new Date().toISOString().split('T')[0];
-            
-            if (lastBackup === today) {
-                console.log('✅ Ya se hizo backup hoy');
-                return;
-            }
-            
-            // Verificar si este dispositivo es el "líder" (el que debe hacer el backup)
-            const isLeader = await this.isBackupLeader();
-            
-            if (!isLeader) {
-                console.log('ℹ️ Este dispositivo NO es el líder - Otro dispositivo harx el backup');
-                return;
-            }
-            
-            console.log('👑 Este dispositivo ES el líder - Verificando cambios...');
-            
-            // Verificar si hay cambios en los datos
-            const hasChanges = await this.detectDataChanges();
-            
-            if (hasChanges) {
-                console.log('📊 Se detectaron cambios - Creando backup...');
-                await this.createAutomaticBackup();
-            } else {
-                console.log('ℹ️ No hay cambios en los datos - No se crearx backup');
-            }
+
+        // Solo a las 10 PM (22:00)
+        if (hour !== 22) return;
+
+        // Verificar si ya se hizo backup hoy
+        const lastBackup = await this.getFromDB('lastAutoBackupDate');
+        const today = new Date().toISOString().split('T')[0];
+
+        if (lastBackup === today) {
+            console.log('✅ Ya se hizo backup hoy');
+            return;
         }
+
+        // El servidor (Worker cron) ya hace el backup automatico a las 10 PM.
+        // El cliente solo hace backup si NO hay conexion al servidor.
+        const serverIsActive = typeof SyncEngine !== 'undefined' && SyncEngine.isActive;
+        if (serverIsActive) {
+            console.log('ℹ️ Servidor activo — el backup lo hace el Worker cron, no el cliente');
+            // Marcar como hecho para no reintentar
+            await this.saveToDB('lastAutoBackupDate', today);
+            return;
+        }
+
+        console.log('⚠️ Sin servidor — haciendo backup local como fallback');
+        await this.createAutomaticBackup();
     },
     
     // Determinar si este dispositivo es el líder para hacer backups

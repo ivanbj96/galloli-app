@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.23'; // branch apk-native: motor venta automatica + FCM + BootReceiver
+const APP_VERSION = '7.20.24'; // fix: sync pedidos cancelados, backup encoding, backup completo, no duplicado
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

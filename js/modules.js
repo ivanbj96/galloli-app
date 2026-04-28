@@ -800,17 +800,27 @@ const OrdersModule = {
         if (order) {
             const estadoAnterior = order.status;
             order.status = status;
+            order.lastModified = Date.now();
             if (status === 'delivered') {
                 order.deliveredDate = Utils.formatDate();
                 order.deliveredTime = new Date().toLocaleTimeString('es-ES');
             }
+            if (status === 'cancelled') {
+                order.cancelledDate = Utils.formatDate();
+                order.cancelledTime = new Date().toLocaleTimeString('es-ES');
+            }
             this.saveOrders();
-            
-            // NUEVO: Notificar al modulo de rutas sobre el cambio de estado
+
+            // Sincronizar cambio de estado al servidor
+            if (typeof SyncEngine !== 'undefined' && SyncEngine.addToQueue) {
+                SyncEngine.addToQueue('orders', String(order.id), 'update', order);
+            }
+
+            // Notificar al modulo de rutas sobre el cambio de estado
             if (estadoAnterior !== status && RutasModule.actualizarRutaPorCambioPedido) {
                 RutasModule.actualizarRutaPorCambioPedido(orderId, status);
             }
-            
+
             return true;
         }
         return false;

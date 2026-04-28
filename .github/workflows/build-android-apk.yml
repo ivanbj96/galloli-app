@@ -242,7 +242,4 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
           APP_VERSION: ${{ steps.version.outputs.APP_VERSION }}
-        run: |
-          # Modificar send_apk.py para usar el nombre correcto
-          sed 's/GallOli\.apk/GallOli-Native.apk/g; s/APK_PATH = .*/APK_PATH = "android\/app\/build\/outputs\/apk\/debug\/GallOli-Native.apk"/' .github/scripts/send_apk.py > /tmp/send_native_apk.py
-          python /tmp/send_native_apk.py
+        run: python .github/scripts/send_native_apk.py

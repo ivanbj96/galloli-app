@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.18'; // GPS automatico integrado en modo cadena
+const APP_VERSION = '7.20.19'; // fix: GPS usa coordinates en vez de gps, radio 150m
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

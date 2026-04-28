@@ -5980,19 +5980,24 @@ App._stopChainGps = function() {
 
 // Seleccionar automaticamente el cliente mas cercano segun GPS
 App._chainAutoSelectClient = function(lat, lng) {
-    const clients = ClientsModule.clients.filter(c => c.isActive !== false && c.gps && c.gps.trim());
+    // Los clientes guardan coordenadas en c.coordinates.lat / c.coordinates.lng
+    const clients = ClientsModule.clients.filter(function(c) {
+        return c.isActive !== false &&
+               c.coordinates &&
+               c.coordinates.lat &&
+               c.coordinates.lng;
+    });
+
     let nearest = null;
     let minDist = Infinity;
 
     clients.forEach(function(c) {
         try {
-            const parts = c.gps.split(',');
-            if (parts.length < 2) return;
-            const cLat = parseFloat(parts[0].trim());
-            const cLng = parseFloat(parts[1].trim());
+            const cLat = parseFloat(c.coordinates.lat);
+            const cLng = parseFloat(c.coordinates.lng);
             if (isNaN(cLat) || isNaN(cLng)) return;
             const dist = App._haversineM(lat, lng, cLat, cLng);
-            if (dist < 50 && dist < minDist) { minDist = dist; nearest = c; }
+            if (dist < 150 && dist < minDist) { minDist = dist; nearest = c; }
         } catch(e) {}
     });
 
@@ -6001,28 +6006,24 @@ App._chainAutoSelectClient = function(lat, lng) {
     if (!select) return;
 
     if (nearest) {
-        // Solo cambiar si el usuario no seleccionó manualmente (o si el GPS encontró uno más cercano)
-        const currentVal = select.value;
         const nearestId = String(nearest.id);
-        if (currentVal !== nearestId) {
-            select.value = nearestId;
-            // Si no encontró el valor (IDs numéricos vs string), buscar por opción
-            if (!select.value) {
-                for (let i = 0; i < select.options.length; i++) {
-                    if (String(select.options[i].value) === nearestId) {
-                        select.selectedIndex = i;
-                        break;
-                    }
-                }
+        // Buscar la opcion correcta (comparar como string)
+        let found = false;
+        for (let i = 0; i < select.options.length; i++) {
+            if (String(select.options[i].value) === nearestId) {
+                select.selectedIndex = i;
+                found = true;
+                break;
             }
-            if (gpsIndicator) {
-                gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--success);"></i> ' + nearest.name + ' (' + Math.round(minDist) + 'm)';
-                gpsIndicator.style.display = 'block';
-            }
+        }
+        if (found && gpsIndicator) {
+            gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--success);"></i> ' +
+                nearest.name + ' (' + Math.round(minDist) + 'm)';
+            gpsIndicator.style.display = 'block';
         }
     } else {
         if (gpsIndicator) {
-            gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--gray);"></i> Sin cliente cercano';
+            gpsIndicator.innerHTML = '<i class="fas fa-map-marker-alt" style="color:var(--gray);"></i> Sin cliente cercano (radio 150m)';
             gpsIndicator.style.display = 'block';
         }
     }

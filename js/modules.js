@@ -3181,9 +3181,10 @@ const RutasModule = {
             let contador = 0;
             Object.keys(pedidosPorCliente).forEach(clientId => {
                 const cliente = ClientsModule.getClient(clientId);
-                if (cliente && cliente.gps) {
-                    const [lat, lng] = cliente.gps.split(',').map(v => parseFloat(v.trim()));
-                    
+                if (cliente && cliente.coordinates && cliente.coordinates.lat && cliente.coordinates.lng) {
+                    const lat = parseFloat(cliente.coordinates.lat);
+                    const lng = parseFloat(cliente.coordinates.lng);
+
                     if (!isNaN(lat) && !isNaN(lng)) {
                         contador++;
                         const marcador = OfflineMaps.createMarker(lat, lng, {
@@ -3233,21 +3234,23 @@ const RutasModule = {
         if (!clientes || clientes.length === 0) return clientes;
 
         try {
-            // Ordenar clientes por distancia desde el primer cliente
             const clientesOrdenados = [clientes[0]];
             const clientesRestantes = clientes.slice(1);
 
             while (clientesRestantes.length > 0) {
                 const ultimoCliente = clientesOrdenados[clientesOrdenados.length - 1];
-                const [lat1, lng1] = ultimoCliente.gps.split(',').map(v => parseFloat(v.trim()));
+                if (!ultimoCliente.coordinates) { clientesOrdenados.push(...clientesRestantes); break; }
+                const lat1 = parseFloat(ultimoCliente.coordinates.lat);
+                const lng1 = parseFloat(ultimoCliente.coordinates.lng);
 
                 let proximoIdx = 0;
                 let distanciaMinima = Infinity;
 
                 clientesRestantes.forEach((cliente, idx) => {
-                    const [lat2, lng2] = cliente.gps.split(',').map(v => parseFloat(v.trim()));
+                    if (!cliente.coordinates) return;
+                    const lat2 = parseFloat(cliente.coordinates.lat);
+                    const lng2 = parseFloat(cliente.coordinates.lng);
                     const distancia = OfflineMaps.calculateDistance(lat1, lng1, lat2, lng2);
-                    
                     if (distancia < distanciaMinima) {
                         distanciaMinima = distancia;
                         proximoIdx = idx;

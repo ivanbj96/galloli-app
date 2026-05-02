@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.22'; // fix GPS: radio 500m, debug visible, filtro coordenadas correcto
+const APP_VERSION = '7.20.27'; // main: sync pedidos, backup completo, notificaciones push utiles, fix FCM
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

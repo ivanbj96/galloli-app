@@ -69,6 +69,20 @@ const App = {
         setTimeout(() => {
             App._syncDataToNativeService();
             App._processPendingNativeSales();
+            // Leer token FCM del servicio nativo y registrarlo en el Worker
+            App._registerNativeFcmToken();
+            // Iniciar motor de venta automática (solo APK nativo, se autodescarta en TWA)
+            if (typeof initNativeAutoSale === 'function') {
+                initNativeAutoSale({
+                    mode: 'auto',
+                    minWeightLb: 3.50,
+                    stableReadings: 3,
+                    stableWindowMs: 2000,
+                    minIntervalSamePlaceMs: 60000,
+                    geofenceRadiusM: 150,
+                    sriEnabled: false
+                });
+            }
         }, 2000);
         
         // SINCRONIZAR CON SERVICE WORKER
@@ -2367,10 +2381,21 @@ async cleanDuplicatePayments() {
                 
                 <div class="card">
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
+                    ${(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? `
+                    <div id="auto-sale-status-bar" style="width:100%;margin-bottom:15px;padding:14px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border-radius:10px;font-size:0.95rem;cursor:pointer;" onclick="App.startChainWeighing()">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-robot" style="font-size:1.3rem;"></i>
+                            <div>
+                                <div style="font-weight:600;">Venta automatica activa</div>
+                                <small style="opacity:0.85;">${BluetoothScale.isConnected ? 'Balanza conectada — pesando en segundo plano' : 'Conecta la balanza para activar'}</small>
+                            </div>
+                            <i class="fas fa-chevron-right" style="margin-left:auto;opacity:0.7;"></i>
+                        </div>
+                    </div>` : `
                     <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
                         <i class="fas fa-weight"></i> Modo Pesaje en Cadena
                         <small style="display:block;font-size:0.8rem;opacity:0.85;margin-top:2px;">${BluetoothScale.isConnected ? 'Balanza conectada — captura automatica' : 'Ingresa pesos manualmente uno por uno'}</small>
-                    </button>
+                    </button>`}
                     <form id="sale-form">
                         <div class="form-group">
                             <label class="form-label" for="sale-date">Fecha de la Venta</label>
@@ -6233,6 +6258,42 @@ App._syncDataToNativeService = function() {
         console.log('🔄 Datos sincronizados al servicio nativo');
     } catch(e) {
         console.warn('Error sincronizando al servicio nativo:', e);
+    }
+};
+
+/**
+ * Lee el token FCM del servicio nativo y lo registra en el Worker.
+ * Resuelve el problema de que GalloliFirebaseService guarda el token
+ * en SharedPreferences pero el JS nunca lo leía.
+ */
+App._registerNativeFcmToken = async function() {
+    try {
+        const plugin = window.Capacitor &&
+                       window.Capacitor.isNativePlatform &&
+                       window.Capacitor.isNativePlatform() &&
+                       window.Capacitor.Plugins &&
+                       window.Capacitor.Plugins.BleForeground;
+        if (!plugin || !plugin.getFcmToken) return;
+
+        const result = await plugin.getFcmToken();
+        if (!result || !result.hasToken || !result.token) {
+            console.log('[FCM] Sin token FCM en SharedPreferences aun');
+            return;
+        }
+
+        const token = result.token;
+        console.log('[FCM] Token FCM leido del servicio nativo:', token.substring(0, 20) + '...');
+
+        // Guardar en window y localStorage para que notify-system.js lo use
+        window._fcmToken = token;
+        localStorage.setItem('galloli_fcm_token', token);
+
+        // Registrar en el Worker
+        if (typeof PushNotifications !== 'undefined' && PushNotifications.registerFcmToken) {
+            await PushNotifications.registerFcmToken(token);
+        }
+    } catch(e) {
+        console.warn('[FCM] Error leyendo token nativo:', e.message);
     }
 };
 

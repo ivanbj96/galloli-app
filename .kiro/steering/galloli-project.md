@@ -288,6 +288,7 @@ Cuando se agregue cualquier dato nuevo, actualizar TODOS estos puntos:
 | `updateWeight({weight})` | JS pasa el peso actual al servicio |
 | `getLocation()` | → `{lat, lng, hasLocation}` |
 | `getWeight()` | → `{weight}` |
+| `setChainModalActive({active})` | Activa/desactiva flag para evitar doble factura cuando el modal JS esta abierto |
 | `getFcmToken()` | → `{token, hasToken}` — lee token FCM de SharedPreferences |
 | `syncClients({clientsJson})` | Sincroniza lista de clientes al servicio |
 | `syncSalePrice({price})` | Sincroniza precio del dia al servicio |

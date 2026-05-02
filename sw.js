@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.27'; // main: sync pedidos, backup completo, notificaciones push utiles, fix FCM
+const APP_VERSION = '7.20.28'; // fix doble factura: flag chain_modal_active, fix peso fantasma Java
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

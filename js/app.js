@@ -5793,6 +5793,14 @@ App.startChainWeighing = function() {
 
     document.body.appendChild(modal);
 
+    // Notificar al servicio nativo que el modal esta activo (evita doble factura)
+    const _bleFg = window.Capacitor && window.Capacitor.isNativePlatform &&
+                   window.Capacitor.isNativePlatform() &&
+                   window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+    if (_bleFg && _bleFg.setChainModalActive) {
+        _bleFg.setChainModalActive({ active: true }).catch(() => {});
+    }
+
     // Estado interno del modo cadena
     App._chainState = {
         stableTimer: null,
@@ -5835,6 +5843,15 @@ App.stopChainWeighing = function() {
     }
     App._stopChainGps();
     App._chainState = null;
+
+    // Notificar al servicio nativo que el modal se cerro
+    const _bleFg = window.Capacitor && window.Capacitor.isNativePlatform &&
+                   window.Capacitor.isNativePlatform() &&
+                   window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+    if (_bleFg && _bleFg.setChainModalActive) {
+        _bleFg.setChainModalActive({ active: false }).catch(() => {});
+    }
+
     const modal = document.getElementById('chain-weighing-modal');
     if (modal) modal.remove();
 };

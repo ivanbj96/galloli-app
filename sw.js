@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.28'; // fix doble factura: chain_modal_active flag, fix peso fantasma Java
+const APP_VERSION = '7.20.29'; // fix FCM: MainActivity inyecta token al WebView via evaluateJavascript
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

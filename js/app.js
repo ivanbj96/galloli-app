@@ -6280,8 +6280,7 @@ App._syncDataToNativeService = function() {
 
 /**
  * Lee el token FCM del servicio nativo y lo registra en el Worker.
- * Resuelve el problema de que GalloliFirebaseService guarda el token
- * en SharedPreferences pero el JS nunca lo leía.
+ * Reintenta hasta 30 veces (30 segundos) porque Firebase puede tardar en generar el token.
  */
 App._registerNativeFcmToken = async function() {
     try {
@@ -6292,22 +6291,41 @@ App._registerNativeFcmToken = async function() {
                        window.Capacitor.Plugins.BleForeground;
         if (!plugin || !plugin.getFcmToken) return;
 
-        const result = await plugin.getFcmToken();
-        if (!result || !result.hasToken || !result.token) {
-            console.log('[FCM] Sin token FCM en SharedPreferences aun');
-            return;
+        // Reintentar hasta 30s — Firebase puede tardar en generar el token
+        for (let i = 0; i < 30; i++) {
+            try {
+                const result = await plugin.getFcmToken();
+                if (result && result.hasToken && result.token) {
+                    const token = result.token;
+                    console.log('[FCM] Token FCM leido del servicio nativo:', token.substring(0, 20) + '...');
+
+                    // Guardar en window y localStorage para que notify-system.js lo use
+                    window._fcmToken = token;
+                    localStorage.setItem('galloli_fcm_token', token);
+
+                    // Registrar en el Worker
+                    if (typeof PushNotifications !== 'undefined' && PushNotifications.registerFcmToken) {
+                        await PushNotifications.registerFcmToken(token);
+                    }
+
+                    // Actualizar el toggle del sidebar
+                    const sw = document.getElementById('notif-switch');
+                    const status = document.getElementById('notif-status-sidebar');
+                    if (sw) sw.checked = true;
+                    if (status) { status.textContent = 'Activas'; status.style.color = 'rgba(76, 175, 80, 0.9)'; }
+
+                    return; // Exito
+                }
+            } catch(e) { /* ignorar errores individuales */ }
+
+            await new Promise(r => setTimeout(r, 1000));
         }
 
-        const token = result.token;
-        console.log('[FCM] Token FCM leido del servicio nativo:', token.substring(0, 20) + '...');
-
-        // Guardar en window y localStorage para que notify-system.js lo use
-        window._fcmToken = token;
-        localStorage.setItem('galloli_fcm_token', token);
-
-        // Registrar en el Worker
-        if (typeof PushNotifications !== 'undefined' && PushNotifications.registerFcmToken) {
-            await PushNotifications.registerFcmToken(token);
+        console.warn('[FCM] No se pudo obtener token FCM en 30s');
+        const status = document.getElementById('notif-status-sidebar');
+        if (status && status.textContent === 'Iniciando FCM...') {
+            status.textContent = 'Toca para activar';
+            status.style.color = '';
         }
     } catch(e) {
         console.warn('[FCM] Error leyendo token nativo:', e.message);

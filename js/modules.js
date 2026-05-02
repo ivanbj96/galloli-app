@@ -4458,6 +4458,7 @@ const CloudSyncModule = {
     
     showMessage(message, type) {
         const msgDiv = document.getElementById('login-message');
+        if (!msgDiv) return; // El elemento no existe si no estamos en la pagina de login
         msgDiv.textContent = message;
         msgDiv.style.display = 'block';
         msgDiv.style.background = type === 'error' ? '#ffebee' : '#e8f5e9';

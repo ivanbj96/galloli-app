@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.30'; // fix peso fantasma val>=0, responsividad global movil
+const APP_VERSION = '7.20.31'; // fix peso fantasma: parser ASCII correcto, sanity check binario, estabilidad
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

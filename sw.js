@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.34'; // fix responsividad TWA: 100dvh, viewport-fit=cover, safe-area-inset
+const APP_VERSION = '7.20.35'; // fix layout config TWA, notif balanza primera instalacion
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

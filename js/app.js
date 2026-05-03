@@ -1514,13 +1514,15 @@ loadConfigPage() {
                     <i class="fas fa-info-circle"></i> Herramientas para diagnosticar problemas en la app
                 </p>
                 <div class="config-actions">
-                    <button class="btn btn-outline" onclick="showErrorLog()" style="width: 100%; margin-bottom: 10px;">
-                        <i class="fas fa-list"></i> Ver Log de Errores
-                    </button>
-                    <button class="btn btn-outline" onclick="clearErrorLog()" style="width: 100%; margin-bottom: 10px;">
-                        <i class="fas fa-trash"></i> Limpiar Log
-                    </button>
-                    <button class="btn btn-success" onclick="PushNotifications.test()" style="width: 100%;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <button class="btn btn-outline" onclick="showErrorLog()">
+                            <i class="fas fa-list"></i> Ver Log de Errores
+                        </button>
+                        <button class="btn btn-outline" onclick="clearErrorLog()">
+                            <i class="fas fa-trash"></i> Limpiar Log
+                        </button>
+                    </div>
+                    <button class="btn btn-success" onclick="PushNotifications.test()" style="width:100%;">
                         <i class="fas fa-bell"></i> Probar Notificaciones Push
                     </button>
                 </div>

@@ -499,7 +499,12 @@ public class BleForegroundService extends Service {
      * Construye el título de la notificación persistente según el estado actual.
      */
     private String buildTitle() {
-        if (!bleConnected) return "GallOli — Balanza desconectada";
+        if (!bleConnected) {
+            String deviceId = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString(KEY_BLE_DEVICE_ID, null);
+            if (deviceId == null) return "GallOli — Pesaje automatico";
+            return "GallOli — Balanza desconectada";
+        }
         if (!hasLocation)  return "GallOli — Sin GPS";
         if (nearestClientName != null) return "GallOli — " + nearestClientName;
         return "GallOli — Pesaje activo";
@@ -512,7 +517,13 @@ public class BleForegroundService extends Service {
         StringBuilder sb = new StringBuilder();
 
         if (!bleConnected) {
-            sb.append("Reconectando balanza...");
+            String deviceId = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .getString(KEY_BLE_DEVICE_ID, null);
+            if (deviceId == null) {
+                sb.append("Conecta la balanza desde la app para activar");
+            } else {
+                sb.append("Reconectando balanza...");
+            }
         } else if (waitingForZero) {
             sb.append("Retira el pollo de la balanza");
         } else if (nearestClientName != null) {

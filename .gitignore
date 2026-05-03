@@ -76,5 +76,9 @@ GallOli - Google Play package2.zip
 *.jks
 signing-key-info.txt
 
-# Ideas y backlog privado — no publicar
-ideas/
+# Logs de CI y archivos temporales
+logs*/
+run_logs*/
+*.zip
+node_modules/
+.wrangler/

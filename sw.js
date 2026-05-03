@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.33'; // fix notif balanza desconectada: jsHasControl flag, notifyJsConnected/Disconnected
+const APP_VERSION = '7.20.34'; // fix responsividad TWA: 100dvh, viewport-fit=cover, safe-area-inset
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -20,14 +20,6 @@
     box-sizing: border-box;
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
     -webkit-tap-highlight-color: transparent;
-    /* Evitar que elementos se salgan de pantalla en cualquier dispositivo */
-    max-width: 100%;
-}
-
-/* Excepciones: elementos que pueden ser mas anchos que su contenedor */
-img, video, canvas, svg, iframe {
-    max-width: 100%;
-    height: auto;
 }
 
 body {
@@ -37,15 +29,15 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
-    padding-bottom: var(--bottom-nav-height); /* PADDING PARA NAV INFERIOR */
-    /* Asegurar que el body no se desborde en ninguna pantalla */
-    width: 100%;
-    min-width: 0;
+    padding-bottom: var(--bottom-nav-height);
+    /* Soporte para safe area en dispositivos con notch/barra de gestos */
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .app-container {
     display: flex;
     min-height: 100vh;
+    min-height: 100dvh;
     position: relative;
 }
 
@@ -75,6 +67,7 @@ body {
     left: 0;
     width: var(--sidebar-width);
     height: 100vh;
+    height: 100dvh;
     background: var(--white);
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     z-index: 1000;
@@ -198,7 +191,8 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - var(--bottom-nav-height)); /* AJUSTE PARA NAV INFERIOR */
+    min-height: calc(100vh - var(--bottom-nav-height));
+    min-height: calc(100dvh - var(--bottom-nav-height));
     width: 100%;
     transition: margin-left 0.3s ease;
 }
@@ -1060,7 +1054,9 @@ select.form-input {
     background: var(--white);
     display: none;
     justify-content: space-around;
-    padding: 10px 0 15px 0; /* MÁS PADDING ABAJO */
+    padding: 10px 0 15px 0;
+    /* Respetar safe area en dispositivos con barra de gestos */
+    padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -2px 15px rgba(0,0,0,0.1);
     z-index: 100;
     border-top: 1px solid #eee;
@@ -2009,35 +2005,6 @@ select.form-input {
     .emoji-grid {
         grid-template-columns: repeat(4, 1fr);
     }
-
-    .config-actions {
-        flex-direction: column;
-    }
-
-    .config-actions .btn {
-        width: 100%;
-    }
-
-    .custom-color-inputs {
-        grid-template-columns: 1fr;
-    }
-
-    /* Formulario rapido de cliente en ventas */
-    #quick-client-form,
-    #quick-client-form-order {
-        padding: 12px;
-    }
-
-    /* Inputs en formularios no deben salirse de pantalla */
-    .form-input {
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    /* Botones de accion en pares */
-    .form-group > div[style*="display: flex"] {
-        flex-wrap: wrap;
-    }
 }
 /* Estilos para logos dinámicos */
 .logo-emoji, .logo-image-custom {
@@ -2608,71 +2575,5 @@ input:checked + .slider:hover {
     
     .custom-select-options {
         max-height: 190px;
-    }
-}
-
-/* ─── Responsividad global para pantallas pequeñas ─────────────────────────── */
-
-/* Pantallas muy pequeñas (< 360px — algunos Android de gama baja) */
-@media (max-width: 360px) {
-    .card {
-        padding: 12px;
-    }
-
-    .btn {
-        padding: 10px 12px;
-        font-size: 0.9rem;
-    }
-
-    .form-input {
-        font-size: 0.9rem;
-        padding: 10px 12px;
-    }
-
-    .modal-content {
-        margin: 8px;
-        max-width: calc(100vw - 16px);
-    }
-
-    h2 { font-size: 1.3rem; }
-    h3 { font-size: 1.1rem; }
-}
-
-/* Asegurar que grids no se desborden en ninguna pantalla */
-@media (max-width: 480px) {
-    /* Grids de 2 columnas que pueden ser muy estrechos */
-    [style*="grid-template-columns: 1fr 1fr"],
-    [style*="grid-template-columns:1fr 1fr"] {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* Formularios con display flex que se salen */
-    .form-group [style*="display: flex"],
-    .form-group [style*="display:flex"] {
-        flex-wrap: wrap;
-    }
-
-    /* Contenedor de pagina con padding adecuado */
-    .main-content {
-        padding: 12px;
-    }
-
-    /* Tablas responsivas */
-    table {
-        display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-}
-
-/* Asegurar que el modal no se salga en ninguna pantalla */
-@media (max-width: 440px) {
-    .modal-content {
-        max-width: calc(100vw - 20px) !important;
-        margin: 10px auto !important;
-    }
-
-    .modal-body {
-        padding: 15px !important;
     }
 }

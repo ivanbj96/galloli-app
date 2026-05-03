@@ -158,6 +158,35 @@ public class BleForegroundPlugin extends Plugin {
 
     // ─── Helper ───────────────────────────────────────────────────────────────
 
+    /**
+     * JS llama esto cuando conecta la balanza exitosamente.
+     * El servicio marca bleConnected=true y cede el control BLE al JS.
+     * Corrige la notificacion que siempre mostraba "Balanza desconectada".
+     */
+    @PluginMethod
+    public void notifyJsConnected(PluginCall call) {
+        String deviceId = call.getString("deviceId", null);
+        Intent intent = new Intent(getContext(), BleForegroundService.class);
+        intent.setAction(BleForegroundService.ACTION_JS_CONNECTED);
+        if (deviceId != null) {
+            intent.putExtra(BleForegroundService.EXTRA_DEVICE_ID, deviceId);
+        }
+        getContext().startService(intent);
+        call.resolve();
+    }
+
+    /**
+     * JS llama esto cuando desconecta la balanza.
+     * El servicio toma el control y reconecta en background.
+     */
+    @PluginMethod
+    public void notifyJsDisconnected(PluginCall call) {
+        Intent intent = new Intent(getContext(), BleForegroundService.class);
+        intent.setAction(BleForegroundService.ACTION_JS_DISCONNECTED);
+        getContext().startService(intent);
+        call.resolve();
+    }
+
     private void startService(String action) {
         Intent intent = new Intent(getContext(), BleForegroundService.class);
         intent.setAction(action);

@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.32'; // fix peso fantasma: parser ASCII correcto, sanity check binario, estabilidad
+const APP_VERSION = '7.20.33'; // fix notif balanza desconectada: jsHasControl flag, notifyJsConnected/Disconnected
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

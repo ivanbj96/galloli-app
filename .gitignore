@@ -75,3 +75,10 @@ GallOli - Google Play package2.zip
 *.keystore
 *.jks
 signing-key-info.txt
+
+# Logs de CI y archivos temporales
+logs*/
+run_logs*/
+*.zip
+node_modules/
+.wrangler/

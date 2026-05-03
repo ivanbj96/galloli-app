@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.31'; // fix peso fantasma: parser ASCII correcto, sanity check binario, estabilidad
+const APP_VERSION = '7.20.32'; // fix peso fantasma con x2 correcto para balanza CAMRY
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -307,41 +307,75 @@ public class BleForegroundService extends Service {
         }
     }
 
-    // ─── Parseo de peso ───────────────────────────────────────────────────────
+    // ─── Parseo de peso (mismo protocolo que bluetooth-scale.js) ─────────────
 
     private double parseWeightFromBytes(byte[] data) {
+        // 1) Intento ASCII (formato CAMRY) — siempre retorna si hay match (incluido 0)
+        boolean asciiOk = false;
         try {
             String text = new String(data, "UTF-8").trim();
-            java.util.regex.Pattern p = java.util.regex.Pattern.compile(
-                "([+-]?\\s*\\d+\\.?\\d*)\\s*(kg|lb|g|KG|LB|G)",
-                java.util.regex.Pattern.CASE_INSENSITIVE);
-            java.util.regex.Matcher m = p.matcher(text);
-            if (m.find()) {
-                double val = Double.parseDouble(m.group(1).replaceAll("\\s", ""));
-                String unit = m.group(2).toLowerCase();
-                if (val > 0) {
-                    if (unit.equals("kg")) return Math.round(val * 2 * 100.0) / 100.0;
-                    if (unit.equals("g"))  return Math.round((val / 453.592) * 100.0) / 100.0;
-                    return val;
+            if (text.length() > 0) {
+                java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "([+-]?\\s*\\d+\\.?\\d*)\\s*(kg|lb|g)",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
+                java.util.regex.Matcher m = p.matcher(text);
+                if (m.find()) {
+                    asciiOk = true;
+                    double val = Double.parseDouble(m.group(1).replaceAll("\\s", ""));
+                    String unit = m.group(2).toLowerCase();
+                    if (!Double.isFinite(val)) return -1;
+                    // CAMRY reporta kg pero display muestra lb — x2 es correcto para esta balanza
+                    double lb;
+                    if (unit.equals("kg"))      lb = val * 2;
+                    else if (unit.equals("g"))  lb = val / 453.592;
+                    else                        lb = val;
+                    // Retornar SIEMPRE (incluido 0) — no caer al parser binario
+                    return Math.round(lb * 100.0) / 100.0;
                 }
             }
         } catch (Exception e) { /* ignorar */ }
 
+        // 2) Fallback binario SOLO si el frame NO era ASCII legible
+        if (asciiOk) return -1;
+
+        // Sanity check: si los bytes parecen ASCII imprimible, no reinterpretar como binario
+        boolean looksAscii = true;
+        for (int i = 0; i < Math.min(8, data.length); i++) {
+            int b = data[i] & 0xFF;
+            if (b != 0 && (b < 0x20 || b > 0x7E)) { looksAscii = false; break; }
+        }
+        if (looksAscii) return -1;
+
         if (data.length >= 3) {
             int flags = data[0] & 0xFF;
             int raw = ((data[2] & 0xFF) << 8) | (data[1] & 0xFF);
-            if (raw > 0) {
+            if (raw > 0 && raw < 60000) {
                 if ((flags & 0x01) != 0) return raw * 0.01;
                 return Math.round(raw * 0.005 * 2.20462 * 1000.0) / 1000.0;
             }
         }
-        return 0;
+        return -1; // frame invalido
     }
 
-    // ─── Lógica de pesaje automático ──────────────────────────────────────────
+    // ─── Logica de pesaje automatico ──────────────────────────────────────────
 
     private void handleWeightReading(double weight) {
-        currentWeight = weight;
+        // -1 = frame invalido del parser → reset a 0, no congelar valor anterior
+        if (weight < 0) {
+            if (currentWeight != 0) {
+                currentWeight = 0;
+                refreshPersistentNotification();
+            }
+            return;
+        }
+
+        currentWeight = weight; // Siempre actualizar (incluido 0)
+
+        // Si el JS tiene el modal de cadena abierto, no registrar desde Java
+        SharedPreferences chainPrefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        if (chainPrefs.getBoolean("chain_modal_active", false)) {
+            return;
+        }
 
         if (waitingForZero) {
             if (weight < ZERO_THRESHOLD) {

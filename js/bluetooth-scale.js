@@ -433,9 +433,9 @@ const BluetoothScale = {
                     var unit = match[2].toLowerCase();
                     if (!isFinite(val)) return null;
 
-                    // Conversion correcta a lb
+                    // Conversion a lb (CAMRY reporta kg pero display muestra lb, x2 es correcto para esta balanza)
                     var lb;
-                    if (unit === 'kg')     lb = val * 2.20462;
+                    if (unit === 'kg')     lb = val * 2;
                     else if (unit === 'g') lb = val / 453.592;
                     else                   lb = val;
 

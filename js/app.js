@@ -2414,25 +2414,25 @@ async cleanDuplicatePayments() {
                             </div>
                         </div>
                         
-                        <!-- Formulario rxpido de cliente (oculto por defecto) -->
-                        <div id="quick-client-form" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
+                        <!-- Formulario rapido de cliente (oculto por defecto) -->
+                        <div id="quick-client-form" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0; box-sizing: border-box; width: 100%;">
+                            <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 0.95rem;">
                                 <i class="fas fa-user-plus"></i> Agregar Cliente Rapido
+                            </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre">
+                                <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Teléfono">
+                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-address" placeholder="Dirección">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <input type="text" class="form-input" id="quick-client-address" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClient()" style="flex: 1;">
+                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClient()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-save"></i> Guardar
                                 </button>
-                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientForm()" style="flex: 1;">
+                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientForm()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-times"></i> Cancelar
                                 </button>
                             </div>
@@ -2611,24 +2611,24 @@ async cleanDuplicatePayments() {
                         </div>
                         
                         <!-- Formulario rxpido de cliente -->
-                        <div id="quick-client-form-order" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
+                        <div id="quick-client-form-order" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0; box-sizing: border-box; width: 100%;">
+                            <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 0.95rem;">
                                 <i class="fas fa-user-plus"></i> Agregar Cliente Rapido
+                            </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre">
+                                <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Teléfono">
+                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Dirección">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClientOrder()" style="flex: 1;">
+                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClientOrder()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-save"></i> Guardar
                                 </button>
-                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientFormOrder()" style="flex: 1;">
+                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientFormOrder()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-times"></i> Cancelar
                                 </button>
                             </div>

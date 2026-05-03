@@ -103,6 +103,8 @@ public class BleForegroundService extends Service {
     public void onCreate() {
         super.onCreate();
         mainHandler = new Handler(Looper.getMainLooper());
+        // Resetear peso al iniciar — evita mostrar valor residual de sesion anterior
+        currentWeight = 0;
         createNotificationChannels();
         // Restaurar contadores del día desde SharedPreferences
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);

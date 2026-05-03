@@ -444,6 +444,7 @@ Si no lo dices, Kiro asume `main`.
 - Usar Python en vez de `sed` para parchear XML/manifests
 - Usar `strReplace` o `fsWrite` para archivos con caracteres especiales
 - Hacer deploy a Cloudflare Pages SIEMPRE desde branch `main`
+- Asumir que Ivan siempre tiene el APK mas reciente instalado — nunca suponer version vieja
 
 ### Lo que Kiro NO hace sin que lo pidas
 

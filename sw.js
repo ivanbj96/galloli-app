@@ -1,5 +1,5 @@
 // Service Worker con versionado automático
-const APP_VERSION = '7.20.28'; // fix doble factura: flag chain_modal_active, fix peso fantasma Java
+const APP_VERSION = '7.20.30'; // fix form quick-client HTML roto, reset peso 82.76 al iniciar servicio
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

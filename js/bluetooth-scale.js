@@ -476,11 +476,13 @@ const BluetoothScale = {
 
     // Sincronizar clientes y precio al servicio nativo para pesaje en segundo plano
     _syncToNativeService(deviceId) {
-        var plugin = this._getBleClient ? null : null;
         if (!this.isNative()) return;
         try {
             var BleForeground = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
             if (!BleForeground) return;
+
+            // Resetear peso en el servicio nativo al conectar (evita mostrar valor residual)
+            BleForeground.updateWeight({ weight: 0 }).catch(function(){});
 
             // Guardar device ID para reconexión automática
             if (deviceId) {

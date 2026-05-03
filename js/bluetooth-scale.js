@@ -375,14 +375,14 @@ const BluetoothScale = {
         this._rawLog.unshift({ bytes: bytes, ts: Date.now() });
         if (this._rawLog.length > 20) this._rawLog.pop();
         var result = this._parseWeight(dataView, bytes);
-        if (result !== null && result.weight >= 0 && result.weight < 2000) {
+        if (result !== null && result.weight > 0 && result.weight < 2000) {
             this.currentUnit = 'lb';
             this.currentRawWeight = result.weight;
             this.currentWeight = result.weight;
             this._notifyListeners(this.currentWeight);
             this._updateWeightDisplays();
-        } else if (result === null) {
-            // Dato invalido (no es un peso) → resetear a 0
+        } else {
+            // La balanza envió 0 o dato inválido → resetear peso a 0
             if (this.currentRawWeight !== 0) {
                 this.currentRawWeight = 0;
                 this.currentWeight = 0;
@@ -401,7 +401,7 @@ const BluetoothScale = {
                 if (match) {
                     var val = parseFloat(match[1].replace(/\s/g, ''));
                     var unit = match[2].toLowerCase();
-                    if (val >= 0) {
+                    if (val > 0) {
                         // CAMRY envia kg, multiplicar x2 para obtener lb visual del display
                         if (unit === 'kg') return { weight: parseFloat((val * 2).toFixed(2)), unit: 'lb' };
                         if (unit === 'g') return { weight: parseFloat((val / 453.592).toFixed(2)), unit: 'lb' };
@@ -476,11 +476,13 @@ const BluetoothScale = {
 
     // Sincronizar clientes y precio al servicio nativo para pesaje en segundo plano
     _syncToNativeService(deviceId) {
-        var plugin = this._getBleClient ? null : null;
         if (!this.isNative()) return;
         try {
             var BleForeground = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
             if (!BleForeground) return;
+
+            // Resetear peso en el servicio nativo al conectar (evita mostrar valor residual)
+            BleForeground.updateWeight({ weight: 0 }).catch(function(){});
 
             // Guardar device ID para reconexión automática
             if (deviceId) {

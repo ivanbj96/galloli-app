@@ -2414,25 +2414,25 @@ async cleanDuplicatePayments() {
                             </div>
                         </div>
                         
-                        <!-- Formulario rxpido de cliente (oculto por defecto) -->
-                        <div id="quick-client-form" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
+                        <!-- Formulario rapido de cliente (oculto por defecto) -->
+                        <div id="quick-client-form" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0; box-sizing: border-box; width: 100%;">
+                            <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 0.95rem;">
                                 <i class="fas fa-user-plus"></i> Agregar Cliente Rapido
+                            </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre">
+                                <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Teléfono">
+                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-address" placeholder="Dirección">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <input type="text" class="form-input" id="quick-client-address" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClient()" style="flex: 1;">
+                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClient()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-save"></i> Guardar
                                 </button>
-                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientForm()" style="flex: 1;">
+                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientForm()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-times"></i> Cancelar
                                 </button>
                             </div>
@@ -2611,24 +2611,24 @@ async cleanDuplicatePayments() {
                         </div>
                         
                         <!-- Formulario rxpido de cliente -->
-                        <div id="quick-client-form-order" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
-                            <h4 style="margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem;">
+                        <div id="quick-client-form-order" style="display: none; background: var(--light); padding: 15px; border-radius: 8px; margin: 15px 0; box-sizing: border-box; width: 100%;">
+                            <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 0.95rem;">
                                 <i class="fas fa-user-plus"></i> Agregar Cliente Rapido
+                            </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre">
+                                <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Teléfono">
+                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
                             </div>
-                            <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Dirección">
+                            <div class="form-group" style="margin-bottom: 12px;">
+                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClientOrder()" style="flex: 1;">
+                                <button type="button" class="btn btn-primary" onclick="App.saveQuickClientOrder()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-save"></i> Guardar
                                 </button>
-                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientFormOrder()" style="flex: 1;">
+                                <button type="button" class="btn btn-outline" onclick="App.toggleQuickClientFormOrder()" style="flex: 1; min-width: 0;">
                                     <i class="fas fa-times"></i> Cancelar
                                 </button>
                             </div>
@@ -6280,7 +6280,8 @@ App._syncDataToNativeService = function() {
 
 /**
  * Lee el token FCM del servicio nativo y lo registra en el Worker.
- * Reintenta hasta 30 veces (30 segundos) porque Firebase puede tardar en generar el token.
+ * Resuelve el problema de que GalloliFirebaseService guarda el token
+ * en SharedPreferences pero el JS nunca lo leía.
  */
 App._registerNativeFcmToken = async function() {
     try {
@@ -6291,41 +6292,22 @@ App._registerNativeFcmToken = async function() {
                        window.Capacitor.Plugins.BleForeground;
         if (!plugin || !plugin.getFcmToken) return;
 
-        // Reintentar hasta 30s — Firebase puede tardar en generar el token
-        for (let i = 0; i < 30; i++) {
-            try {
-                const result = await plugin.getFcmToken();
-                if (result && result.hasToken && result.token) {
-                    const token = result.token;
-                    console.log('[FCM] Token FCM leido del servicio nativo:', token.substring(0, 20) + '...');
-
-                    // Guardar en window y localStorage para que notify-system.js lo use
-                    window._fcmToken = token;
-                    localStorage.setItem('galloli_fcm_token', token);
-
-                    // Registrar en el Worker
-                    if (typeof PushNotifications !== 'undefined' && PushNotifications.registerFcmToken) {
-                        await PushNotifications.registerFcmToken(token);
-                    }
-
-                    // Actualizar el toggle del sidebar
-                    const sw = document.getElementById('notif-switch');
-                    const status = document.getElementById('notif-status-sidebar');
-                    if (sw) sw.checked = true;
-                    if (status) { status.textContent = 'Activas'; status.style.color = 'rgba(76, 175, 80, 0.9)'; }
-
-                    return; // Exito
-                }
-            } catch(e) { /* ignorar errores individuales */ }
-
-            await new Promise(r => setTimeout(r, 1000));
+        const result = await plugin.getFcmToken();
+        if (!result || !result.hasToken || !result.token) {
+            console.log('[FCM] Sin token FCM en SharedPreferences aun');
+            return;
         }
 
-        console.warn('[FCM] No se pudo obtener token FCM en 30s');
-        const status = document.getElementById('notif-status-sidebar');
-        if (status && status.textContent === 'Iniciando FCM...') {
-            status.textContent = 'Toca para activar';
-            status.style.color = '';
+        const token = result.token;
+        console.log('[FCM] Token FCM leido del servicio nativo:', token.substring(0, 20) + '...');
+
+        // Guardar en window y localStorage para que notify-system.js lo use
+        window._fcmToken = token;
+        localStorage.setItem('galloli_fcm_token', token);
+
+        // Registrar en el Worker
+        if (typeof PushNotifications !== 'undefined' && PushNotifications.registerFcmToken) {
+            await PushNotifications.registerFcmToken(token);
         }
     } catch(e) {
         console.warn('[FCM] Error leyendo token nativo:', e.message);

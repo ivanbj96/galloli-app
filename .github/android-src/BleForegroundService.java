@@ -50,9 +50,12 @@ public class BleForegroundService extends Service {
     public static final String ACTION_UPDATE_WEIGHT   = "UPDATE_WEIGHT";
     public static final String ACTION_SYNC_CLIENTS    = "SYNC_CLIENTS";
     public static final String ACTION_SYNC_PRICE      = "SYNC_PRICE";
+    public static final String ACTION_JS_CONNECTED    = "JS_BLE_CONNECTED";   // JS conectó la balanza
+    public static final String ACTION_JS_DISCONNECTED = "JS_BLE_DISCONNECTED"; // JS desconectó
     public static final String EXTRA_WEIGHT           = "weight";
     public static final String EXTRA_CLIENTS_JSON     = "clients_json";
     public static final String EXTRA_PRICE            = "price";
+    public static final String EXTRA_DEVICE_ID        = "device_id";
 
     // SharedPreferences keys
     public static final String PREFS_NAME         = "galloli_prefs";
@@ -79,7 +82,8 @@ public class BleForegroundService extends Service {
 
     // BLE nativo
     private BluetoothGatt bleGatt;
-    private boolean       bleConnected = false;
+    private boolean       bleConnected    = false;
+    private boolean       jsHasControl    = false; // true = JS controla BLE, servicio no reconecta
     private Handler       mainHandler;
 
     // Estado de pesaje automático
@@ -136,6 +140,35 @@ public class BleForegroundService extends Service {
 
             case ACTION_UPDATE_WEIGHT:
                 currentWeight = intent.getDoubleExtra(EXTRA_WEIGHT, 0);
+                // Si el JS está enviando peso, significa que tiene la conexión activa
+                if (currentWeight > 0 && !bleConnected) {
+                    bleConnected = true;
+                    refreshPersistentNotification();
+                }
+                return START_STICKY;
+
+            case ACTION_JS_CONNECTED:
+                // JS conectó la balanza — marcar como conectada y ceder control al JS
+                jsHasControl = true;
+                bleConnected = true;
+                String devId = intent.getStringExtra(EXTRA_DEVICE_ID);
+                if (devId != null) {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                        .edit().putString(KEY_BLE_DEVICE_ID, devId).apply();
+                }
+                // Desconectar la conexión nativa si existe (evitar conflicto)
+                disconnectBle();
+                Log.d(TAG, "JS tiene control BLE — servicio en modo pasivo");
+                refreshPersistentNotification();
+                return START_STICKY;
+
+            case ACTION_JS_DISCONNECTED:
+                // JS desconectó — servicio toma el control y reconecta
+                jsHasControl = false;
+                bleConnected = false;
+                Log.d(TAG, "JS liberó BLE — servicio reconectando...");
+                refreshPersistentNotification();
+                mainHandler.postDelayed(() -> reconnectBleIfNeeded(), 2000);
                 return START_STICKY;
 
             case ACTION_SYNC_CLIENTS:
@@ -236,6 +269,11 @@ public class BleForegroundService extends Service {
     // ─── BLE nativo ───────────────────────────────────────────────────────────
 
     private void reconnectBleIfNeeded() {
+        // Si el JS tiene el control BLE, no reconectar desde Java
+        if (jsHasControl) {
+            Log.d(TAG, "JS tiene control BLE — no reconectar desde servicio");
+            return;
+        }
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String deviceId = prefs.getString(KEY_BLE_DEVICE_ID, null);
         if (deviceId == null) return;

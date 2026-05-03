@@ -283,6 +283,9 @@ const BluetoothScale = {
         // Sincronizar datos al servicio nativo para pesaje en segundo plano
         this._syncToNativeService(deviceId);
 
+        // Notificar al servicio que JS tiene la conexion BLE activa
+        this._notifyServiceConnected(deviceId);
+
         Utils.showNotification('Balanza "' + (deviceName || 'Desconocida') + '" conectada', 'success', 3000);
 
         // Activar modo automatico si hay precio del dia configurado
@@ -290,7 +293,6 @@ const BluetoothScale = {
 
         return true;
     },
-
     async _connectWeb() {
         this.device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -529,6 +531,17 @@ const BluetoothScale = {
         }, 500);
     },
 
+    // Notificar al servicio nativo que JS conectó la balanza
+    _notifyServiceConnected(deviceId) {
+        if (!this.isNative()) return;
+        try {
+            var BleForeground = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+            if (BleForeground && BleForeground.notifyJsConnected) {
+                BleForeground.notifyJsConnected({ deviceId: deviceId || '' }).catch(function(){});
+            }
+        } catch(e) {}
+    },
+
     // Sincronizar clientes y precio al servicio nativo para pesaje en segundo plano
     _syncToNativeService(deviceId) {
         if (!this.isNative()) return;
@@ -591,6 +604,13 @@ const BluetoothScale = {
         this.activeScaleId = null;
         localStorage.removeItem(this.ACTIVE_KEY);
         this._stopForeground();
+        // Notificar al servicio que JS liberó la balanza — servicio reconectará solo
+        try {
+            var BleForeground = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+            if (BleForeground && BleForeground.notifyJsDisconnected) {
+                BleForeground.notifyJsDisconnected({}).catch(function(){});
+            }
+        } catch(e) {}
         this.updateUI();
         Utils.showNotification('Balanza desconectada', 'info', 2000);
     },

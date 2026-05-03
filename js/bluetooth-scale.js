@@ -18,7 +18,9 @@ const BluetoothScale = {
     _rawLog: [],
     _nativeDeviceId: null,
     _bleClient: null,
-    _reconnectTimer: null,  // timer de reconexión automática
+    _reconnectTimer: null,
+    _stableSamples: [],
+    _lastStableWeight: 0,
 
     isNative() {
         return typeof window !== 'undefined' &&
@@ -374,52 +376,105 @@ const BluetoothScale = {
         var bytes = Array.from(new Uint8Array(dataView.buffer));
         this._rawLog.unshift({ bytes: bytes, ts: Date.now() });
         if (this._rawLog.length > 20) this._rawLog.pop();
+
         var result = this._parseWeight(dataView, bytes);
-        if (result !== null && result.weight > 0 && result.weight < 2000) {
-            this.currentUnit = 'lb';
-            this.currentRawWeight = result.weight;
-            this.currentWeight = result.weight;
-            this._notifyListeners(this.currentWeight);
-            this._updateWeightDisplays();
-        } else {
-            // La balanza envió 0 o dato inválido → resetear peso a 0
+
+        // Frame invalido → reset a 0 (no congelar el ultimo valor)
+        if (result === null) {
             if (this.currentRawWeight !== 0) {
                 this.currentRawWeight = 0;
                 this.currentWeight = 0;
                 this._notifyListeners(0);
                 this._updateWeightDisplays();
             }
+            return;
+        }
+
+        var w = result.weight;
+
+        // Peso 0 explicito (plato vacio) → reset
+        if (w <= 0) {
+            if (this.currentRawWeight !== 0) {
+                this.currentRawWeight = 0;
+                this.currentWeight = 0;
+                this._notifyListeners(0);
+                this._updateWeightDisplays();
+            }
+            return;
+        }
+
+        // Rango plausible para venta de pollos (descarta basura > 200 lb)
+        if (w > 200) return;
+
+        this.currentUnit = 'lb';
+        this.currentRawWeight = w;
+        this.currentWeight = w;
+        this._updateWeightDisplays();
+
+        // Notificar solo cuando el peso es estable (3 lecturas en 1500ms con spread < 0.05 lb)
+        var stable = this._pushSample(w);
+        if (stable !== null && Math.abs(stable - this._lastStableWeight) > 0.02) {
+            this._lastStableWeight = stable;
+            this._notifyListeners(stable);
         }
     },
 
     _parseWeight(dataView, bytes) {
-        // ASCII texto (CAMRY siempre envia kg aunque display muestre lb)
+        // 1) Intento ASCII (formato CAMRY) — siempre retorna si hay match (incluido 0)
+        var asciiOk = false;
         try {
             var text = new TextDecoder('utf-8', { fatal: false }).decode(dataView.buffer).trim();
             if (text.length > 0) {
-                var match = text.match(/([+-]?\s*\d+\.?\d*)\s*(kg|lb|g|KG|LB|G)/i);
+                // Requiere sufijo de unidad para considerar el frame valido
+                var match = text.match(/([+-]?\s*\d+\.?\d*)\s*(kg|lb|g)/i);
                 if (match) {
-                    var val = parseFloat(match[1].replace(/\s/g, ''));
+                    asciiOk = true;
+                    var val  = parseFloat(match[1].replace(/\s/g, ''));
                     var unit = match[2].toLowerCase();
-                    if (val > 0) {
-                        // CAMRY envia kg, multiplicar x2 para obtener lb visual del display
-                        if (unit === 'kg') return { weight: parseFloat((val * 2).toFixed(2)), unit: 'lb' };
-                        if (unit === 'g') return { weight: parseFloat((val / 453.592).toFixed(2)), unit: 'lb' };
-                        return { weight: val, unit: 'lb' };
-                    }
+                    if (!isFinite(val)) return null;
+
+                    // Conversion correcta a lb
+                    var lb;
+                    if (unit === 'kg')     lb = val * 2.20462;
+                    else if (unit === 'g') lb = val / 453.592;
+                    else                   lb = val;
+
+                    // Retornar SIEMPRE (incluido 0) — no caer al parser binario
+                    return { weight: parseFloat(lb.toFixed(2)), unit: 'lb' };
                 }
             }
         } catch(e) {}
-        // BLE Weight Scale estandar
+
+        // 2) Fallback binario SOLO si el frame NO era ASCII legible
+        if (asciiOk) return null;
+
+        // Sanity check: si los bytes parecen ASCII imprimible, no reinterpretar como binario
+        var looksAscii = bytes.slice(0, Math.min(8, bytes.length))
+                              .every(function(b) { return b === 0 || (b >= 0x20 && b <= 0x7E); });
+        if (looksAscii) return null;
+
         if (bytes.length >= 3) {
             var flags = bytes[0];
-            var raw = dataView.getUint16(1, true);
-            if (raw > 0) {
+            var raw   = dataView.getUint16(1, true);
+            if (raw > 0 && raw < 60000) {
                 if (flags & 0x01) return { weight: raw * 0.01, unit: 'lb' };
-                else return { weight: parseFloat((raw * 0.005 * 2.20462).toFixed(3)), unit: 'lb' };
+                return { weight: parseFloat((raw * 0.005 * 2.20462).toFixed(3)), unit: 'lb' };
             }
         }
         return null;
+    },
+
+    // Filtro de estabilidad: retorna peso promedio si 3+ lecturas en 1500ms con spread < 0.05 lb
+    _pushSample(w) {
+        var now = Date.now();
+        this._stableSamples.push({ w: w, t: now });
+        this._stableSamples = this._stableSamples.filter(function(s) { return now - s.t < 1500; });
+        if (this._stableSamples.length < 3) return null;
+        var vals = this._stableSamples.map(function(s) { return s.w; });
+        var min = Math.min.apply(null, vals);
+        var max = Math.max.apply(null, vals);
+        if ((max - min) > 0.05) return null;
+        return (min + max) / 2;
     },
 
     _notifyListeners(weight) {

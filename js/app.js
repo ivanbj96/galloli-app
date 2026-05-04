@@ -65,13 +65,20 @@ const App = {
         // Inicializar balanza BLE
         BluetoothScale.init();
 
-        // Sincronizar datos al servicio nativo (APK) y procesar ventas pendientes
-        setTimeout(() => {
+        // SINCRONIZAR CON SERVICE WORKER
+        this.syncDevModeWithServiceWorker();
+        
+        // Inicializar configuración PRIMERO
+        await ConfigModule.init();
+        
+        // Cargar datos
+        await this.loadAllData();
+
+        // Sincronizar al servicio nativo DESPUES de loadAllData (clientes y precio ya disponibles)
+        if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
             App._syncDataToNativeService();
             App._processPendingNativeSales();
-            // Leer token FCM del servicio nativo y registrarlo en el Worker
             App._registerNativeFcmToken();
-            // Iniciar motor de venta automática (solo APK nativo, se autodescarta en TWA)
             if (typeof initNativeAutoSale === 'function') {
                 initNativeAutoSale({
                     mode: 'auto',
@@ -83,16 +90,7 @@ const App = {
                     sriEnabled: false
                 });
             }
-        }, 2000);
-        
-        // SINCRONIZAR CON SERVICE WORKER
-        this.syncDevModeWithServiceWorker();
-        
-        // Inicializar configuración PRIMERO
-        await ConfigModule.init();
-        
-        // Cargar datos
-        await this.loadAllData();
+        }
         this.setupNavigation();
         this.setupEventListeners();
         this.loadPage('dashboard');
@@ -153,31 +151,36 @@ const App = {
         let lastVisibilityChange = Date.now();
         
         document.addEventListener('visibilitychange', async () => {
-            if (!document.hidden) {
-                // La app se volvió visible
-                const now = Date.now();
-                const timeSinceLastChange = now - lastVisibilityChange;
-                
-                console.log('👁️ App visible - Tiempo desde último cambio:', timeSinceLastChange, 'ms');
-                
-                // Procesar ventas registradas en segundo plano (APK nativo)
-                await App._processPendingNativeSales();
-
-                // Si pasaron mas de 2 segundos desde el último cambio, recargar datos
-                if (timeSinceLastChange > 2000) {
-                    console.log('🔄 Recargando datos...');
-                    
-                    // Recargar todos los datos
-                    await this.loadAllData();
-                    
-                    // Recargar la pagina actual para reflejar cambios
-                    this.loadPage(this.currentPage);
-                    
-                    console.log('✅ Datos actualizados');
-                }
-                
-                lastVisibilityChange = now;
+            if (document.hidden) {
+                // App va a background — ceder BLE al servicio nativo
+                await App._handoffBleToNativeService();
+                return;
             }
+
+            // App vuelve a primer plano
+            const now = Date.now();
+            const timeSinceLastChange = now - lastVisibilityChange;
+
+            console.log('👁️ App visible - Tiempo desde último cambio:', timeSinceLastChange, 'ms');
+
+            // Procesar ventas registradas en segundo plano (APK nativo)
+            await App._processPendingNativeSales();
+            // Resincronizar datos al servicio nativo
+            App._syncDataToNativeService();
+            // Reconectar balanza JS si hace falta
+            if (window.BluetoothScale && !BluetoothScale.isConnected && BluetoothScale.activeScaleId) {
+                BluetoothScale._autoReconnect && BluetoothScale._autoReconnect();
+            }
+
+            // Si pasaron mas de 2 segundos desde el último cambio, recargar datos
+            if (timeSinceLastChange > 2000) {
+                console.log('🔄 Recargando datos...');
+                await this.loadAllData();
+                this.loadPage(this.currentPage);
+                console.log('✅ Datos actualizados');
+            }
+
+            lastVisibilityChange = now;
         });
         
         // También detectar cuando la ventana recibe foco
@@ -5939,7 +5942,7 @@ App._autoRegisterChainSale = function(weight) {
     const isPaid = payment === 'cash';
 
     const sale = SalesModule.addSale(clientId, weight, quantity, state.salePrice, null, isPaid);
-    ClientsModule.updateClientStats(clientId, weight, quantity, sale.total);
+    // NO llamar ClientsModule.updateClientStats — SalesModule.addSale ya lo hace
 
     const client = ClientsModule.getClientById(clientId);
 
@@ -6192,33 +6195,43 @@ App._processPendingNativeSales = async function() {
                 const client = ClientsModule.getClientById(clientId);
                 if (!client) { console.warn('Cliente no encontrado:', s.clientId); continue; }
 
+                // Ventas background siempre a credito — SalesModule.addSale ya llama updateClientStats
                 const sale = SalesModule.addSale(
                     clientId,
                     s.weight,
                     s.quantity || 1,
                     s.salePrice,
                     null,
-                    s.isPaid !== false
+                    false,  // isPaid = false (credito)
+                    0       // initialPayment = 0
                 );
-                ClientsModule.updateClientStats(clientId, s.weight, s.quantity || 1, sale.total);
+                // NO llamar ClientsModule.updateClientStats aqui — SalesModule.addSale ya lo hace
+                sale.autoGenerated = true;
+                sale.source = s.source || 'background_auto';
+                sale.nativeTimestamp = s.timestamp || Date.now();
+                sale.lastModified = Date.now();
+                await SalesModule.saveSales();
                 processed++;
 
-                console.log('✅ Venta background procesada:', client.name, s.weight + 'lb', Utils.formatCurrency(sale.total));
+                console.log('✅ Venta background (credito):', client.name, s.weight + 'lb', Utils.formatCurrency(sale.total));
             } catch(e) {
                 console.error('Error procesando venta background:', e);
             }
         }
 
         if (processed > 0) {
-            // Limpiar cola en el servicio nativo
             await plugin.clearPendingSales();
 
+            // Actualizar badge de creditos
+            if (typeof CreditosModule !== 'undefined' && CreditosModule.updateCreditBadges) {
+                CreditosModule.updateCreditBadges();
+            }
+
             Utils.showNotification(
-                processed + ' venta' + (processed > 1 ? 's' : '') + ' registrada' + (processed > 1 ? 's' : '') + ' en segundo plano',
+                processed + ' venta' + (processed > 1 ? 's' : '') + ' a credito registrada' + (processed > 1 ? 's' : '') + ' en segundo plano',
                 'success', 4000
             );
 
-            // Recargar datos para reflejar las nuevas ventas
             await App.loadAllData();
             App.loadPage(App.currentPage);
         }
@@ -6316,6 +6329,54 @@ App._registerNativeFcmToken = async function() {
 
 // ─── Fin ventas en segundo plano ─────────────────────────────────────────────
 
+/**
+ * Cede el control BLE al servicio nativo cuando la app va a background.
+ * El servicio nativo reconecta la balanza y registra ventas automaticamente.
+ */
+App._handoffBleToNativeService = async function() {
+    try {
+        const isNative = window.Capacitor &&
+            window.Capacitor.isNativePlatform &&
+            window.Capacitor.isNativePlatform();
+        if (!isNative) return;
+
+        const plugin = window.Capacitor.Plugins && window.Capacitor.Plugins.BleForeground;
+        if (!plugin) return;
+
+        // Sincronizar clientes y precio antes de ceder control
+        App._syncDataToNativeService();
+
+        // Cerrar modal si esta activo para no dejar chain_modal_active=true
+        if (document.getElementById('chain-weighing-modal')) {
+            App.stopChainWeighing();
+        }
+
+        // Si JS tiene conexion BLE abierta, guardar device ID y desconectar
+        if (window.BluetoothScale && BluetoothScale.isConnected) {
+            try {
+                const deviceId = BluetoothScale._nativeDeviceId || BluetoothScale.activeScaleId;
+                if (deviceId && plugin.saveBleDeviceId) {
+                    await plugin.saveBleDeviceId({ deviceId: String(deviceId) });
+                }
+                await BluetoothScale.disconnect();
+            } catch(e) {
+                console.warn('[Handoff] No se pudo desconectar BLE JS:', e.message);
+            }
+        }
+
+        // Notificar al servicio que tome el control
+        if (plugin.releaseBleToService) {
+            await plugin.releaseBleToService();
+        } else if (plugin.notifyJsDisconnected) {
+            await plugin.notifyJsDisconnected({});
+        }
+
+        console.log('[Handoff] BLE cedido al servicio nativo');
+    } catch(e) {
+        console.warn('[Handoff] Error cediendo BLE al servicio nativo:', e.message);
+    }
+};
+
 App.updateChainPreview = function() {
     const weightEl = document.getElementById('chain-manual-weight');
     const unitEl = document.getElementById('chain-manual-unit');
@@ -6386,7 +6447,7 @@ App.confirmChainSale = function() {
     const isPaid = payment === 'cash';
 
     const sale = SalesModule.addSale(clientId, weight, quantity, salePrice, null, isPaid);
-    ClientsModule.updateClientStats(clientId, weight, quantity, sale.total);
+    // NO llamar ClientsModule.updateClientStats — SalesModule.addSale ya lo hace
 
     // Actualizar resumen
     const salesCount = document.getElementById('chain-sales-count');

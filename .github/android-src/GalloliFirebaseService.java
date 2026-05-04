@@ -14,7 +14,7 @@ import android.util.Log;
 public class GalloliFirebaseService extends FirebaseMessagingService {
 
     private static final String TAG = "GalloliFCM";
-    private static final String CHANNEL_ID = "galloli_push_channel";
+    private static final String CHANNEL_ID = "galloli_push_channel_v2";
     private static final String CHANNEL_NAME = "GallOli Notificaciones";
 
     @Override
@@ -83,7 +83,8 @@ public class GalloliFirebaseService extends FirebaseMessagingService {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Notificaciones de GallOli");
+            channel.setDescription("Notificaciones push de GallOli");
+            channel.enableVibration(true);
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) manager.createNotificationChannel(channel);
         }

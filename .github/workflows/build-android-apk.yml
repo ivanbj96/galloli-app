@@ -175,6 +175,7 @@ jobs:
               <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
               <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -184,7 +185,7 @@ jobs:
           content = re.sub(r'(<manifest[^>]*>)', r'\1' + permissions, content, count=1)
 
           services = """
-              <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="galloli_push_channel" />
+              <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="galloli_push_channel_v2" />
               <service android:name=".BleForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|location" />
               <service android:name=".GeofenceBleService" android:enabled="true" android:exported="false" android:foregroundServiceType="location|connectedDevice" />
               <service android:name=".GalloliFirebaseService" android:exported="false">

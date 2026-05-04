@@ -187,6 +187,47 @@ public class BleForegroundPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Libera BLE al servicio nativo — alias de notifyJsDisconnected para handoff al minimizar.
+     */
+    @PluginMethod
+    public void releaseBleToService(PluginCall call) {
+        Intent intent = new Intent(getContext(), BleForegroundService.class);
+        intent.setAction(BleForegroundService.ACTION_JS_DISCONNECTED);
+        getContext().startService(intent);
+        call.resolve();
+    }
+
+    /**
+     * Activa/desactiva flag para evitar doble factura cuando el modal JS esta abierto.
+     */
+    @PluginMethod
+    public void setChainModalActive(PluginCall call) {
+        boolean active = call.getBoolean("active", false);
+        getContext()
+            .getSharedPreferences(BleForegroundService.PREFS_NAME,
+                android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("chain_modal_active", active)
+            .apply();
+        call.resolve();
+    }
+
+    /**
+     * Lee el token FCM guardado por GalloliFirebaseService en SharedPreferences.
+     */
+    @PluginMethod
+    public void getFcmToken(PluginCall call) {
+        String token = getContext()
+            .getSharedPreferences(BleForegroundService.PREFS_NAME,
+                android.content.Context.MODE_PRIVATE)
+            .getString("fcm_token", null);
+        JSObject result = new JSObject();
+        result.put("token", token != null ? token : "");
+        result.put("hasToken", token != null && !token.isEmpty());
+        call.resolve(result);
+    }
+
     private void startService(String action) {
         Intent intent = new Intent(getContext(), BleForegroundService.class);
         intent.setAction(action);

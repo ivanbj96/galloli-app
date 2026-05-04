@@ -38,8 +38,8 @@ public class BleForegroundService extends Service {
     // ─── Canales de notificación ──────────────────────────────────────────────
     // Canal persistente (baja prioridad) — siempre visible en la barra
     public static final String CHANNEL_PERSISTENT = "galloli_ble_channel";
-    // Canal de alertas (alta prioridad) — aparece como heads-up al registrar venta
-    public static final String CHANNEL_ALERTS     = "galloli_alerts_channel";
+    // Canal de alertas v2 — ID nuevo para forzar IMPORTANCE_HIGH en dispositivos con canal viejo
+    public static final String CHANNEL_ALERTS     = "galloli_alerts_channel_v2";
 
     public static final int NOTIFICATION_ID       = 1001;
     public static final int NOTIFICATION_SALE_ID  = 1002; // heads-up de venta registrada
@@ -95,10 +95,13 @@ public class BleForegroundService extends Service {
     private static final long   STABLE_MS       = 1500;
     private static final double CLIENT_RADIUS_M = 500.0;
 
+    // Deduplicacion de ventas por cliente
+    private static final String KEY_LAST_CLIENT_ID = "last_sale_client_id";
+    private static final String KEY_LAST_SALE_TS   = "last_sale_ts";
+    private static final long   MIN_INTERVAL_SAME_CLIENT_MS = 60_000;
+
     // Peso compartido con el Plugin
     private static double currentWeight = 0;
-
-    // Estado del día (para mostrar en notificación)
     private int    salesToday = 0;
     private double totalToday = 0.0;
     private String nearestClientName = null;
@@ -107,8 +110,10 @@ public class BleForegroundService extends Service {
     public void onCreate() {
         super.onCreate();
         mainHandler = new Handler(Looper.getMainLooper());
-        // Resetear peso al iniciar — evita mostrar valor residual de sesion anterior
         currentWeight = 0;
+        // Resetear chain_modal_active para evitar bloqueo tras cierres bruscos
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit().putBoolean("chain_modal_active", false).apply();
         createNotificationChannels();
         // Restaurar contadores del día desde SharedPreferences
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -156,9 +161,10 @@ public class BleForegroundService extends Service {
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                         .edit().putString(KEY_BLE_DEVICE_ID, devId).apply();
                 }
-                // Desconectar la conexión nativa si existe (evitar conflicto)
-                disconnectBle();
-                Log.d(TAG, "JS tiene control BLE — servicio en modo pasivo");
+                // Cerrar solo el GATT nativo para no competir con JS,
+                // pero NO marcar la balanza como desconectada.
+                closeNativeGattOnly();
+                Log.d(TAG, "JS tiene control BLE — servicio en modo pasivo conectado");
                 refreshPersistentNotification();
                 return START_STICKY;
 
@@ -345,6 +351,14 @@ public class BleForegroundService extends Service {
         }
     }
 
+    // Cierra solo el GATT nativo sin cambiar bleConnected — usado cuando JS toma control
+    private void closeNativeGattOnly() {
+        if (bleGatt != null) {
+            try { bleGatt.disconnect(); bleGatt.close(); } catch (Exception e) { /* ignorar */ }
+            bleGatt = null;
+        }
+    }
+
     // ─── Parseo de peso (mismo protocolo que bluetooth-scale.js) ─────────────
 
     private double parseWeightFromBytes(byte[] data) {
@@ -470,8 +484,24 @@ public class BleForegroundService extends Service {
             return;
         }
 
+        // Deduplicacion: evitar doble venta al mismo cliente en menos de 60s
+        String lastClientId = prefs.getString(KEY_LAST_CLIENT_ID, null);
+        long lastSaleTs = prefs.getLong(KEY_LAST_SALE_TS, 0);
+        long nowMs = System.currentTimeMillis();
+        if (nearestId.equals(lastClientId) && nowMs - lastSaleTs < MIN_INTERVAL_SAME_CLIENT_MS) {
+            updatePersistentNotificationText(buildTitle(), "Venta duplicada evitada — retira el pollo");
+            waitingForZero = true;
+            return;
+        }
+
         savePendingSale(nearestId, weight, salePrice);
         waitingForZero = true;
+
+        // Guardar para deduplicacion
+        prefs.edit()
+            .putString(KEY_LAST_CLIENT_ID, nearestId)
+            .putLong(KEY_LAST_SALE_TS, nowMs)
+            .apply();
 
         String clientName = getClientName(nearestId);
         double total = weight * salePrice;
@@ -592,7 +622,9 @@ public class BleForegroundService extends Service {
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pi)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)  // heads-up
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_VIBRATE)
             .build();
 
@@ -668,7 +700,12 @@ public class BleForegroundService extends Service {
             sale.put("salePrice", salePrice);
             sale.put("total", weight * salePrice);
             sale.put("timestamp", System.currentTimeMillis());
-            sale.put("isPaid", true);
+            // Ventas background siempre a credito — el usuario confirma al abrir la app
+            sale.put("isPaid", false);
+            sale.put("paidAmount", 0);
+            sale.put("remainingDebt", weight * salePrice);
+            sale.put("paymentHistory", new JSONArray());
+            sale.put("autoCredit", true);
             sale.put("quantity", 1);
             sale.put("source", "background_auto");
             sales.put(sale);
@@ -717,12 +754,12 @@ public class BleForegroundService extends Service {
             persistent.setSound(null, null);
             nm.createNotificationChannel(persistent);
 
-            // Canal de alertas — alta prioridad, vibra al registrar venta
+            // Canal de alertas v2 — ID nuevo para forzar IMPORTANCE_HIGH en dispositivos con canal viejo
             NotificationChannel alerts = new NotificationChannel(
                 CHANNEL_ALERTS,
-                "GallOli — Ventas registradas",
+                "GallOli — Ventas automaticas",
                 NotificationManager.IMPORTANCE_HIGH);
-            alerts.setDescription("Notificacion emergente cuando se registra una venta automatica");
+            alerts.setDescription("Alertas emergentes de ventas automaticas registradas");
             alerts.enableVibration(true);
             alerts.setVibrationPattern(new long[]{0, 100, 50, 100});
             nm.createNotificationChannel(alerts);

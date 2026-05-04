@@ -1,5 +1,5 @@
-// android/app/src/main/java/com/galloli/app/GeofenceBleService.kt
-package com.galloli.app
+// android/app/src/main/java/store/ivapps/galloli/GeofenceBleService.kt
+package store.ivapps.galloli
 
 import android.app.*
 import android.content.Context

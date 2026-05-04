@@ -84,41 +84,40 @@ jobs:
       - name: Install ImageMagick
         run: sudo apt-get install -y imagemagick
 
-      - name: Generate app icons
+      - name: Copy app icons from TWA (same icons as Play Store version)
         run: |
-          SRC="icons/favicon.pub/android-chrome-512x512.png"
           RES="android/app/src/main/res"
-          for size in 48 72 96 144 192; do
-            case $size in
-              48)  d="mdpi"    ;;
-              72)  d="hdpi"    ;;
-              96)  d="xhdpi"   ;;
-              144) d="xxhdpi"  ;;
-              192) d="xxxhdpi" ;;
-            esac
+          ICONS=".github/apk-icons"
+
+          # Copiar iconos de cada densidad directamente desde los iconos de la TWA
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             mkdir -p "$RES/mipmap-$d"
-            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher.png"
-            convert "$SRC" -resize ${size}x${size} "$RES/mipmap-$d/ic_launcher_round.png"
-            fg=$((size * 108 / 48))
-            convert "$SRC" -resize ${fg}x${fg} -gravity center -extent ${fg}x${fg} "$RES/mipmap-$d/ic_launcher_foreground.png"
+            cp "$ICONS/mipmap-$d/ic_launcher.png"            "$RES/mipmap-$d/ic_launcher.png"
+            cp "$ICONS/mipmap-$d/ic_launcher_round.png"      "$RES/mipmap-$d/ic_launcher_round.png"
+            cp "$ICONS/mipmap-$d/ic_launcher_foreground.png" "$RES/mipmap-$d/ic_launcher_foreground.png"
           done
+
+          # Copiar XMLs adaptativos
           mkdir -p "$RES/mipmap-anydpi-v26"
-          for icon in ic_launcher ic_launcher_round; do
-            printf '<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@color/ic_launcher_background"/>\n    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>\n</adaptive-icon>\n' > "$RES/mipmap-anydpi-v26/${icon}.xml"
-          done
-          mkdir -p "$RES/values"
-          # Eliminar ic_launcher_background.xml que Capacitor genera (evita duplicado con colors.xml)
-          rm -f "$RES/values/ic_launcher_background.xml"
-          if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
-            sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#185a83</color>|' "$RES/values/colors.xml"
-          else
-            sed -i 's|</resources>|    <color name="ic_launcher_background">#185a83</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
-            printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#185a83</color>\n</resources>\n' > "$RES/values/colors.xml"
-          fi
+          cp "$ICONS/mipmap-anydpi-v26/ic_launcher.xml"       "$RES/mipmap-anydpi-v26/ic_launcher.xml"
+          cp "$ICONS/mipmap-anydpi-v26/ic_launcher_round.xml" "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
+
+          # Copiar icono de notificacion
           mkdir -p "$RES/drawable"
-          convert "$SRC" -resize 96x96 -colorspace Gray -threshold 50% \
-            -background transparent -alpha on -channel RGB -evaluate set 100% \
-            "$RES/drawable/ic_notification.png"
+          cp "$ICONS/drawable/ic_notification.png" "$RES/drawable/ic_notification.png"
+
+          # Configurar color de fondo del icono adaptativo
+          rm -f "$RES/values/ic_launcher_background.xml"
+          mkdir -p "$RES/values"
+          if grep -q "ic_launcher_background" "$RES/values/colors.xml" 2>/dev/null; then
+            sed -i 's|<color name="ic_launcher_background">.*</color>|<color name="ic_launcher_background">#ffffff</color>|' "$RES/values/colors.xml"
+          else
+            sed -i 's|</resources>|    <color name="ic_launcher_background">#ffffff</color>\n</resources>|' "$RES/values/colors.xml" 2>/dev/null || \
+            printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#ffffff</color>\n</resources>\n' > "$RES/values/colors.xml"
+          fi
+
+          echo "=== Iconos copiados desde TWA ==="
+          ls -la "$RES/mipmap-hdpi/"
 
       - name: Disable Capacitor splash screen
         run: |

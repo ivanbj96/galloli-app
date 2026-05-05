@@ -7,16 +7,34 @@ const ClientsModule = {
     },
 
     addClient(name, phone, address, locationData, coordinates = null) {
+        // Validar coordenadas: rechazar Null Island (0,0) o fuera de rango
+        let validCoords = null;
+        if (coordinates) {
+            const lat = parseFloat(coordinates.lat || coordinates.latitude);
+            const lng = parseFloat(coordinates.lng || coordinates.longitude);
+            if (!isNaN(lat) && !isNaN(lng) &&
+                !(lat === 0 && lng === 0) &&
+                lat >= -90 && lat <= 90 &&
+                lng >= -180 && lng <= 180) {
+                validCoords = { lat, lng };
+            } else {
+                console.warn('[ClientsModule] Coordenadas invalidas rechazadas:', coordinates);
+            }
+        } else if (locationData && locationData.latitude != null && locationData.longitude != null) {
+            const lat = parseFloat(locationData.latitude);
+            const lng = parseFloat(locationData.longitude);
+            if (!isNaN(lat) && !isNaN(lng) && !(lat === 0 && lng === 0)) {
+                validCoords = { lat, lng };
+            }
+        }
+
         const client = {
             id: Date.now(),
             name,
             phone,
             address,
             location: locationData.address || locationData,
-            coordinates: coordinates || {
-                lat: locationData.latitude,
-                lng: locationData.longitude
-            },
+            coordinates: validCoords,
             timestamp: new Date().toISOString(),
             lastModified: Date.now(),
             date: Utils.formatDate(),
@@ -695,7 +713,7 @@ const ClientsModule = {
         }
     },
 
-    // Obtener posicion actual
+    // Obtener posicion actual con alta precision
     getCurrentPosition() {
         return new Promise((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -708,8 +726,8 @@ const ClientsModule = {
                 reject,
                 {
                     enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 300000 // 5 minutos
+                    timeout: 15000,
+                    maximumAge: 0 // Siempre pedir posicion fresca
                 }
             );
         });

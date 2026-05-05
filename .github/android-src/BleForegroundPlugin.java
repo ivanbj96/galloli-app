@@ -122,12 +122,14 @@ public class BleForegroundPlugin extends Plugin {
 
     /**
      * Devuelve la ubicación GPS actual del servicio nativo.
+     * Incluye accuracy para que el JS pueda filtrar lecturas imprecisas.
      */
     @PluginMethod
     public void getLocation(PluginCall call) {
         JSObject result = new JSObject();
         result.put("lat", BleForegroundService.getLastLat());
         result.put("lng", BleForegroundService.getLastLng());
+        result.put("accuracy", BleForegroundService.getLastAccuracy());
         result.put("hasLocation", BleForegroundService.hasLocation());
         call.resolve(result);
     }

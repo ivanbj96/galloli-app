@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.37'; // iconos APK = iconos TWA, sin ImageMagick para launcher
+const APP_VERSION = '7.20.38'; // GPS alta precision FusedLocation, buscador creditos, mapa en tiempo real, radio dinamico
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

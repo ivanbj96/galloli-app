@@ -749,6 +749,17 @@ const App = {
                     </div>
                 </div>
 
+                ${Object.keys(clientsWithDebt).length > 0 ? `
+                <!-- Buscador de creditos -->
+                <div style="position: relative; margin-bottom: 15px;">
+                    <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray); pointer-events: none;"></i>
+                    <input type="text" id="creditos-search" class="form-input"
+                           placeholder="Buscar por nombre o teléfono..."
+                           style="padding-left: 40px;"
+                           oninput="App._filterCreditosPage(this.value)">
+                </div>
+                ` : ''}
+
                 ${Object.keys(clientsWithDebt).length === 0 ? `
                     <div class="card" style="background: #E8F5E9; border-left: 4px solid var(--success);">
                         <p style="margin: 0; color: var(--success);">
@@ -757,8 +768,9 @@ const App = {
                     </div>
                 ` : ''}
 
+                <div id="creditos-list">
                 ${Object.values(clientsWithDebt).map(data => `
-                    <div class="card">
+                    <div class="card credito-card" data-client-name="${(data.client.name || '').toLowerCase()}" data-client-phone="${(data.client.phone || '').toLowerCase()}">
                         <h3>
                             <i class="fas fa-user"></i> ${data.client.name}
                             <span style="float: right; color: var(--danger); font-size: 1.2rem;">
@@ -822,6 +834,7 @@ const App = {
                         </ul>
                     </div>
                 `).join('')}
+                </div>
             </div>
         `;
 
@@ -829,6 +842,16 @@ const App = {
         if (mainContent) {
             mainContent.innerHTML = html;
         }
+    },
+
+    // Filtrar lista de creditos por nombre o telefono
+    _filterCreditosPage(query) {
+        const q = query.toLowerCase().trim();
+        document.querySelectorAll('.credito-card').forEach(card => {
+            const name = card.dataset.clientName || '';
+            const phone = card.dataset.clientPhone || '';
+            card.style.display = (!q || name.includes(q) || phone.includes(q)) ? '' : 'none';
+        });
     },
 
     showPaymentModal(saleId) {
@@ -4379,30 +4402,87 @@ async cleanDuplicatePayments() {
         if (modal) {
             modal.classList.add('active');
             modal.style.display = 'flex';
-            
-            // Obtener ubicación actual y luego inicializar mapa
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        setTimeout(() => {
-                            MapModule.initMap(lat, lng);
-                        }, 100);
-                    },
-                    (error) => {
-                        // Si falla, usar ubicación por defecto (Ciudad de México)
-                        console.warn('No se pudo obtener ubicación:', error);
-                        setTimeout(() => {
-                            MapModule.initMap(19.4326, -99.1332);
-                        }, 100);
+
+            // Fallback dinamico: ultima posicion conocida del usuario (no un pais hardcodeado)
+            const getLastKnownFallback = () => {
+                try {
+                    const saved = localStorage.getItem('galloli_last_known_pos');
+                    if (saved) return JSON.parse(saved);
+                } catch(e) {}
+                return null; // sin fallback — el mapa esperara
+            };
+
+            // Wrapper de alta precision con watchPosition para seguimiento en vivo
+            let mapWatchId = null;
+            let mapMarker = null;
+            let mapAccCircle = null;
+            let markerUserMoved = false;
+
+            const initMapWithPos = (lat, lng, accuracy) => {
+                // Guardar como ultima posicion conocida
+                localStorage.setItem('galloli_last_known_pos', JSON.stringify([lat, lng]));
+
+                if (!MapModule.map) {
+                    MapModule.initMap(lat, lng);
+                    // Agregar circulo de precision
+                    setTimeout(() => {
+                        if (typeof L !== 'undefined' && MapModule.map) {
+                            mapAccCircle = L.circle([lat, lng], {
+                                radius: accuracy || 5,
+                                color: '#4CAF50', fillOpacity: 0.1, weight: 1
+                            }).addTo(MapModule.map);
+                            // Marcador arrastrable en mi posicion
+                            mapMarker = L.marker([lat, lng], { draggable: true }).addTo(MapModule.map);
+                            mapMarker.on('dragstart', () => { markerUserMoved = true; });
+                        }
+                    }, 200);
+                } else if (!markerUserMoved && mapMarker) {
+                    // Actualizar posicion del marcador si el usuario no lo movio
+                    mapMarker.setLatLng([lat, lng]);
+                    if (mapAccCircle) {
+                        mapAccCircle.setLatLng([lat, lng]).setRadius(accuracy || 5);
                     }
+                    MapModule.map.panTo([lat, lng]);
+                }
+            };
+
+            // Intentar GPS de alta precision
+            if (navigator.geolocation) {
+                // Leer inmediatamente con alta precision
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        initMapWithPos(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+                    },
+                    (err) => {
+                        console.warn('GPS inicial fallido:', err.message);
+                        // Usar ultima posicion conocida como fallback
+                        const fallback = getLastKnownFallback();
+                        if (fallback) {
+                            MapModule.initMap(fallback[0], fallback[1]);
+                        }
+                        // Si no hay fallback, el mapa se inicializa cuando llegue el watch
+                    },
+                    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
                 );
+
+                // Watch en vivo para actualizar mientras el usuario se mueve
+                mapWatchId = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        if (pos.coords.accuracy > 30) return; // ignorar lecturas muy imprecisas
+                        initMapWithPos(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+                    },
+                    (err) => { console.warn('GPS watch error:', err.message); },
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                );
+
+                // Guardar watchId para limpiarlo al cerrar el modal
+                App._mapModalWatchId = mapWatchId;
             } else {
-                // Si no hay geolocalización, usar ubicación por defecto
-                setTimeout(() => {
-                    MapModule.initMap(19.4326, -99.1332);
-                }, 100);
+                // Sin GPS: usar ultima posicion conocida o mostrar mensaje
+                const fallback = getLastKnownFallback();
+                if (fallback) {
+                    setTimeout(() => MapModule.initMap(fallback[0], fallback[1]), 100);
+                }
             }
         }
     },
@@ -4428,7 +4508,13 @@ async cleanDuplicatePayments() {
         if (modal) {
             modal.classList.remove('active');
             modal.style.display = 'none';
-            
+
+            // Limpiar watch GPS del mapa
+            if (App._mapModalWatchId != null) {
+                navigator.geolocation.clearWatch(App._mapModalWatchId);
+                App._mapModalWatchId = null;
+            }
+
             // Limpiar datos del mapa
             const latInput = document.getElementById('map-latitude');
             const lngInput = document.getElementById('map-longitude');
@@ -4467,12 +4553,15 @@ async cleanDuplicatePayments() {
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
+                // Guardar como ultima posicion conocida
+                localStorage.setItem('galloli_last_known_pos', JSON.stringify([lat, lng]));
                 MapModule.setCurrentLocation(lat, lng);
                 Utils.showNotification('Ubicación actual establecida', 'success', 3000);
             },
             (error) => {
                 Utils.showNotification('No se pudo obtener la ubicación actual', 'error', 5000);
-            }
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
         );
     },
 
@@ -6005,6 +6094,8 @@ App._startChainGps = function() {
                 const loc = await plugin.getLocation();
                 const gpsIndicator = document.getElementById('chain-gps-indicator');
                 if (loc && loc.hasLocation) {
+                    // Guardar como ultima posicion conocida
+                    localStorage.setItem('galloli_last_known_pos', JSON.stringify([loc.lat, loc.lng]));
                     onLocation(loc.lat, loc.lng);
                 } else {
                     if (gpsIndicator) {
@@ -6034,7 +6125,7 @@ App._startChainGps = function() {
                     gpsIndicator.style.display = 'block';
                 }
             },
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
         // Leer inmediatamente
         navigator.geolocation.getCurrentPosition(
@@ -6047,7 +6138,7 @@ App._startChainGps = function() {
                     gpsIndicator.style.display = 'block';
                 }
             },
-            { enableHighAccuracy: true, timeout: 8000 }
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
         );
     } else {
         const gpsIndicator = document.getElementById('chain-gps-indicator');
@@ -6070,6 +6161,9 @@ App._stopChainGps = function() {
 
 // Seleccionar automaticamente el cliente mas cercano segun GPS
 App._chainAutoSelectClient = function(lat, lng) {
+    // Guardar como ultima posicion conocida (fallback para el mapa)
+    localStorage.setItem('galloli_last_known_pos', JSON.stringify([lat, lng]));
+
     const gpsIndicator = document.getElementById('chain-gps-indicator');
     const debugEl = document.getElementById('chain-gps-debug');
 

@@ -2,11 +2,14 @@
 package store.ivapps.galloli;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.webkit.WebView;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
@@ -26,6 +29,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BleForegroundPlugin.class);
         super.onCreate(savedInstanceState);
         requestAppPermissions();
+        requestBatteryOptimizationExclusion();
         fetchFcmToken();
     }
 
@@ -132,6 +136,26 @@ public class MainActivity extends BridgeActivity {
                     ActivityCompat.requestPermissions(this,
                         new String[]{ Manifest.permission.ACCESS_BACKGROUND_LOCATION }, 1002);
                 }
+            }
+        }
+    }
+
+    /**
+     * Solicita al usuario excluir la app de Battery Optimization.
+     * Sin esto, Doze mode degrada el GPS a intervalos de 15 min en background.
+     */
+    private void requestBatteryOptimizationExclusion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                    Log.d(TAG, "Solicitando exclusion de Battery Optimization");
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "No se pudo solicitar exclusion de bateria: " + e.getMessage());
             }
         }
     }

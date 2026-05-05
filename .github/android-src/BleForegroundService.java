@@ -20,15 +20,19 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.UUID;
@@ -73,11 +77,12 @@ public class BleForegroundService extends Service {
 
     private static final String TAG = "GalloliService";
 
-    // GPS
-    private LocationManager  locationManager;
-    private LocationListener locationListener;
+    // GPS — FusedLocationProviderClient (alta precision)
+    private FusedLocationProviderClient fusedLocationClient;
+    private LocationCallback            locationCallback;
     private static double  lastLat     = 0;
     private static double  lastLng     = 0;
+    private static float   lastAccuracy = 999f;
     private static boolean hasLocation = false;
 
     // BLE nativo
@@ -222,52 +227,66 @@ public class BleForegroundService extends Service {
         }
     }
 
-    // ─── GPS ──────────────────────────────────────────────────────────────────
+    // ─── GPS — FusedLocationProviderClient alta precision ─────────────────────
 
     private void startGpsTracking() {
         try {
-            locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-            if (locationManager == null) return;
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-            locationListener = new LocationListener() {
-                @Override public void onLocationChanged(Location loc) {
+            // Solicitar ultima ubicacion conocida como punto de partida
+            fusedLocationClient.getLastLocation().addOnSuccessListener(loc -> {
+                if (loc != null && loc.getAccuracy() <= 50f) {
                     lastLat = loc.getLatitude();
                     lastLng = loc.getLongitude();
+                    lastAccuracy = loc.getAccuracy();
                     hasLocation = true;
                     refreshNearestClient();
                     refreshPersistentNotification();
                 }
-                @Override public void onStatusChanged(String p, int s, Bundle e) {}
-                @Override public void onProviderEnabled(String p) {}
-                @Override public void onProviderDisabled(String p) {}
+            });
+
+            // Configurar solicitud de alta precision: intervalo 2s, descartar accuracy > 8m
+            LocationRequest req = new LocationRequest.Builder(
+                    Priority.PRIORITY_HIGH_ACCURACY, 2000L)
+                .setMinUpdateIntervalMillis(1000L)
+                .setMinUpdateDistanceMeters(0f)
+                .setWaitForAccurateLocation(true)
+                .setMaxUpdateDelayMillis(2000L)
+                .build();
+
+            locationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(@NonNull LocationResult result) {
+                    Location loc = result.getLastLocation();
+                    if (loc == null) return;
+                    // Descartar lecturas con precision peor que 8m
+                    if (loc.getAccuracy() > 8f) {
+                        Log.d(TAG, "GPS descartado: accuracy=" + loc.getAccuracy() + "m");
+                        return;
+                    }
+                    lastLat = loc.getLatitude();
+                    lastLng = loc.getLongitude();
+                    lastAccuracy = loc.getAccuracy();
+                    hasLocation = true;
+                    Log.d(TAG, "GPS actualizado: " + lastLat + "," + lastLng + " acc=" + lastAccuracy + "m");
+                    refreshNearestClient();
+                    refreshPersistentNotification();
+                }
             };
 
-            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 5000, 3, locationListener);
-            }
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER, 10000, 5, locationListener);
-            }
-
-            Location last = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if (last == null) last = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-            if (last != null) {
-                lastLat = last.getLatitude();
-                lastLng = last.getLongitude();
-                hasLocation = true;
-                refreshNearestClient();
-            }
+            fusedLocationClient.requestLocationUpdates(req, locationCallback, Looper.getMainLooper());
+            Log.d(TAG, "GPS FusedLocation iniciado (alta precision, 2s)");
         } catch (SecurityException e) {
             Log.e(TAG, "Sin permiso GPS: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Error iniciando GPS: " + e.getMessage());
         }
     }
 
     private void stopGpsTracking() {
         try {
-            if (locationManager != null && locationListener != null) {
-                locationManager.removeUpdates(locationListener);
+            if (fusedLocationClient != null && locationCallback != null) {
+                fusedLocationClient.removeLocationUpdates(locationCallback);
             }
         } catch (Exception e) { /* ignorar */ }
     }
@@ -731,6 +750,7 @@ public class BleForegroundService extends Service {
 
     public static double  getLastLat()       { return lastLat; }
     public static double  getLastLng()       { return lastLng; }
+    public static float   getLastAccuracy()  { return lastAccuracy; }
     public static boolean hasLocation()      { return hasLocation; }
     public static double  getCurrentWeight() { return currentWeight; }
     public static void    setCurrentWeight(double w) { currentWeight = w; }

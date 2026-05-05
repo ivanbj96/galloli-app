@@ -209,6 +209,17 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x android/gradlew
 
+      - name: Add play-services-location dependency
+        run: |
+          # FusedLocationProviderClient requiere play-services-location
+          GRADLE="android/app/build.gradle"
+          if ! grep -q "play-services-location" "$GRADLE"; then
+            sed -i "s|dependencies {|dependencies {\n    implementation 'com.google.android.gms:play-services-location:21.3.0'|" "$GRADLE"
+            echo "play-services-location agregado a build.gradle"
+          else
+            echo "play-services-location ya existe en build.gradle"
+          fi
+
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace

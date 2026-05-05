@@ -93,10 +93,15 @@ function _startGeofence() {
         // APK: usar @capacitor/geolocation
         Geolocation.requestPermissions().then(function() {
             Geolocation.watchPosition(
-                { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
                 function(pos, err) {
                     if (err || !pos) return;
-                    _checkZone(pos.coords.latitude, pos.coords.longitude);
+                    // Guardar como ultima posicion conocida
+                    if (typeof localStorage !== 'undefined') {
+                        localStorage.setItem('galloli_last_known_pos',
+                            JSON.stringify([pos.coords.latitude, pos.coords.longitude]));
+                    }
+                    _checkZone(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
                 }
             ).then(function(id) { watchId = id; });
         }).catch(function(e) {
@@ -115,27 +120,35 @@ function _fallbackGps() {
         setInterval(function() {
             plugin.getLocation().then(function(loc) {
                 if (loc && loc.hasLocation) {
-                    _checkZone(loc.lat, loc.lng);
+                    _checkZone(loc.lat, loc.lng, loc.accuracy);
                 }
             }).catch(function(){});
         }, 4000);
     } else if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
-            function(pos) { _checkZone(pos.coords.latitude, pos.coords.longitude); },
+            function(pos) {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('galloli_last_known_pos',
+                        JSON.stringify([pos.coords.latitude, pos.coords.longitude]));
+                }
+                _checkZone(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+            },
             function() {},
-            { enableHighAccuracy: true, maximumAge: 5000 }
+            { enableHighAccuracy: true, maximumAge: 0 }
         );
     }
 }
 
-function _checkZone(lat, lng) {
+function _checkZone(lat, lng, accuracy) {
     var clients = _getClientsWithCoords();
     var nearest = null;
     var nearestDist = Infinity;
+    // Radio efectivo: max(5m, accuracy del GPS) — nunca menor a 5m
+    var effectiveRadius = Math.max(5, accuracy || cfg.geofenceRadiusM);
 
     clients.forEach(function(c) {
         var d = _haversineM(lat, lng, c.lat, c.lng);
-        if (d < cfg.geofenceRadiusM && d < nearestDist) {
+        if (d < effectiveRadius && d < nearestDist) {
             nearest = c;
             nearestDist = d;
         }
@@ -143,7 +156,7 @@ function _checkZone(lat, lng) {
 
     if (nearest && (!currentZone || currentZone.id !== nearest.id)) {
         currentZone = nearest;
-        console.info('[galloli/native] Zona activa:', nearest.name, Math.round(nearestDist) + 'm');
+        console.info('[galloli/native] Zona activa:', nearest.name, Math.round(nearestDist) + 'm (radio=' + Math.round(effectiveRadius) + 'm)');
         weightBuffer = [];
     } else if (!nearest && currentZone) {
         currentZone = null;

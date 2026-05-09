@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.39'; // fix iconos APK: foreground tamanos correctos, ic_notification blanco+alpha
+const APP_VERSION = '7.20.40'; // fix backup duplicado: cliente no envia si usuario autenticado en nube
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -919,15 +919,15 @@ const OrdersModule = {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3><i class="fas fa-truck"></i> Confirmar Entrega</h3>
-                    <button class="close-modal" onclick="this.parentElement.parentElement.remove()">
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <form id="delivery-form">
                         <div class="form-group">
-                            <label class="form-label" for="delivery-weight">Cliente</label>
-                            <input type="text" class="form-input" value="${client.name}" readonly>
+                            <label class="form-label" for="delivery-client-name">Cliente</label>
+                            <input type="text" id="delivery-client-name" name="delivery-client-name" class="form-input" value="${client.name}" readonly>
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="delivery-weight">Peso del Pedido (lb)</label>
@@ -1087,7 +1087,7 @@ const OrdersModule = {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3><i class="fas fa-clipboard-list"></i> Detalles del Pedido</h3>
-                    <button class="close-modal" onclick="this.parentElement.parentElement.remove()">
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>

@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.37'; // fix todos los label sin for en app.js, modules.js, facturacion-ui.js, feedback.html, index.html
+const APP_VERSION = '7.20.38'; // fix modal overlay queda oscuro, input sin id, botones rutas responsivos
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

@@ -258,7 +258,12 @@ const App = {
             if (mapModal && mapModal.classList.contains('active')) {
                 if (e.target === mapModal) {
                     this.closeMapModal();
+                    return;
                 }
+            }
+            // Cerrar modales dinámicos (sin id) al hacer clic en el overlay oscuro
+            if (e.target.classList.contains('modal') && e.target.classList.contains('active')) {
+                e.target.remove();
             }
         });
         
@@ -4450,11 +4455,21 @@ async cleanDuplicatePayments() {
         // Cerrar recibo
         this.closeReceipt();
         
-        // Cerrar cualquier otro modal que pueda estar abierto
-        const allModals = document.querySelectorAll('.modal');
-        allModals.forEach(modal => {
-            modal.classList.remove('active');
-            modal.style.display = 'none';
+        // Cerrar sidebar overlay si está activo (móvil)
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.classList.remove('active');
+
+        // Cerrar y ELIMINAR modales dinámicos (creados con createElement y appendados al body)
+        document.querySelectorAll('.modal').forEach(modal => {
+            // Si el modal fue creado dinámicamente (no es parte del HTML estático), eliminarlo
+            if (!modal.id || modal.id === '') {
+                modal.remove();
+            } else {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
         });
         
         // Ocultar notificaciones

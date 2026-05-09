@@ -1567,15 +1567,26 @@ select.form-input {
 
 /* Botones de control del mapa en la página de rutas */
 .controles-mapa {
-    display: flex;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
     margin-top: 15px;
-    flex-wrap: wrap;
+}
+
+@media (min-width: 600px) {
+    .controles-mapa {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 .controles-mapa .btn {
-    flex: 1;
-    min-width: 120px;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.85rem;
+    padding: 10px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Estilos para los marcadores numerados */

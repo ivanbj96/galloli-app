@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.40'; // fix backup duplicado: cliente no envia si usuario autenticado en nube
+const APP_VERSION = '7.20.41'; // fix modal overlay oscuro, input sin id, botones rutas 2x2, labels for en apk-native
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

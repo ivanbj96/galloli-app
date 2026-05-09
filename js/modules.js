@@ -399,27 +399,27 @@ const ClientsModule = {
                 <div class="modal-body">
                     <form id="edit-client-form">
                         <div class="form-group">
-                            <label class="form-label">Nombre del Cliente</label>
+                            <label class="form-label" for="edit-client-name">Nombre del Cliente</label>
                             <input type="text" class="form-input" id="edit-client-name" 
                                    value="${client.name || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Telefono</label>
+                            <label class="form-label" for="edit-client-phone">Telefono</label>
                             <input type="tel" class="form-input" id="edit-client-phone" 
                                    value="${client.phone || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Direccion</label>
+                            <label class="form-label" for="edit-client-address">Direccion</label>
                             <input type="text" class="form-input" id="edit-client-address" 
                                    value="${client.address || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Ubicacion (Descripcion)</label>
+                            <label class="form-label" for="edit-client-location">Ubicacion (Descripcion)</label>
                             <input type="text" class="form-input" id="edit-client-location" 
                                    value="${client.location || ''}" placeholder="Descripcion de la ubicacion">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Coordenadas</label>
+                            <label class="form-label" for="edit-client-lat">Coordenadas</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <input type="number" step="any" class="form-input" id="edit-client-lat" 
                                        placeholder="Latitud" value="${client.coordinates?.lat || ''}">
@@ -937,18 +937,18 @@ const OrdersModule = {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3><i class="fas fa-truck"></i> Confirmar Entrega</h3>
-                    <button class="close-modal" onclick="this.parentElement.parentElement.remove()">
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body">
                     <form id="delivery-form">
                         <div class="form-group">
-                            <label class="form-label">Cliente</label>
-                            <input type="text" class="form-input" value="${client.name}" readonly>
+                            <label class="form-label" for="delivery-client-name">Cliente</label>
+                            <input type="text" id="delivery-client-name" name="delivery-client-name" class="form-input" value="${client.name}" readonly>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Peso del Pedido (lb)</label>
+                            <label class="form-label" for="delivery-weight">Peso del Pedido (lb)</label>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <input type="number" step="0.01" min="0.01" class="form-input" 
                                        id="delivery-weight" value="${order.weight}" required style="flex:1;">
@@ -960,17 +960,17 @@ const OrdersModule = {
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Cantidad de Pollos</label>
+                            <label class="form-label" for="delivery-quantity">Cantidad de Pollos</label>
                             <input type="number" min="1" class="form-input" 
                                    id="delivery-quantity" value="${order.quantity}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Precio por lb ($)</label>
+                            <label class="form-label" for="delivery-price">Precio por lb ($)</label>
                             <input type="number" step="0.01" min="0" class="form-input" 
                                    id="delivery-price" value="${order.price || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Notas de entrega (opcional)</label>
+                            <label class="form-label" for="delivery-notes">Notas de entrega (opcional)</label>
                             <textarea class="form-input" id="delivery-notes" rows="2" 
                                       placeholder="Observaciones de la entrega..."></textarea>
                         </div>
@@ -1105,7 +1105,7 @@ const OrdersModule = {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3><i class="fas fa-clipboard-list"></i> Detalles del Pedido</h3>
-                    <button class="close-modal" onclick="this.parentElement.parentElement.remove()">
+                    <button class="close-modal" onclick="this.closest('.modal').remove()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1381,7 +1381,7 @@ const SalesModule = {
                 <div class="modal-body">
                     <form id="edit-sale-form">
                         <div class="form-group">
-                            <label class="form-label">Cliente</label>
+                            <label class="form-label" for="edit-sale-client">Cliente</label>
                             <select class="form-input" id="edit-sale-client" required>
                                 ${ClientsModule.clients.map(c => 
                                     `<option value="${c.id}" ${c.id === sale.clientId ? 'selected' : ''}>${c.name} - ${c.phone}</option>`
@@ -1389,17 +1389,17 @@ const SalesModule = {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Peso Total (lb)</label>
+                            <label class="form-label" for="edit-sale-weight">Peso Total (lb)</label>
                             <input type="number" step="0.01" min="0.01" class="form-input" 
                                    id="edit-sale-weight" value="${sale.weight}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Cantidad de Pollos</label>
+                            <label class="form-label" for="edit-sale-quantity">Cantidad de Pollos</label>
                             <input type="number" min="1" class="form-input" 
                                    id="edit-sale-quantity" value="${sale.quantity}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Precio por lb ($)</label>
+                            <label class="form-label" for="edit-sale-price">Precio por lb ($)</label>
                             <input type="number" step="0.01" min="0" class="form-input" 
                                    id="edit-sale-price" value="${sale.price}" required>
                         </div>
@@ -1417,14 +1417,14 @@ const SalesModule = {
                             </small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Tipo de Pago</label>
+                            <label class="form-label" for="edit-sale-payment">Tipo de Pago</label>
                             <select class="form-input" id="edit-sale-payment" required>
                                 <option value="paid" ${sale.isPaid ? 'selected' : ''}>Efectivo (Pagado)</option>
                                 <option value="credit" ${!sale.isPaid ? 'selected' : ''}>Credito (A deber)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Fecha</label>
+                            <label class="form-label" for="edit-sale-date">Fecha</label>
                             <input type="date" class="form-input" 
                                    id="edit-sale-date" value="${sale.date}" required>
                         </div>

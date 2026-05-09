@@ -94,17 +94,19 @@ const AutoBackup = {
             return;
         }
 
-        // El servidor (Worker cron) ya hace el backup automatico a las 10 PM.
-        // El cliente solo hace backup si NO hay conexion al servidor.
-        const serverIsActive = typeof SyncEngine !== 'undefined' && SyncEngine.isActive;
-        if (serverIsActive) {
-            console.log('ℹ️ Servidor activo — el backup lo hace el Worker cron, no el cliente');
-            // Marcar como hecho para no reintentar
+        // Si el usuario tiene sesion activa en la nube, el Worker cron ya hace el backup.
+        // El cliente NUNCA debe duplicar el backup cuando hay cuenta activa.
+        const isAuthenticated = typeof window.AuthManager !== 'undefined' &&
+                                window.AuthManager.isAuthenticated &&
+                                window.AuthManager.isAuthenticated();
+        if (isAuthenticated) {
+            console.log('ℹ️ Usuario autenticado — el backup lo hace el Worker cron, no el cliente');
+            // Marcar como hecho para no reintentar en esta sesion
             await this.saveToDB('lastAutoBackupDate', today);
             return;
         }
 
-        console.log('⚠️ Sin servidor — haciendo backup local como fallback');
+        console.log('⚠️ Sin cuenta en la nube — haciendo backup local como fallback');
         await this.createAutomaticBackup();
     },
     

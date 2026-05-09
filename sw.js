@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.35'; // fix layout config TWA, notif balanza primera instalacion
+const APP_VERSION = '7.20.36'; // fix backup duplicado: cliente no envia si usuario autenticado en nube
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

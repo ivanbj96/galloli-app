@@ -39,14 +39,16 @@
     <p class="subtitle">Tu opinión nos ayuda a mejorar GallOli</p>
 
     <form id="feedbackForm">
-      <label>¿Cómo calificarías la app?</label>
-      <div class="stars">
-        <input type="radio" name="rating" id="s5" value="5"><label for="s5">★</label>
-        <input type="radio" name="rating" id="s4" value="4"><label for="s4">★</label>
-        <input type="radio" name="rating" id="s3" value="3"><label for="s3">★</label>
-        <input type="radio" name="rating" id="s2" value="2"><label for="s2">★</label>
-        <input type="radio" name="rating" id="s1" value="1"><label for="s1">★</label>
-      </div>
+      <fieldset style="border: none; padding: 0; margin: 0 0 1rem 0;">
+        <legend>¿Cómo calificarías la app?</legend>
+        <div class="stars">
+          <input type="radio" name="rating" id="s5" value="5"><label for="s5">★</label>
+          <input type="radio" name="rating" id="s4" value="4"><label for="s4">★</label>
+          <input type="radio" name="rating" id="s3" value="3"><label for="s3">★</label>
+          <input type="radio" name="rating" id="s2" value="2"><label for="s2">★</label>
+          <input type="radio" name="rating" id="s1" value="1"><label for="s1">★</label>
+        </div>
+      </fieldset>
 
       <label for="message">Tu mensaje</label>
       <textarea id="message" placeholder="Escribe tus comentarios, sugerencias o reporta un problema..." maxlength="500"></textarea>

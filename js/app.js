@@ -493,12 +493,12 @@ const App = {
                     <h3><i class="fas fa-cog"></i> Configuración de Porcentajes</h3>
                     <form id="diezmos-config-form">
                         <div class="form-group">
-                            <label class="form-label">Porcentaje de Diezmo (%)</label>
+                            <label class="form-label" for="diezmo-percent">Porcentaje de Diezmo (%)</label>
                             <input type="number" step="0.1" min="0" max="100" class="form-input" 
                                    id="diezmo-percent" value="${DiezmosModule.config.diezmoPercent}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Porcentaje de Ofrenda (%)</label>
+                            <label class="form-label" for="ofrenda-percent">Porcentaje de Ofrenda (%)</label>
                             <input type="number" step="0.1" min="0" max="100" class="form-input" 
                                    id="ofrenda-percent" value="${DiezmosModule.config.ofrendaPercent}" required>
                         </div>
@@ -524,11 +524,11 @@ const App = {
                     <div style="margin-bottom: 20px;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <div class="form-group" style="margin: 0;">
-                                <label class="form-label" style="font-size: 0.85rem;">Fecha Inicio</label>
+                                <label class="form-label" for="diezmos-start-date" style="font-size: 0.85rem;">Fecha Inicio</label>
                                 <input type="date" class="form-input" id="diezmos-start-date">
                             </div>
                             <div class="form-group" style="margin: 0;">
-                                <label class="form-label" style="font-size: 0.85rem;">Fecha Fin</label>
+                                <label class="form-label" for="diezmos-end-date" style="font-size: 0.85rem;">Fecha Fin</label>
                                 <input type="date" class="form-input" id="diezmos-end-date">
                             </div>
                         </div>
@@ -854,13 +854,13 @@ const App = {
                     
                     <form id="payment-form">
                         <div class="form-group">
-                            <label class="form-label">Monto a Pagar</label>
+                            <label class="form-label" for="payment-amount">Monto a Pagar</label>
                             <input type="number" step="0.01" min="0.01" 
                                    class="form-input" id="payment-amount" required 
                                    placeholder="Maximo: ${sale.remainingDebt.toFixed(2)}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Fecha del Pago</label>
+                            <label class="form-label" for="payment-date">Fecha del Pago</label>
                             <input type="date" class="form-input" id="payment-date" 
                                    value="${Utils.getTodayDate()}" required>
                         </div>
@@ -935,7 +935,7 @@ const App = {
 
                     <form id="smart-payment-form">
                         <div class="form-group">
-                            <label class="form-label">Monto a Pagar</label>
+                            <label class="form-label" for="smart-payment-amount">Monto a Pagar</label>
                             <input type="number" step="0.01" min="0.01" max="${totalDebt.toFixed(2)}"
                                    class="form-input" id="smart-payment-amount" required 
                                    placeholder="Maximo: ${totalDebt.toFixed(2)}">
@@ -956,7 +956,7 @@ const App = {
                         </div>
                         
                         <div class="form-group">
-                            <label class="form-label">Fecha del Pago</label>
+                            <label class="form-label" for="smart-payment-date">Fecha del Pago</label>
                             <input type="date" class="form-input" id="smart-payment-date" 
                                    value="${Utils.getTodayDate()}" required>
                         </div>
@@ -1142,7 +1142,7 @@ const App = {
                     <h3 style="margin-bottom: 20px;"><i class="fas fa-filter"></i> Filtros de Búsqueda</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
                         <div class="form-group" style="margin: 0;">
-                            <label class="form-label" style="font-weight: 600;">
+                            <label class="form-label" for="filter-client" style="font-weight: 600;">
                                 <i class="fas fa-user"></i> Cliente
                             </label>
                             <select class="form-input" id="filter-client" onchange="App.filterPaymentHistory()" style="border: 2px solid var(--border);">
@@ -1151,13 +1151,13 @@ const App = {
                             </select>
                         </div>
                         <div class="form-group" style="margin: 0;">
-                            <label class="form-label" style="font-weight: 600;">
+                            <label class="form-label" for="filter-start-date" style="font-weight: 600;">
                                 <i class="fas fa-calendar-alt"></i> Fecha Inicio
                             </label>
                             <input type="date" class="form-input" id="filter-start-date" onchange="App.filterPaymentHistory()" style="border: 2px solid var(--border);">
                         </div>
                         <div class="form-group" style="margin: 0;">
-                            <label class="form-label" style="font-weight: 600;">
+                            <label class="form-label" for="filter-end-date" style="font-weight: 600;">
                                 <i class="fas fa-calendar-check"></i> Fecha Fin
                             </label>
                             <input type="date" class="form-input" id="filter-end-date" onchange="App.filterPaymentHistory()" style="border: 2px solid var(--border);">
@@ -1401,9 +1401,9 @@ loadConfigPage() {
                 <!-- Inputs de color personalizados -->
                 <div class="custom-color-inputs">
                     <div class="color-input-group">
-                        <label>Color Primario:</label>
+                        <label for="color-input-primary">Color Primario:</label>
                         <div class="color-input-wrapper">
-                            <input type="color" class="color-input" value="${ConfigModule.currentConfig.colors.primary}" 
+                            <input type="color" id="color-input-primary" class="color-input" value="${ConfigModule.currentConfig.colors.primary}" 
                                    onchange="ConfigModule.currentConfig.colors.primary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
                             <input type="text" class="color-hex-input" value="${ConfigModule.currentConfig.colors.primary}" 
                                    onchange="ConfigModule.currentConfig.colors.primary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
@@ -1411,9 +1411,9 @@ loadConfigPage() {
                     </div>
                     
                     <div class="color-input-group">
-                        <label>Color Secundario:</label>
+                        <label for="color-input-secondary">Color Secundario:</label>
                         <div class="color-input-wrapper">
-                            <input type="color" class="color-input" value="${ConfigModule.currentConfig.colors.secondary}" 
+                            <input type="color" id="color-input-secondary" class="color-input" value="${ConfigModule.currentConfig.colors.secondary}" 
                                    onchange="ConfigModule.currentConfig.colors.secondary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
                             <input type="text" class="color-hex-input" value="${ConfigModule.currentConfig.colors.secondary}" 
                                    onchange="ConfigModule.currentConfig.colors.secondary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
@@ -1428,14 +1428,14 @@ loadConfigPage() {
                 
                 <!-- Nombre de la App -->
                 <div class="form-group">
-                    <label class="form-label">Nombre de la Aplicación</label>
+                    <label class="form-label" for="config-app-name">Nombre de la Aplicación</label>
                     <input type="text" class="form-input" id="config-app-name" 
                            value="${ConfigModule.currentConfig.appName}"
                            onchange="ConfigModule.setAppName(this.value)">
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Nombre Corto (para PWA)</label>
+                    <label class="form-label" for="config-app-shortname">Nombre Corto (para PWA)</label>
                     <input type="text" class="form-input" id="config-app-shortname" 
                            value="${ConfigModule.currentConfig.appShortName}"
                            onchange="ConfigModule.currentConfig.appShortName = this.value">
@@ -3477,7 +3477,7 @@ async cleanDuplicatePayments() {
                         </div>
                         
                         <div style="margin-bottom: 10px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
+                            <label for="telegram-token" style="display: block; margin-bottom: 5px; font-weight: 500;">
                                 <i class="fas fa-key"></i> Bot Token:
                             </label>
                             <input type="text" id="telegram-token" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" 
@@ -3485,7 +3485,7 @@ async cleanDuplicatePayments() {
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">
+                            <label for="telegram-chatid" style="display: block; margin-bottom: 5px; font-weight: 500;">
                                 <i class="fas fa-user"></i> Chat ID:
                             </label>
                             <input type="text" id="telegram-chatid" placeholder="123456789" 
@@ -4723,17 +4723,17 @@ async cleanDuplicatePayments() {
                 <div class="modal-body">
                     <form id="edit-expense-form">
                         <div class="form-group">
-                            <label class="form-label">Descripción</label>
+                            <label class="form-label" for="edit-expense-description">Descripción</label>
                             <input type="text" class="form-input" id="edit-expense-description" 
                                    value="${expense.description}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Monto</label>
+                            <label class="form-label" for="edit-expense-amount">Monto</label>
                             <input type="number" step="0.01" min="0.01" class="form-input" 
                                    id="edit-expense-amount" value="${expense.amount}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Categoría</label>
+                            <label class="form-label" for="edit-expense-category">Categoría</label>
                             <select class="form-input" id="edit-expense-category" required>
                                 <option value="insumos" ${expense.category === 'insumos' ? 'selected' : ''}>Insumos</option>
                                 <option value="mano_obra" ${expense.category === 'mano_obra' ? 'selected' : ''}>Mano de Obra</option>
@@ -4743,7 +4743,7 @@ async cleanDuplicatePayments() {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Fecha</label>
+                            <label class="form-label" for="edit-expense-date">Fecha</label>
                             <input type="date" class="form-input" id="edit-expense-date" 
                                    value="${expense.date}" required>
                         </div>
@@ -5282,13 +5282,13 @@ async cleanDuplicatePayments() {
                     </p>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="form-group">
-                            <label class="form-label">Diezmo (%)</label>
+                            <label class="form-label" for="diezmo-percent">Diezmo (%)</label>
                             <input type="number" step="0.1" min="0" max="100" class="form-input" 
                                    id="diezmo-percent" value="${DiezmosModule.config.diezmoPercent}" 
                                    oninput="App.updateDiezmosPreview(); App.autoSaveDiezmosConfig()">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Ofrenda (%)</label>
+                            <label class="form-label" for="ofrenda-percent">Ofrenda (%)</label>
                             <input type="number" step="0.1" min="0" max="100" class="form-input" 
                                    id="ofrenda-percent" value="${DiezmosModule.config.ofrendaPercent}" 
                                    oninput="App.updateDiezmosPreview(); App.autoSaveDiezmosConfig()">
@@ -5700,7 +5700,7 @@ App.startChainWeighing = function() {
 
                 <!-- Cliente activo (se selecciona al inicio) -->
                 <div style="margin-bottom:16px;">
-                    <label class="form-label" style="font-weight:600;"><i class="fas fa-user"></i> Cliente activo</label>
+                    <label class="form-label" for="chain-client-search" style="font-weight:600;"><i class="fas fa-user"></i> Cliente activo</label>
                     <input type="text" class="form-input" id="chain-client-search"
                            placeholder="Buscar cliente..." autocomplete="off"
                            oninput="App.filterChainClients(this.value)"
@@ -5718,11 +5718,11 @@ App.startChainWeighing = function() {
                 <!-- Cantidad y pago -->
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                     <div class="form-group" style="margin:0;">
-                        <label class="form-label"><i class="fas fa-egg"></i> Pollos</label>
+                        <label class="form-label" for="chain-quantity"><i class="fas fa-egg"></i> Pollos</label>
                         <input type="number" class="form-input" id="chain-quantity" min="1" value="1">
                     </div>
                     <div class="form-group" style="margin:0;">
-                        <label class="form-label"><i class="fas fa-credit-card"></i> Pago</label>
+                        <label class="form-label" for="chain-payment"><i class="fas fa-credit-card"></i> Pago</label>
                         <select class="form-input" id="chain-payment">
                             <option value="cash">Efectivo</option>
                             <option value="credit">Credito</option>
@@ -6466,7 +6466,7 @@ App.startGeoChain = function() {
 
                 <!-- Override manual de cliente -->
                 <div style="margin-bottom:16px;">
-                    <label class="form-label" style="font-size:0.85rem;"><i class="fas fa-user-edit"></i> Override manual de cliente</label>
+                    <label class="form-label" for="geo-client-override" style="font-size:0.85rem;"><i class="fas fa-user-edit"></i> Override manual de cliente</label>
                     <select class="form-input" id="geo-client-override" onchange="App._geoChainOverrideClient(this.value)" style="font-size:0.9rem;">
                         <option value="">-- Auto por GPS --</option>
                         ${ClientsModule.clients.filter(c => c.isActive !== false).map(c =>

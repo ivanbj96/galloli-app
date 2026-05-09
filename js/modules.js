@@ -381,27 +381,27 @@ const ClientsModule = {
                 <div class="modal-body">
                     <form id="edit-client-form">
                         <div class="form-group">
-                            <label class="form-label">Nombre del Cliente</label>
+                            <label class="form-label" for="edit-client-name">Nombre del Cliente</label>
                             <input type="text" class="form-input" id="edit-client-name" 
                                    value="${client.name || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Telefono</label>
+                            <label class="form-label" for="edit-client-phone">Telefono</label>
                             <input type="tel" class="form-input" id="edit-client-phone" 
                                    value="${client.phone || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Direccion</label>
+                            <label class="form-label" for="edit-client-address">Direccion</label>
                             <input type="text" class="form-input" id="edit-client-address" 
                                    value="${client.address || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Ubicacion (Descripcion)</label>
+                            <label class="form-label" for="edit-client-location">Ubicacion (Descripcion)</label>
                             <input type="text" class="form-input" id="edit-client-location" 
                                    value="${client.location || ''}" placeholder="Descripcion de la ubicacion">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Coordenadas</label>
+                            <label class="form-label" for="edit-client-lat">Coordenadas</label>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                                 <input type="number" step="any" class="form-input" id="edit-client-lat" 
                                        placeholder="Latitud" value="${client.coordinates?.lat || ''}">
@@ -500,11 +500,11 @@ const ClientsModule = {
                     <div id="edit-location-map" style="height: 400px; width: 100%; margin-bottom: 15px;"></div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                         <div>
-                            <label>Latitud:</label>
+                            <label for="map-edit-lat">Latitud:</label>
                             <input type="number" step="any" id="map-edit-lat" class="form-input" readonly>
                         </div>
                         <div>
-                            <label>Longitud:</label>
+                            <label for="map-edit-lng">Longitud:</label>
                             <input type="number" step="any" id="map-edit-lng" class="form-input" readonly>
                         </div>
                     </div>
@@ -926,11 +926,11 @@ const OrdersModule = {
                 <div class="modal-body">
                     <form id="delivery-form">
                         <div class="form-group">
-                            <label class="form-label">Cliente</label>
+                            <label class="form-label" for="delivery-weight">Cliente</label>
                             <input type="text" class="form-input" value="${client.name}" readonly>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Peso del Pedido (lb)</label>
+                            <label class="form-label" for="delivery-weight">Peso del Pedido (lb)</label>
                             <div style="display:flex; gap:8px; align-items:center;">
                                 <input type="number" step="0.01" min="0.01" class="form-input" 
                                        id="delivery-weight" value="${order.weight}" required style="flex:1;">
@@ -942,17 +942,17 @@ const OrdersModule = {
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Cantidad de Pollos</label>
+                            <label class="form-label" for="delivery-quantity">Cantidad de Pollos</label>
                             <input type="number" min="1" class="form-input" 
                                    id="delivery-quantity" value="${order.quantity}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Precio por lb ($)</label>
+                            <label class="form-label" for="delivery-price">Precio por lb ($)</label>
                             <input type="number" step="0.01" min="0" class="form-input" 
                                    id="delivery-price" value="${order.price || ''}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Notas de entrega (opcional)</label>
+                            <label class="form-label" for="delivery-notes">Notas de entrega (opcional)</label>
                             <textarea class="form-input" id="delivery-notes" rows="2" 
                                       placeholder="Observaciones de la entrega..."></textarea>
                         </div>
@@ -1363,7 +1363,7 @@ const SalesModule = {
                 <div class="modal-body">
                     <form id="edit-sale-form">
                         <div class="form-group">
-                            <label class="form-label">Cliente</label>
+                            <label class="form-label" for="edit-sale-client">Cliente</label>
                             <select class="form-input" id="edit-sale-client" required>
                                 ${ClientsModule.clients.map(c => 
                                     `<option value="${c.id}" ${c.id === sale.clientId ? 'selected' : ''}>${c.name} - ${c.phone}</option>`
@@ -1371,22 +1371,22 @@ const SalesModule = {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Peso Total (lb)</label>
+                            <label class="form-label" for="edit-sale-weight">Peso Total (lb)</label>
                             <input type="number" step="0.01" min="0.01" class="form-input" 
                                    id="edit-sale-weight" value="${sale.weight}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Cantidad de Pollos</label>
+                            <label class="form-label" for="edit-sale-quantity">Cantidad de Pollos</label>
                             <input type="number" min="1" class="form-input" 
                                    id="edit-sale-quantity" value="${sale.quantity}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Precio por lb ($)</label>
+                            <label class="form-label" for="edit-sale-price">Precio por lb ($)</label>
                             <input type="number" step="0.01" min="0" class="form-input" 
                                    id="edit-sale-price" value="${sale.price}" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">
+                            <label class="form-label" for="edit-sale-cost">
                                 Costo por lb ($)
                                 <i class="fas fa-info-circle" style="color: var(--gray); cursor: help;" 
                                    title="Opcional: Para pollos pelados con costo diferente a la merma"></i>
@@ -1399,14 +1399,14 @@ const SalesModule = {
                             </small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Tipo de Pago</label>
+                            <label class="form-label" for="edit-sale-payment">Tipo de Pago</label>
                             <select class="form-input" id="edit-sale-payment" required>
                                 <option value="paid" ${sale.isPaid ? 'selected' : ''}>Efectivo (Pagado)</option>
                                 <option value="credit" ${!sale.isPaid ? 'selected' : ''}>Credito (A deber)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Fecha</label>
+                            <label class="form-label" for="edit-sale-date">Fecha</label>
                             <input type="date" class="form-input" 
                                    id="edit-sale-date" value="${sale.date}" required>
                         </div>
@@ -3841,7 +3841,7 @@ const CloudSyncModule = {
                 <!-- Telegram Login -->
                 <div class="login-form" id="telegram-form">
                     <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Tu ID de Telegram</label>
+                        <label for="telegram-id" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Tu ID de Telegram</label>
                         <input type="text" id="telegram-id" placeholder="Ej: 123456789" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">
                             <i class="fas fa-info-circle"></i> Envia /start a @userinfobot para obtener tu ID
@@ -3849,7 +3849,7 @@ const CloudSyncModule = {
                     </div>
                     
                     <div id="telegram-code-section" style="display: none; margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Codigo de Verificacion</label>
+                        <label for="telegram-code" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Codigo de Verificacion</label>
                         <input type="text" id="telegram-code" placeholder="123456" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1.5rem; text-align: center; letter-spacing: 0.5rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">
                             <i class="fas fa-info-circle"></i> Revisa tu Telegram, te enviamos un codigo
@@ -3864,12 +3864,12 @@ const CloudSyncModule = {
                 <!-- Email Login -->
                 <div class="login-form" id="email-form" style="display: none;">
                     <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
+                        <label for="email-input" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
                         <input type="email" id="email-input" placeholder="tu@email.com" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contrasena</label>
+                        <label for="password-input" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Contrasena</label>
                         <input type="password" id="password-input" placeholder="........" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
@@ -4260,7 +4260,7 @@ const CloudSyncModule = {
                 </div>
                 <div class="modal-body">
                     <p style="margin-bottom: 1rem;">Usuario: <strong>${userName}</strong></p>
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nuevo Rol:</label>
+                    <label for="new-role" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Nuevo Rol:</label>
                     <select id="new-role" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 1rem;">
                         ${roleOptions}
                     </select>
@@ -4351,19 +4351,19 @@ const CloudSyncModule = {
                 </div>
                 <div class="modal-body">
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Rol del Usuario:</label>
+                        <label for="invitation-role" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Rol del Usuario:</label>
                         <select id="invitation-role" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                             ${roleOptions}
                         </select>
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos Maximos:</label>
+                        <label for="invitation-max-uses" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Usos Maximos:</label>
                         <input type="number" id="invitation-max-uses" value="1" min="1" max="100" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                     </div>
                     
                     <div style="margin-bottom: 1rem;">
-                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Expira en (horas):</label>
+                        <label for="invitation-expires" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Expira en (horas):</label>
                         <input type="number" id="invitation-expires" value="24" min="1" max="720" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
                         <small style="color: #666; display: block; margin-top: 0.5rem;">Dejar vacio para que no expire</small>
                     </div>

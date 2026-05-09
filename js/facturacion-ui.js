@@ -43,42 +43,42 @@ const FacturacionUI = {
                         <h3><i class="fas fa-building"></i> Datos del Negocio</h3>
                         
                         <div class="form-group">
-                            <label>RUC</label>
+                            <label for="ruc">RUC</label>
                             <input type="text" id="ruc" class="form-input" value="${config.ruc}" placeholder="1234567890001" maxlength="13">
                         </div>
                         
                         <div class="form-group">
-                            <label>Razón Social</label>
+                            <label for="razon-social">Razón Social</label>
                             <input type="text" id="razon-social" class="form-input" value="${config.razonSocial}" placeholder="NOMBRE LEGAL DEL NEGOCIO">
                         </div>
                         
                         <div class="form-group">
-                            <label>Nombre Comercial</label>
+                            <label for="nombre-comercial">Nombre Comercial</label>
                             <input type="text" id="nombre-comercial" class="form-input" value="${config.nombreComercial}" placeholder="NOMBRE COMERCIAL">
                         </div>
                         
                         <div class="form-group">
-                            <label>Dirección Matriz</label>
+                            <label for="dir-matriz">Dirección Matriz</label>
                             <input type="text" id="dir-matriz" class="form-input" value="${config.dirMatriz}" placeholder="Calle Principal 123 y Secundaria">
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
                             <div class="form-group">
-                                <label>Establecimiento</label>
+                                <label for="establecimiento">Establecimiento</label>
                                 <input type="text" id="establecimiento" class="form-input" value="${config.establecimiento}" placeholder="001" maxlength="3">
                             </div>
                             <div class="form-group">
-                                <label>Punto Emisión</label>
+                                <label for="punto-emision">Punto Emisión</label>
                                 <input type="text" id="punto-emision" class="form-input" value="${config.puntoEmision}" placeholder="001" maxlength="3">
                             </div>
                             <div class="form-group">
-                                <label>Secuencial</label>
+                                <label for="secuencial">Secuencial</label>
                                 <input type="number" id="secuencial" class="form-input" value="${config.secuencialActual}" min="1">
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label>Obligado a llevar contabilidad</label>
+                            <label for="obligado-contabilidad">Obligado a llevar contabilidad</label>
                             <select id="obligado-contabilidad" class="form-input">
                                 <option value="NO" ${config.obligadoContabilidad === 'NO' ? 'selected' : ''}>NO</option>
                                 <option value="SI" ${config.obligadoContabilidad === 'SI' ? 'selected' : ''}>SÍ</option>
@@ -105,12 +105,12 @@ const FacturacionUI = {
                         `}
                         
                         <div class="form-group">
-                            <label>Archivo .p12 o .pfx</label>
+                            <label for="certificado-file">Archivo .p12 o .pfx</label>
                             <input type="file" id="certificado-file" class="form-input" accept=".p12,.pfx" onchange="FacturacionUI.loadCertificate(this)">
                         </div>
                         
                         <div class="form-group">
-                            <label>Contraseña del Certificado</label>
+                            <label for="certificado-password">Contraseña del Certificado</label>
                             <input type="password" id="certificado-password" class="form-input" placeholder="••••••••">
                         </div>
                         

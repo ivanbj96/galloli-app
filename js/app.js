@@ -1408,9 +1408,9 @@ loadConfigPage() {
                     <div class="color-input-group">
                         <label for="color-input-primary">Color Primario:</label>
                         <div class="color-input-wrapper">
-                            <input type="color" id="color-input-primary" class="color-input" value="${ConfigModule.currentConfig.colors.primary}" 
+                            <input type="color" id="color-input-primary" name="color-input-primary" class="color-input" value="${ConfigModule.currentConfig.colors.primary}" 
                                    onchange="ConfigModule.currentConfig.colors.primary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
-                            <input type="text" class="color-hex-input" value="${ConfigModule.currentConfig.colors.primary}" 
+                            <input type="text" id="color-hex-primary" name="color-hex-primary" class="color-hex-input" value="${ConfigModule.currentConfig.colors.primary}" 
                                    onchange="ConfigModule.currentConfig.colors.primary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
                         </div>
                     </div>
@@ -1418,9 +1418,9 @@ loadConfigPage() {
                     <div class="color-input-group">
                         <label for="color-input-secondary">Color Secundario:</label>
                         <div class="color-input-wrapper">
-                            <input type="color" id="color-input-secondary" class="color-input" value="${ConfigModule.currentConfig.colors.secondary}" 
+                            <input type="color" id="color-input-secondary" name="color-input-secondary" class="color-input" value="${ConfigModule.currentConfig.colors.secondary}" 
                                    onchange="ConfigModule.currentConfig.colors.secondary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
-                            <input type="text" class="color-hex-input" value="${ConfigModule.currentConfig.colors.secondary}" 
+                            <input type="text" id="color-hex-secondary" name="color-hex-secondary" class="color-hex-input" value="${ConfigModule.currentConfig.colors.secondary}" 
                                    onchange="ConfigModule.currentConfig.colors.secondary = this.value; ConfigModule.applyConfig(); ConfigModule.saveConfig();">
                         </div>
                     </div>
@@ -2427,13 +2427,13 @@ async cleanDuplicatePayments() {
                                 <i class="fas fa-user-plus"></i> Agregar Cliente Rapido
                             </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-name" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
+                                <input type="text" class="form-input" id="quick-client-name" name="quick-client-name" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
+                                <input type="tel" class="form-input" id="quick-client-phone" name="quick-client-phone" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 12px;">
-                                <input type="text" class="form-input" id="quick-client-address" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
+                                <input type="text" class="form-input" id="quick-client-address" name="quick-client-address" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button type="button" class="btn btn-primary" onclick="App.saveQuickClient()" style="flex: 1; min-width: 0;">
@@ -2568,18 +2568,18 @@ async cleanDuplicatePayments() {
                 });
             }
             
-            // Inicializar select personalizado
-            setTimeout(() => {
-                if (typeof CustomSelect !== 'undefined') {
-                    CustomSelect.init('sale-client', {
-                        placeholder: 'Seleccionar cliente',
-                        searchPlaceholder: 'Buscar cliente...'
-                    });
-                    CustomSelect.init('sale-payment-method', {
-                        placeholder: 'Método de pago'
-                    });
-                }
-            }, 100);
+            // Inicializar select personalizado — destruir instancia previa si existe
+            if (typeof CustomSelect !== 'undefined') {
+                CustomSelect.destroy('sale-client');
+                CustomSelect.destroy('sale-payment-method');
+                CustomSelect.init('sale-client', {
+                    placeholder: 'Seleccionar cliente',
+                    searchPlaceholder: 'Buscar cliente...'
+                });
+                CustomSelect.init('sale-payment-method', {
+                    placeholder: 'Método de pago'
+                });
+            }
         }
     },
 
@@ -2623,13 +2623,13 @@ async cleanDuplicatePayments() {
                                 <i class="fas fa-user-plus"></i> Agregar Cliente Rapido
                             </h4>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="text" class="form-input" id="quick-client-name-order" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
+                                <input type="text" class="form-input" id="quick-client-name-order" name="quick-client-name-order" placeholder="Nombre" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
-                                <input type="tel" class="form-input" id="quick-client-phone-order" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
+                                <input type="tel" class="form-input" id="quick-client-phone-order" name="quick-client-phone-order" placeholder="Telefono" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="form-group" style="margin-bottom: 12px;">
-                                <input type="text" class="form-input" id="quick-client-address-order" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
+                                <input type="text" class="form-input" id="quick-client-address-order" name="quick-client-address-order" placeholder="Direccion" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div style="display: flex; gap: 10px;">
                                 <button type="button" class="btn btn-primary" onclick="App.saveQuickClientOrder()" style="flex: 1; min-width: 0;">
@@ -2694,15 +2694,14 @@ async cleanDuplicatePayments() {
                 });
             }
             
-            // Inicializar select personalizado
-            setTimeout(() => {
-                if (typeof CustomSelect !== 'undefined') {
-                    CustomSelect.init('order-client', {
-                        placeholder: 'Seleccionar cliente',
-                        searchPlaceholder: 'Buscar cliente...'
-                    });
-                }
-            }, 100);
+            // Inicializar select personalizado — destruir instancia previa si existe
+            if (typeof CustomSelect !== 'undefined') {
+                CustomSelect.destroy('order-client');
+                CustomSelect.init('order-client', {
+                    placeholder: 'Seleccionar cliente',
+                    searchPlaceholder: 'Buscar cliente...'
+                });
+            }
         }
     },
 
@@ -3350,14 +3349,13 @@ async cleanDuplicatePayments() {
                 });
             }
             
-            // Inicializar select personalizado
-            setTimeout(() => {
-                if (typeof CustomSelect !== 'undefined') {
-                    CustomSelect.init('expense-category', {
-                        placeholder: 'Seleccionar categoría'
-                    });
-                }
-            }, 100);
+            // Inicializar select personalizado — destruir instancia previa si existe
+            if (typeof CustomSelect !== 'undefined') {
+                CustomSelect.destroy('expense-category');
+                CustomSelect.init('expense-category', {
+                    placeholder: 'Seleccionar categoría'
+                });
+            }
         }
     },
 

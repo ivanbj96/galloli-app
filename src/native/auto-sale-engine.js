@@ -46,6 +46,15 @@ window.initNativeAutoSale = function(userCfg) {
 
     if (userCfg) Object.assign(cfg, userCfg);
 
+    // Configurar WeightStability si está disponible (§4)
+    if (window.WeightStability) {
+        WeightStability.configure({
+            windowMs:    cfg.stableWindowMs,
+            minReadings: cfg.stableReadings,
+            toleranceLb: 0.07
+        });
+    }
+
     console.info('[galloli/native] Iniciando motor de venta automática...');
 
     // Arrancar foreground service
@@ -68,6 +77,11 @@ window.initNativeAutoSale = function(userCfg) {
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) _processPendingNativeSales();
     });
+
+    // Actualizar chip del header
+    if (typeof App !== 'undefined' && App._updateAutoSaleChip) {
+        App._updateAutoSaleChip(true);
+    }
 
     console.info('[galloli/native] Motor iniciado. Modo:', cfg.mode);
 };
@@ -169,25 +183,34 @@ function _onWeightReading(lb) {
     if (!currentZone) return;
     if (lb < cfg.minWeightLb) return;
 
-    var now = Date.now();
-    weightBuffer = weightBuffer.filter(function(r) { return now - r.t < cfg.stableWindowMs; });
-    weightBuffer.push({ lb: lb, t: now });
+    // Usar WeightStability si está disponible (§4), si no usar buffer propio
+    var stableLb = null;
+    if (window.WeightStability) {
+        stableLb = WeightStability.push(lb);
+    } else {
+        // Fallback: buffer propio
+        var now = Date.now();
+        weightBuffer = weightBuffer.filter(function(r) { return now - r.t < cfg.stableWindowMs; });
+        weightBuffer.push({ lb: lb, t: now });
 
-    if (weightBuffer.length < cfg.stableReadings) return;
+        if (weightBuffer.length < cfg.stableReadings) return;
 
-    // Verificar estabilidad: spread < 0.07 lb (~30g)
-    var lbs = weightBuffer.map(function(r) { return r.lb; });
-    var spread = Math.max.apply(null, lbs) - Math.min.apply(null, lbs);
-    if (spread > 0.07) return;
+        var lbs = weightBuffer.map(function(r) { return r.lb; });
+        var spread = Math.max.apply(null, lbs) - Math.min.apply(null, lbs);
+        if (spread > 0.07) return;
 
-    var stableLb = parseFloat((lbs.reduce(function(a,b){return a+b;},0) / lbs.length).toFixed(3));
+        stableLb = parseFloat((lbs.reduce(function(a,b){return a+b;},0) / lbs.length).toFixed(3));
+    }
+
+    if (!stableLb) return;
 
     // Dedupe: una venta por cliente cada minIntervalSamePlaceMs
     var last = lastSaleByClient[currentZone.id] || 0;
-    if (now - last < cfg.minIntervalSamePlaceMs) return;
+    if (Date.now() - last < cfg.minIntervalSamePlaceMs) return;
 
+    if (window.WeightStability) WeightStability.reset();
     weightBuffer = [];
-    lastSaleByClient[currentZone.id] = now;
+    lastSaleByClient[currentZone.id] = Date.now();
 
     var sale = _buildSaleDraft(currentZone, stableLb);
 

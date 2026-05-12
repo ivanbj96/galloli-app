@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.41'; // fix modal overlay oscuro, input sin id, botones rutas 2x2, labels for en apk-native
+const APP_VERSION = '7.20.42'; // GPS fresco en ventas background, chip AUTO header, WeightStability, getFreshLocation plugin
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 
@@ -33,6 +33,7 @@ async function getStaticResources() {
             '/js/custom-select.js',
             '/js/bluetooth-scale.js',
             '/js/geo-chain.js',
+            '/js/weight-stability.js',
             '/js/facturacion-electronica.js',
             '/js/facturacion-ui.js',
             '/manifest.json',

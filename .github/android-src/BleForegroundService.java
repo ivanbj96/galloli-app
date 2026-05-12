@@ -727,6 +727,18 @@ public class BleForegroundService extends Service {
             sale.put("autoCredit", true);
             sale.put("quantity", 1);
             sale.put("source", "background_auto");
+            // Guardar GPS fresco en el momento exacto de la venta (§1.2)
+            JSONObject geo = new JSONObject();
+            if (hasLocation) {
+                geo.put("lat", lastLat);
+                geo.put("lng", lastLng);
+                geo.put("acc", lastAccuracy);
+                geo.put("ts", System.currentTimeMillis());
+                geo.put("stale", false);
+            } else {
+                geo.put("stale", true);
+            }
+            sale.put("location", geo);
             sales.put(sale);
             prefs.edit().putString(KEY_PENDING_SALES, sales.toString()).apply();
         } catch (Exception e) {
@@ -754,6 +766,13 @@ public class BleForegroundService extends Service {
     public static boolean hasLocation()      { return hasLocation; }
     public static double  getCurrentWeight() { return currentWeight; }
     public static void    setCurrentWeight(double w) { currentWeight = w; }
+
+    /** Devuelve la ubicacion fresca actual o null si no hay fix valido (§2) */
+    @androidx.annotation.Nullable
+    public static double[] getFreshLocationStatic() {
+        if (!hasLocation) return null;
+        return new double[]{ lastLat, lastLng, lastAccuracy };
+    }
 
     @Override
     public IBinder onBind(Intent intent) { return null; }

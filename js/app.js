@@ -2413,14 +2413,24 @@ async cleanDuplicatePayments() {
                 <div class="card">
                     <h3><i class="fas fa-plus-circle"></i> Nueva Venta</h3>
                     ${(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) ? `
-                    <div id="auto-sale-status-bar" style="width:100%;margin-bottom:15px;padding:14px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border-radius:10px;font-size:0.95rem;cursor:pointer;" onclick="App.startChainWeighing()">
+                    <div id="auto-sale-status-bar" style="width:100%;margin-bottom:15px;padding:14px;background:var(--light);border-radius:10px;font-size:0.95rem;border:2px solid var(--border);">
                         <div style="display:flex;align-items:center;gap:10px;">
-                            <i class="fas fa-robot" style="font-size:1.3rem;"></i>
-                            <div>
-                                <div style="font-weight:600;">Venta automatica activa</div>
-                                <small style="opacity:0.85;">${BluetoothScale.isConnected ? 'Balanza conectada — pesando en segundo plano' : 'Conecta la balanza para activar'}</small>
+                            <i class="fas fa-robot" style="font-size:1.3rem;color:var(--primary);"></i>
+                            <div style="flex:1;">
+                                <div style="font-weight:600;">Venta automática en segundo plano</div>
+                                <small style="color:var(--gray);">${BluetoothScale.isConnected ? 'Balanza conectada — pesando en segundo plano' : 'Conecta la balanza para activar'}</small>
                             </div>
-                            <i class="fas fa-chevron-right" style="margin-left:auto;opacity:0.7;"></i>
+                            <label class="switch" style="margin:0;" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="auto-sale-toggle"
+                                       ${localStorage.getItem('autoSale.enabled') === '1' ? 'checked' : ''}
+                                       onchange="App._onAutoSaleToggle(this.checked)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div style="margin-top:8px;">
+                            <button type="button" class="btn btn-outline" style="width:100%;font-size:0.85rem;padding:8px;" onclick="App.startChainWeighing()">
+                                <i class="fas fa-weight"></i> Abrir modo pesaje manual
+                            </button>
                         </div>
                     </div>` : `
                     <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:15px;padding:14px;font-size:1rem;" onclick="App.startChainWeighing()">
@@ -5732,6 +5742,64 @@ async cleanDuplicatePayments() {
         }
     }
 };
+
+// ─── Toggle de venta automática (§3.4) ───────────────────────────────────────
+
+/**
+ * Maneja el toggle "Auto" en la página de ventas (APK nativo).
+ * Activa/desactiva el motor de venta automática y actualiza el chip del header.
+ */
+App._onAutoSaleToggle = function(enabled) {
+    if (enabled) {
+        localStorage.setItem('autoSale.enabled', '1');
+        // Activar motor si está disponible
+        if (typeof initNativeAutoSale === 'function' && !window._autoSaleInitialized) {
+            initNativeAutoSale({
+                mode: 'auto',
+                minWeightLb: 3.50,
+                stableReadings: 3,
+                stableWindowMs: 2000,
+                minIntervalSamePlaceMs: 60000,
+                geofenceRadiusM: 150,
+                sriEnabled: false
+            });
+            window._autoSaleInitialized = true;
+        }
+        Utils.showNotification('Venta automática activada', 'success', 2500);
+    } else {
+        localStorage.removeItem('autoSale.enabled');
+        Utils.showNotification('Venta automática desactivada', 'info', 2500);
+    }
+    App._updateAutoSaleChip(enabled);
+};
+
+/**
+ * Actualiza el chip indicador del header según el estado del toggle Auto.
+ * @param {boolean} on - true = activo (verde pulsante), false = inactivo (gris)
+ */
+App._updateAutoSaleChip = function(on) {
+    const chip = document.getElementById('autoSaleChip');
+    if (!chip) return;
+    chip.hidden = false;
+    if (on) {
+        chip.className = 'chip chip--on';
+    } else {
+        chip.className = 'chip chip--off';
+    }
+};
+
+// Inicializar chip al cargar la app (APK nativo)
+(function() {
+    var isNative = window.Capacitor &&
+                   window.Capacitor.isNativePlatform &&
+                   window.Capacitor.isNativePlatform();
+    if (!isNative) return;
+    var enabled = localStorage.getItem('autoSale.enabled') === '1';
+    // Esperar a que el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        App._updateAutoSaleChip(enabled);
+    });
+})();
 
 // Suprimir errores de extensiones globalmente
 window.addEventListener('unhandledrejection', (e) => {

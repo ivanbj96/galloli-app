@@ -135,6 +135,26 @@ public class BleForegroundPlugin extends Plugin {
     }
 
     /**
+     * Devuelve la ubicacion fresca del servicio nativo (§2).
+     * Equivalente a getLocation() pero con campo "fresh" para que el JS
+     * sepa si el fix es valido y reciente.
+     */
+    @PluginMethod
+    public void getFreshLocation(PluginCall call) {
+        double[] fix = BleForegroundService.getFreshLocationStatic();
+        JSObject result = new JSObject();
+        if (fix != null) {
+            result.put("lat", fix[0]);
+            result.put("lng", fix[1]);
+            result.put("acc", fix[2]);
+            result.put("fresh", true);
+        } else {
+            result.put("fresh", false);
+        }
+        call.resolve(result);
+    }
+
+    /**
      * Devuelve el peso actual leído por el servicio nativo.
      */
     @PluginMethod

@@ -546,6 +546,27 @@ async function runScheduledPushNotifications(env, { merma = true, creditos = tru
   }
 }
 
+// Verificación de roles en endpoints protegidos
+function requireRole(user, perms) {
+  const matrix = {
+    super_admin: '*',
+    admin: ['sales.create','sales.edit','sales.delete','clients.crud','products.crud','prices.edit','expenses.crud','merma.create','routes.assign','routes.execute','orders.manage','reports.view','users.manage','invitations.create','auto-sale.engine','sri.facturar'],
+    vendedor:   ['sales.create','sales.edit','clients.crud','merma.create','routes.execute','orders.manage','auto-sale.engine'],
+    repartidor: ['sales.create','routes.execute','orders.manage'],
+    contador:   ['expenses.crud','reports.view','sri.facturar'],
+    viewer:     ['reports.view'],
+  };
+  const list = matrix[user.role];
+  if (list === '*') return;
+  for (const p of perms) {
+    if (!list || !list.includes(p)) {
+      const err = new Error('forbidden:' + p);
+      err.status = 403;
+      throw err;
+    }
+  }
+}
+
 // Helper functions
 function jsonResponse(data, headers = {}, status = 200) {
   return new Response(JSON.stringify(data), {

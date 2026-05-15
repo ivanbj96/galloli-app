@@ -1,0 +1,22 @@
+# Forzar LF en todos los archivos de texto del proyecto
+* text=auto eol=lf
+
+# Archivos JS/CSS/HTML/JSON — siempre LF
+*.js    text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+*.ts    text eol=lf
+*.md    text eol=lf
+*.sql   text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sh    text eol=lf
+
+# Archivos binarios — no tocar
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.apk   binary
+*.keystore binary

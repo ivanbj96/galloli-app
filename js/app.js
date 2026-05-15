@@ -128,6 +128,9 @@ const App = {
         // Procesar acción de notificación desde URL
         this.checkNotificationActionFromURL();
 
+        // Detectar ?reset=token para recuperación de contraseña
+        this._checkPasswordResetFromURL();
+
         // Manejar file_handlers (archivos abiertos desde el explorador)
         this.handleFileHandlers();
 
@@ -292,6 +295,68 @@ const App = {
         });
     },
     
+    // Detectar ?reset=token en la URL y abrir modal de nueva contraseña
+    _checkPasswordResetFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const resetToken = urlParams.get('reset');
+        if (!resetToken) return;
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width:400px;">
+                    <div class="modal-header" style="background:linear-gradient(135deg,#4CAF50,#388E3C);color:white;">
+                        <h3><i class="fas fa-key"></i> Nueva contraseña</h3>
+                    </div>
+                    <div class="modal-body" style="padding:1.5rem;">
+                        <p style="margin-bottom:1rem;color:#666;font-size:.9rem;">Ingresa tu nueva contraseña para completar la recuperación.</p>
+                        <div class="form-group">
+                            <label style="font-weight:600;font-size:.9rem;">Nueva contraseña</label>
+                            <input type="password" id="reset-pwd-input" class="form-input" placeholder="Mínimo 6 caracteres" style="margin-top:.4rem;">
+                        </div>
+                        <div class="form-group" style="margin-top:.75rem;">
+                            <label style="font-weight:600;font-size:.9rem;">Confirmar contraseña</label>
+                            <input type="password" id="reset-pwd-confirm" class="form-input" placeholder="Repite la contraseña" style="margin-top:.4rem;">
+                        </div>
+                        <div id="reset-pwd-msg" style="margin-top:.75rem;font-size:.85rem;display:none;"></div>
+                        <button onclick="App._submitPasswordReset('${resetToken}')"
+                                style="width:100%;margin-top:1rem;padding:1rem;background:linear-gradient(135deg,#4CAF50,#388E3C);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-check"></i> Guardar nueva contraseña
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(() => { const el = document.getElementById('reset-pwd-input'); if (el) el.focus(); }, 100);
+        }, 1500);
+    },
+
+    async _submitPasswordReset(token) {
+        const pwd = (document.getElementById('reset-pwd-input') || {}).value || '';
+        const confirm = (document.getElementById('reset-pwd-confirm') || {}).value || '';
+        const msgEl = document.getElementById('reset-pwd-msg');
+        if (pwd.length < 6) {
+            if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = '#f44336'; msgEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; }
+            return;
+        }
+        if (pwd !== confirm) {
+            if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = '#f44336'; msgEl.textContent = 'Las contraseñas no coinciden.'; }
+            return;
+        }
+        try {
+            await window.AuthManager.resetPassword(token, pwd);
+            if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = '#4CAF50'; msgEl.textContent = 'Contraseña actualizada. Ahora puedes iniciar sesión.'; }
+            setTimeout(() => {
+                const m = document.querySelector('.modal.active');
+                if (m) m.remove();
+                this.loadPage('cloud-sync');
+            }, 2000);
+        } catch (e) {
+            if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = '#f44336'; msgEl.textContent = e.message || 'Token inválido o expirado.'; }
+        }
+    },
+
     // Verificar si hay una acción de notificación en la URL
     checkNotificationActionFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -1561,7 +1626,7 @@ loadConfigPage() {
             <div class="config-group" style="border: 2px solid var(--danger); border-radius: 12px; padding: 20px;">
                 <h4 style="color: var(--danger);"><i class="fas fa-exclamation-triangle"></i> Zona de Peligro</h4>
                 <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 15px;">
-                    Estas acciones son irreversibles. Todos tus datos serxn eliminados permanentemente.
+                    Estas acciones son irreversibles. Todos tus datos serán eliminados permanentemente.
                 </p>
                 ${window.AuthManager && window.AuthManager.isAuthenticated() ? `
                 <button class="btn btn-danger" onclick="App.confirmDeleteAccount()" style="width: 100%;">
@@ -1677,7 +1742,7 @@ async confirmDeleteAccount() {
                     <h3><i class="fas fa-exclamation-triangle"></i> Eliminar cuenta</h3>
                 </div>
                 <div class="modal-body">
-                    <p style="margin-bottom: 15px;">Esta acción es <strong>irreversible</strong>. Se eliminarxn:</p>
+                    <p style="margin-bottom: 15px;">Esta acción es <strong>irreversible</strong>. Se eliminarán:</p>
                     <ul style="margin: 0 0 20px 20px; color: var(--gray); font-size: 0.9rem;">
                         <li>Tu cuenta de usuario</li>
                         <li>Todos tus clientes, ventas, pedidos y gastos</li>
@@ -5169,7 +5234,7 @@ async cleanDuplicatePayments() {
 
     async clearAllData() {
         const confirmed = await Utils.showDangerConfirm(
-            ' Esto eliminarx TODOS los datos de la aplicación. Esta acción NO se puede deshacer.',
+            ' Esto eliminará TODOS los datos de la aplicación. Esta acción NO se puede deshacer.',
             ' Eliminar Todos los Datos',
             'Continuar'
         );
@@ -5330,7 +5395,7 @@ async cleanDuplicatePayments() {
     // NUEVO: Limpiar configuración de Telegram
     async clearTelegramConfig() {
         const confirmed = await Utils.showDangerConfirm(
-            'Se eliminarx la configuración de Telegram. Podrxs volver a configurarla cuando quieras.',
+            'Se eliminará la configuración de Telegram. Podrás volver a configurarla cuando quieras.',
             'Eliminar Configuración de Telegram',
             'Eliminar'
         );

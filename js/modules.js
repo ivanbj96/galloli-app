@@ -4251,44 +4251,110 @@ const CloudSyncModule = {
     async handleEmailLogin() {
         const email = document.getElementById('email-input').value.trim();
         const password = document.getElementById('password-input').value;
-        
+        const keepSession = document.getElementById('keep-session')?.checked !== false;
+
         if (!email || !password) {
             this.showMessage('Completa todos los campos', 'error');
             return;
         }
-        
+
+        const btn = document.getElementById('email-login-btn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando...'; }
+
         try {
-            const result = await window.AuthManager.loginWithEmail(email, password);
+            const result = await window.AuthManager.loginWithEmail(email, password, keepSession);
             if (result.success) {
-                this.showMessage('Login exitoso! Recargando...', 'success');
-                setTimeout(() => App.loadPage('cloud-sync'), 1000);
+                // Persistir email para autocompletar en próximos accesos
+                localStorage.setItem('galloli_last_email', email);
+                this.showMessage('¡Sesión iniciada! Cargando...', 'success');
+                setTimeout(() => App.loadPage('cloud-sync'), 800);
             }
         } catch (error) {
             this.showMessage(error.message, 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span id="login-btn-text">Iniciar Sesión</span>'; }
         }
     },
     
     async handleEmailRegister() {
         const email = document.getElementById('email-input').value.trim();
         const password = document.getElementById('password-input').value;
-        
+        const nameInput = document.getElementById('register-name');
+        const inviteInput = document.getElementById('register-invite');
+        const name = nameInput ? nameInput.value.trim() : '';
+        const invitationCode = inviteInput ? inviteInput.value.trim() : '';
+
         if (!email || !password) {
-            this.showMessage('Completa todos los campos', 'error');
+            this.showMessage('Completa email y contraseña', 'error');
             return;
         }
-        
-        const name = prompt('Como te llamas?');
-        if (!name) return;
-        
+        if (password.length < 6) {
+            this.showMessage('La contraseña debe tener al menos 6 caracteres', 'error');
+            return;
+        }
+
+        // Si no hay campos de nombre/invitación en el DOM, mostrar el formulario extendido
+        if (!nameInput) {
+            this._showRegisterExtendedFields();
+            return;
+        }
+        if (!name) {
+            this.showMessage('Ingresa tu nombre', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('email-register-btn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...'; }
+
         try {
-            const result = await window.AuthManager.registerWithEmail(email, password, name);
+            let result;
+            if (invitationCode) {
+                // Registro con código de invitación → se une al negocio del dueño
+                result = await window.AuthManager.registerWithInvitation(email, password, name, invitationCode);
+            } else {
+                // Registro normal → crea nuevo negocio
+                result = await window.AuthManager.registerWithEmail(email, password, name);
+            }
             if (result.success) {
-                this.showMessage('Registro exitoso! Recargando...', 'success');
-                setTimeout(() => App.loadPage('cloud-sync'), 1000);
+                localStorage.setItem('galloli_last_email', email);
+                this.showMessage('¡Cuenta creada! Cargando...', 'success');
+                setTimeout(() => App.loadPage('cloud-sync'), 800);
             }
         } catch (error) {
             this.showMessage(error.message, 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus"></i> Crear Cuenta'; }
         }
+    },
+
+    /** Muestra los campos adicionales de registro (nombre + código de invitación) */
+    _showRegisterExtendedFields() {
+        const loginButtons = document.getElementById('login-buttons');
+        if (!loginButtons) return;
+
+        // Insertar campos antes de los botones
+        const fieldsHtml = `
+            <div id="register-extra-fields" style="margin-bottom:1rem;">
+                <div class="form-group" style="margin-bottom:.75rem;">
+                    <label for="register-name" style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">Tu nombre</label>
+                    <input type="text" id="register-name" name="register-name" class="form-control"
+                           placeholder="Ej: Juan Pérez" autocomplete="name">
+                    <div id="name-error" style="color:#f44336;font-size:.8rem;margin-top:.25rem;display:none;"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:.75rem;">
+                    <label for="register-invite" style="display:block;margin-bottom:.4rem;font-weight:600;font-size:.9rem;">
+                        Código de invitación <span style="color:#999;font-weight:400;">(opcional)</span>
+                    </label>
+                    <input type="text" id="register-invite" name="register-invite" class="form-control"
+                           placeholder="Ej: ABC12345" autocomplete="off" maxlength="20"
+                           style="text-transform:uppercase;letter-spacing:.1rem;">
+                    <small style="color:#666;font-size:.78rem;display:block;margin-top:.3rem;">
+                        <i class="fas fa-info-circle"></i> Si tienes un código, te unirás al negocio de tu empleador.
+                        Sin código, se crea un negocio nuevo.
+                    </small>
+                </div>
+            </div>
+        `;
+        loginButtons.insertAdjacentHTML('beforebegin', fieldsHtml);
+        document.getElementById('register-name')?.focus();
     },
     
     async syncNow() {

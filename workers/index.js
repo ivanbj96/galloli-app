@@ -868,84 +868,94 @@ async function handleAuth(request, env, path, corsHeaders) {
     }, corsHeaders);
   }
   
-  // POST /api/auth/email/register - Registro con email
+  // POST /api/auth/email/register - Registro con email (con soporte de invitation_code)
   if (path === '/api/auth/email/register' && method === 'POST') {
-    const { email, password, name } = await getRequestBody(request);
-    
+    const { email, password, name, invitation_code } = await getRequestBody(request);
+
     if (!email || !password || !name) {
       return jsonResponse({ error: 'Email, password y name requeridos' }, corsHeaders, 400);
     }
-    
+    if (password.length < 6) {
+      return jsonResponse({ error: 'La contraseña debe tener al menos 6 caracteres' }, corsHeaders, 400);
+    }
+
     // Verificar si email ya existe
-    const existing = await env.DB.prepare(`
-      SELECT id FROM users WHERE email = ?
-    `).bind(email).first();
-    
+    const existing = await env.DB.prepare(
+      `SELECT id FROM users WHERE email = ?`
+    ).bind(email.toLowerCase().trim()).first();
     if (existing) {
       return jsonResponse({ error: 'Email ya registrado' }, corsHeaders, 409);
     }
-    
-    // Crear negocio y usuario
-    const businessId = generateId();
+
     const userId = generateId();
     const passwordHash = await hashPassword(password);
-    
-    await env.DB.prepare(`
-      INSERT INTO businesses (id, name, owner_user_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).bind(businessId, `Negocio de ${name}`, userId, Date.now(), Date.now()).run();
-    
+    let businessId, userRole;
+
+    if (invitation_code) {
+      // ── Registro con código de invitación: unirse al negocio del dueño ──
+      const invite = await env.DB.prepare(`
+        SELECT * FROM invitation_codes
+        WHERE code = ? AND is_active = 1
+          AND (expires_at IS NULL OR expires_at > ?)
+          AND (max_uses = 0 OR uses < max_uses)
+      `).bind(invitation_code.toUpperCase().trim(), Date.now()).first();
+
+      if (!invite) {
+        return jsonResponse({ error: 'Código de invitación inválido, expirado o ya usado' }, corsHeaders, 400);
+      }
+
+      businessId = invite.business_id;
+      userRole   = invite.role || 'vendedor';
+
+      // Incrementar uso del código
+      await env.DB.prepare(
+        `UPDATE invitation_codes SET uses = uses + 1 WHERE code = ?`
+      ).bind(invite.code).run();
+
+      // Desactivar si alcanzó el límite
+      if (invite.max_uses > 0 && invite.uses + 1 >= invite.max_uses) {
+        await env.DB.prepare(
+          `UPDATE invitation_codes SET is_active = 0 WHERE code = ?`
+        ).bind(invite.code).run();
+      }
+    } else {
+      // ── Registro normal: crear nuevo negocio ──
+      businessId = generateId();
+      userRole   = 'super_admin';
+
+      await env.DB.prepare(`
+        INSERT INTO businesses (id, name, owner_user_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(businessId, `Negocio de ${name}`, userId, Date.now(), Date.now()).run();
+    }
+
     await env.DB.prepare(`
       INSERT INTO users (id, business_id, email, password_hash, name, role, is_active, created_at, last_seen)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      userId,
-      businessId,
-      email,
-      passwordHash,
-      name,
-      'super_admin',
-      1,
-      Date.now(),
-      Date.now()
-    ).run();
-    
-    // Crear token
+      VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+    `).bind(userId, businessId, email.toLowerCase().trim(), passwordHash, name, userRole, Date.now(), Date.now()).run();
+
     const tokenPayload = {
       user_id: userId,
       business_id: businessId,
-      role: 'super_admin',
+      role: userRole,
       exp: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60)
     };
-    
     const token = await createJWT(tokenPayload, env.JWT_SECRET);
-    
-    // Guardar sesión
+
     await env.DB.prepare(`
       INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_activity)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(
-      generateId(),
-      userId,
-      await hashPassword(token),
-      Date.now(),
-      Date.now() + (30 * 24 * 60 * 60 * 1000),
-      Date.now()
-    ).run();
-    
+    `).bind(generateId(), userId, await hashPassword(token), Date.now(),
+            Date.now() + (30 * 24 * 60 * 60 * 1000), Date.now()).run();
+
+    const business = await env.DB.prepare(
+      `SELECT id, name FROM businesses WHERE id = ?`
+    ).bind(businessId).first();
+
     return jsonResponse({
       token,
-      user: {
-        id: userId,
-        business_id: businessId,
-        email,
-        name,
-        role: 'super_admin'
-      },
-      business: {
-        id: businessId,
-        name: `Negocio de ${name}`
-      }
+      user: { id: userId, business_id: businessId, name, role: userRole },
+      business: { id: businessId, name: business?.name || `Negocio de ${name}` }
     }, corsHeaders);
   }
   

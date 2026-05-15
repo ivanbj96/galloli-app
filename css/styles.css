@@ -12,6 +12,89 @@
     --warning: #FF9800;
     --sidebar-width: 280px;
     --bottom-nav-height: 70px; /* ALTURA FIJA PARA NAV INFERIOR */
+    /* Safe area y tap target */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --tap: 44px;
+}
+
+/* === Sistema responsive global GallOli === */
+html, body { overflow-x: hidden; }
+* { min-width: 0; min-height: 0; }
+img, svg, video, canvas { max-width: 100%; height: auto; display: block; }
+
+.page, .page-content, .modal-content, .card, .form-row {
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Botones: target táctil mínimo 44px + nunca desbordar */
+.btn, button {
+    min-height: var(--tap);
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Modales: full-height en mobile, dvh evita el bug del 100vh + barra del navegador */
+.modal { padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0); }
+.modal-content {
+    width: min(96vw, 560px);
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+}
+.modal-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.modal-footer { display: flex; flex-wrap: wrap; gap: .5rem; }
+.modal-footer .btn { flex: 1 1 140px; }
+
+/* Grids universales */
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1rem; }
+.row-wrap  { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* Tabs (sync, ventas) */
+.tabs-bar { display: flex; flex-wrap: wrap; gap: .25rem; overflow-x: auto; }
+.tabs-bar .tab { flex: 0 0 auto; }
+
+/* Tablas → pasan a "tarjetas" en <600px */
+@media (max-width: 600px) {
+    .responsive-table thead { display: none; }
+    .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; }
+    .responsive-table tr { border: 1px solid #e5e7eb; border-radius: .75rem; padding: .75rem; margin-bottom: .5rem; }
+    .responsive-table td { display: flex; justify-content: space-between; gap: .5rem; padding: .25rem 0; border: none; }
+    .responsive-table td::before { content: attr(data-label); font-weight: 600; color: #374151; }
+}
+
+/* Extra-pequeños (<= 360px) */
+@media (max-width: 360px) {
+    .modal-content { width: 98vw; border-radius: .5rem; }
+    .modal-header h3 { font-size: 1rem; }
+    .btn { font-size: .8rem; padding: .55rem .65rem; }
+    .bottom-nav .bottom-nav-item span { display: none; }
+}
+@media (max-width: 280px) {
+    body { font-size: 13px; }
+    .modal-content { width: 100vw; max-height: 100dvh; border-radius: 0; }
+}
+
+/* Inputs: evitar zoom iOS (font-size >= 16px) */
+input, select, textarea {
+    font-size: 16px;
+    max-width: 100%;
+}
+.modal-body { scroll-padding-bottom: 6rem; }
+
+/* Clase utilitaria para inputs/selects con estilo consistente */
+.form-control {
+    width: 100%;
+    padding: clamp(.6rem, 2vw, .85rem);
+    border: 2px solid var(--border, #ddd);
+    border-radius: .5rem;
+    font-size: 1rem;
+    box-sizing: border-box;
+    background: var(--bg, #fff);
+    color: var(--text, #333);
 }
 
 * {

@@ -1161,6 +1161,92 @@ async function handleAuth(request, env, path, corsHeaders) {
     }
   }
   
+  // POST /api/auth/email/forgot — Solicitar recuperación de contraseña
+  if (path === '/api/auth/email/forgot' && method === 'POST') {
+    const { email } = await getRequestBody(request);
+    if (!email) return jsonResponse({ success: true }, corsHeaders); // no revelar si existe
+
+    try {
+      const user = await env.DB.prepare(
+        `SELECT id, telegram_id, name FROM users WHERE email = ? AND is_active = 1 LIMIT 1`
+      ).bind(email.toLowerCase().trim()).first();
+
+      if (user) {
+        // Generar token de 32 bytes hex
+        const rawToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map(b => b.toString(16).padStart(2, '0')).join('');
+        const tokenHash = await hashPassword(rawToken);
+        const expiresAt = Date.now() + 30 * 60 * 1000; // 30 min
+
+        await env.DB.prepare(
+          `INSERT INTO password_resets (id, user_id, token_hash, expires_at, created_at)
+           VALUES (?, ?, ?, ?, ?)`
+        ).bind(generateId(), user.id, tokenHash, expiresAt, Date.now()).run();
+
+        const resetLink = `https://galloli.ivapps.store/?reset=${rawToken}`;
+        const msg = `🔑 *GallOli — Recuperar contraseña*\n\nHola ${user.name},\n\nTu enlace de recuperación (válido 30 min):\n${resetLink}\n\nSi no solicitaste esto, ignora este mensaje.`;
+
+        // Enviar por Telegram si tiene cuenta vinculada
+        if (user.telegram_id && env.TELEGRAM_BOT_TOKEN) {
+          await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: user.telegram_id, text: msg, parse_mode: 'Markdown' })
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.error('forgot password error:', e);
+    }
+
+    // Siempre 200 para no revelar si el email existe
+    return jsonResponse({ success: true, message: 'Si el email existe, recibirás un enlace en breve.' }, corsHeaders);
+  }
+
+  // POST /api/auth/email/reset — Establecer nueva contraseña con token
+  if (path === '/api/auth/email/reset' && method === 'POST') {
+    const { token, password } = await getRequestBody(request);
+    if (!token || !password || password.length < 6) {
+      return jsonResponse({ error: 'Token y contraseña (mín. 6 caracteres) requeridos' }, corsHeaders, 400);
+    }
+
+    const tokenHash = await hashPassword(token);
+    const record = await env.DB.prepare(
+      `SELECT * FROM password_resets WHERE token_hash = ? AND expires_at > ? AND used_at IS NULL LIMIT 1`
+    ).bind(tokenHash, Date.now()).first();
+
+    if (!record) {
+      return jsonResponse({ error: 'Token inválido o expirado' }, corsHeaders, 400);
+    }
+
+    const passwordHash = await hashPassword(password);
+    await env.DB.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`)
+      .bind(passwordHash, record.user_id).run();
+    await env.DB.prepare(`UPDATE password_resets SET used_at = ? WHERE id = ?`)
+      .bind(Date.now(), record.id).run();
+
+    return jsonResponse({ success: true, message: 'Contraseña actualizada correctamente' }, corsHeaders);
+  }
+
+  // POST /api/auth/email/recover-by-telegram — Recuperar email enmascarado por Telegram ID
+  if (path === '/api/auth/email/recover-by-telegram' && method === 'POST') {
+    const { telegram_id } = await getRequestBody(request);
+    if (!telegram_id) return jsonResponse({ error: 'telegram_id requerido' }, corsHeaders, 400);
+
+    const user = await env.DB.prepare(
+      `SELECT email FROM users WHERE telegram_id = ? AND is_active = 1 LIMIT 1`
+    ).bind(String(telegram_id)).first();
+
+    if (!user || !user.email) {
+      return jsonResponse({ error: 'No se encontró ninguna cuenta con ese Telegram ID' }, corsHeaders, 404);
+    }
+
+    // Enmascarar: j***@gmail.com
+    const [local, domain] = user.email.split('@');
+    const masked = local[0] + '***@' + domain;
+    return jsonResponse({ email: masked }, corsHeaders);
+  }
+
   return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
   
   } catch (error) {

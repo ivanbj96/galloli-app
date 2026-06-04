@@ -331,6 +331,46 @@ const Utils = {
     }
 };
 
+// Sistema de permisos por rol
+const Perm = {
+    // Mapa de permisos por rol
+    _map: {
+        super_admin: ['*'],
+        admin:       ['users.manage', 'invitations.create', 'sales.delete', 'expenses.delete', 'config.edit', 'reports.view'],
+        vendedor:    ['sales.create', 'orders.create', 'clients.create', 'clients.edit'],
+        repartidor:  ['orders.view', 'orders.update', 'clients.view'],
+        contador:    ['reports.view', 'accounting.view', 'expenses.create'],
+        viewer:      ['sales.view', 'orders.view', 'clients.view']
+    },
+
+    /** Devuelve el rol del usuario autenticado o null */
+    _role() {
+        return window.AuthManager?.user?.role || null;
+    },
+
+    /** true si el usuario tiene el permiso indicado */
+    can(permission) {
+        const role = this._role();
+        if (!role) return false;
+        const perms = this._map[role] || [];
+        return perms.includes('*') || perms.includes(permission);
+    },
+
+    /** true si el usuario tiene alguno de los roles indicados */
+    hasRole(...roles) {
+        return roles.includes(this._role());
+    },
+
+    /** Oculta/muestra un elemento DOM según permiso */
+    guard(elementId, permission) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.style.display = this.can(permission) ? '' : 'none';
+    }
+};
+
+window.Perm = Perm;
+
 // Módulo de Ubicación
 const LocationModule = {
     currentLocation: '',

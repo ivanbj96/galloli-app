@@ -33,6 +33,8 @@ img, svg, video, canvas { max-width: 100%; height: auto; display: block; }
 /* Botones: target táctil mínimo 44px + nunca desbordar */
 .btn, button {
     min-height: var(--tap);
+    padding: clamp(.5rem, 2vw, .9rem) clamp(.75rem, 3vw, 1.25rem);
+    font-size: clamp(.85rem, 2.6vw, 1rem);
     white-space: normal;
     word-break: break-word;
 }
@@ -1137,6 +1139,9 @@ select.form-input {
     background: var(--white);
     display: none;
     justify-content: space-around;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
     padding: 10px 0 15px 0;
     /* Respetar safe area en dispositivos con barra de gestos */
     padding-bottom: calc(15px + env(safe-area-inset-bottom, 0px));
@@ -1147,6 +1152,7 @@ select.form-input {
     backdrop-filter: blur(10px);
     background-color: rgba(255, 255, 255, 0.95);
 }
+.bottom-nav::-webkit-scrollbar { display: none; }
 
 .bottom-nav-item {
     display: flex;
@@ -1159,7 +1165,9 @@ select.form-input {
     font-size: 0.75rem;
     cursor: pointer;
     touch-action: manipulation;
-    width: 20%;
+    flex: 0 0 auto;
+    min-width: 64px;
+    scroll-snap-align: start;
     transition: all 0.3s;
     position: relative;
     border-radius: 10px;

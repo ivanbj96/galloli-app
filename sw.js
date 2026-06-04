@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.39'; // fix CustomSelect no encontrado al navegar, inputs sin name, destroy robusto
+const APP_VERSION = '7.20.40'; // fix ventas eliminadas resurgen: deleteSale notifica servidor con action=delete
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

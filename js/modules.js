@@ -1585,47 +1585,58 @@ const SalesModule = {
         }
 
         try {
-            console.log('??? Eliminando venta:', saleId);
-            
-            // 1. MARCAR LA VENTA COMO ELIMINADA (igual que editar)
-            // En lugar de eliminar inmediatamente, marcamos como eliminada
+            console.log('🗑️ Eliminando venta:', saleId);
+
+            // 1. Marcar como eliminada en memoria
             sale.deleted = true;
             sale.deletedAt = Date.now();
             sale.lastModified = Date.now();
-            
-            // 2. ACTUALIZAR ESTAD?STICAS DEL CLIENTE
+
+            // 2. Actualizar estadísticas del cliente
             const client = ClientsModule.getClientById(sale.clientId);
             if (client) {
-                client.totalSales -= 1;
-                client.totalAmount -= sale.total;
-                client.totalWeight -= sale.weight;
-                client.totalQuantity -= sale.quantity;
+                client.totalSales = Math.max(0, (client.totalSales || 0) - 1);
+                client.totalAmount = Math.max(0, (client.totalAmount || 0) - sale.total);
+                client.totalWeight = Math.max(0, (client.totalWeight || 0) - sale.weight);
+                client.totalQuantity = Math.max(0, (client.totalQuantity || 0) - sale.quantity);
                 await ClientsModule.saveClients();
             }
-            
-            // 3. GUARDAR LA VENTA MARCADA COMO ELIMINADA
-            // Esto activara los interceptores automaticos igual que la edicion
+
+            // 3. Guardar en IndexedDB (con deleted:true)
             await this.saveSales();
-            
-            // 4. ACTUALIZAR CONTABILIDAD
+
+            // 4. CRÍTICO: Notificar al servidor con action='delete'
+            //    Sin esto, el servidor devuelve la venta en el próximo sync y "resurge".
+            this.addPendingDeletion(saleId);
+            if (typeof window.SyncEngine !== 'undefined' &&
+                window.SyncEngine &&
+                typeof window.SyncEngine.notifyChange === 'function') {
+                try {
+                    await window.SyncEngine.notifyChange('sales', String(saleId), 'delete');
+                    const pending = JSON.parse(localStorage.getItem('pendingSalesDeletions') || '[]');
+                    const filtered = pending.filter(id => String(id) !== String(saleId));
+                    localStorage.setItem('pendingSalesDeletions', JSON.stringify(filtered));
+                    console.log('✅ Eliminación confirmada en servidor:', saleId);
+                } catch (syncErr) {
+                    console.warn('⚠️ Eliminación en cola offline:', saleId, syncErr.message);
+                }
+            }
+
+            // 5. Actualizar contabilidad y badges
             if (typeof AccountingModule !== 'undefined') {
                 AccountingModule.updateAccounting(sale.date);
             }
-            
-            // 5. ACTUALIZAR BADGES DE CREDITOS
             if (!sale.isPaid && typeof CreditosModule !== 'undefined') {
                 CreditosModule.updateCreditBadges();
             }
-            
-            // 6. ACTUALIZAR LA LISTA DE VENTAS
             this.updateSalesList(sale.date);
-            
-            console.log('? Venta marcada como eliminada');
+
+            console.log('✅ Venta eliminada correctamente');
             Utils.showNotification('Venta eliminada correctamente', 'success', 3000);
             return true;
 
         } catch (error) {
-            console.error('? Error al eliminar venta:', error);
+            console.error('❌ Error al eliminar venta:', error);
             Utils.showNotification('Error al eliminar la venta', 'error', 3000);
             return false;
         }

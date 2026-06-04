@@ -40,6 +40,10 @@ const App = {
             if (window.AuthManager.isAuthenticated()) {
                 console.log('🔐 Sesión activa detectada:', window.AuthManager.user.name);
                 await window.SyncEngine.init();
+                // Enviar al servidor cualquier eliminación que haya quedado pendiente offline
+                if (typeof SalesModule !== 'undefined' && SalesModule.syncPendingDeletions) {
+                    SalesModule.syncPendingDeletions().catch(e => console.warn('syncPendingDeletions:', e.message));
+                }
             } else {
                 console.log('⚠️ No hay sesión activa');
             }

@@ -1,4 +1,4 @@
-﻿// Motor de Sincronización P2P en Tiempo Real - GallOli Cloud Sync
+// Motor de Sincronización P2P en Tiempo Real - GallOli Cloud Sync
 // Arquitectura: WebSocket para tiempo real + API REST para persistencia
 
 const SYNC_CONFIG = {
@@ -214,8 +214,26 @@ class SyncEngine {
                         }
                     }
                     break;
-                    
-                // Agregar mxs casos según sea necesario
+
+                case 'orders':
+                    if (window.OrdersModule && window.OrdersModule.orders) {
+                        const index = window.OrdersModule.orders.findIndex(o => o.id == dataId);
+                        if (index !== -1) {
+                            window.OrdersModule.orders.splice(index, 1);
+                            console.log(`✅ Pedido ${dataId} eliminado localmente`);
+                        }
+                    }
+                    break;
+
+                case 'expenses':
+                    if (window.AccountingModule && window.AccountingModule.expenses) {
+                        const index = window.AccountingModule.expenses.findIndex(e => e.id == dataId);
+                        if (index !== -1) {
+                            window.AccountingModule.expenses.splice(index, 1);
+                            console.log(`✅ Gasto ${dataId} eliminado localmente`);
+                        }
+                    }
+                    break;
             }
             
             // Actualizar la interfaz

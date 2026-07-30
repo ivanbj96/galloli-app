@@ -1,4 +1,4 @@
-﻿// Modulo de Clientes
+// Modulo de Clientes
 const ClientsModule = {
     clients: [],
 
@@ -826,9 +826,28 @@ const OrdersModule = {
         return false;
     },
 
-    deleteOrder(orderId) {
+    async deleteOrder(orderId) {
+        const order = this.orders.find(o => o.id === orderId);
+        if (order) {
+            order.deleted = true;
+            order.deletedAt = Date.now();
+            order.lastModified = Date.now();
+        }
         this.orders = this.orders.filter(order => order.id !== orderId);
-        this.saveOrders();
+        await this.saveOrders();
+
+        if (typeof window.SyncEngine !== 'undefined' &&
+            window.SyncEngine &&
+            typeof window.SyncEngine.notifyChange === 'function') {
+            try {
+                await window.SyncEngine.notifyChange('orders', String(orderId), 'delete');
+                console.log('✅ Eliminación de pedido confirmada en servidor:', orderId);
+            } catch (syncErr) {
+                console.warn('⚠️ Eliminación de pedido en cola offline:', orderId, syncErr.message);
+            }
+        }
+        this.updateOrdersList();
+        return true;
     },
 
     updateOrdersList(statusFilter = null) {
@@ -2324,9 +2343,29 @@ const AccountingModule = {
         return true;
     },
 
-    deleteExpense(expenseId) {
+    async deleteExpense(expenseId) {
+        const expense = this.getExpenseById(expenseId);
+        if (expense) {
+            expense.deleted = true;
+            expense.deletedAt = Date.now();
+            expense.lastModified = Date.now();
+        }
         this.expenses = this.expenses.filter(e => e.id !== expenseId);
-        this.saveExpenses();
+        await this.saveExpenses();
+
+        if (typeof window.SyncEngine !== 'undefined' &&
+            window.SyncEngine &&
+            typeof window.SyncEngine.notifyChange === 'function') {
+            try {
+                await window.SyncEngine.notifyChange('expenses', String(expenseId), 'delete');
+                console.log('✅ Eliminación de gasto confirmada en servidor:', expenseId);
+            } catch (syncErr) {
+                console.warn('⚠️ Eliminación de gasto en cola offline:', expenseId, syncErr.message);
+            }
+        }
+        if (typeof AccountingModule !== 'undefined') {
+            AccountingModule.updateAccounting();
+        }
         return true;
     },
 

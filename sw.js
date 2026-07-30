@@ -1,5 +1,5 @@
 // Service Worker con versionado automatico
-const APP_VERSION = '7.20.40'; // fix ventas eliminadas resurgen: deleteSale notifica servidor con action=delete
+const APP_VERSION = '7.20.45'; // fix: deleteOrder/deleteExpense notifican action=delete; handleRemoteDeletion orders/expenses; version.json
 const CACHE_NAME = `galloli-v${APP_VERSION}`;
 const DATA_CACHE_NAME = `galloli-data-v${APP_VERSION}`;
 

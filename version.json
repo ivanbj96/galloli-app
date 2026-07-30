@@ -1,0 +1,5 @@
+{
+  "version": "7.20.45",
+  "buildDate": "2026-07-30",
+  "description": "fix: deleteOrder y deleteExpense notifican servidor con action=delete; handleRemoteDeletion orders/expenses"
+}

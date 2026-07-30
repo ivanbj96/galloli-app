@@ -220,18 +220,72 @@ jobs:
             echo "play-services-location ya existe en build.gradle"
           fi
 
-      - name: Build Debug APK
+      - name: Decode and install Keystore
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+        run: |
+          echo "$RELEASE_KEYSTORE" | base64 --decode > android/app/galloli-release.keystore
+          echo "Keystore instalado en android/app/galloli-release.keystore"
+
+      - name: Configure signing in build.gradle
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          GRADLE="android/app/build.gradle"
+          # Inyectar configuración de firma release
+          python3 - <<'PYEOF'
+          import os, re
+
+          gradle_path = "android/app/build.gradle"
+          with open(gradle_path, "r") as f:
+              content = f.read()
+
+          signing_config = f"""
+              signingConfigs {{
+                  release {{
+                      storeFile file("galloli-release.keystore")
+                      storePassword "{os.environ['KEYSTORE_PASSWORD']}"
+                      keyAlias "{os.environ['KEY_ALIAS']}"
+                      keyPassword "{os.environ['KEY_PASSWORD']}"
+                  }}
+              }}
+          """
+
+          # Solo insertar si no existe ya
+          if "signingConfigs" not in content:
+              content = content.replace("android {", "android {" + signing_config, 1)
+
+          # Configurar buildType release para usar la firma
+          if "signingConfig signingConfigs.release" not in content:
+              content = content.replace(
+                  "release {",
+                  "release {\n            signingConfig signingConfigs.release",
+                  1
+              )
+
+          with open(gradle_path, "w") as f:
+              f.write(content)
+
+          print("build.gradle configurado para firma release")
+          PYEOF
+
+      - name: Build Release APK
         working-directory: android
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Rename APK
-        run: mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/GallOli-Native.apk
+        run: |
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          mv "$APK_PATH" android/app/build/outputs/apk/release/GallOli-Native.apk
+          echo "APK renombrado: GallOli-Native.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: GallOli-Native-APK
-          path: android/app/build/outputs/apk/debug/GallOli-Native.apk
+          path: android/app/build/outputs/apk/release/GallOli-Native.apk
           retention-days: 30
 
       - name: Setup Python

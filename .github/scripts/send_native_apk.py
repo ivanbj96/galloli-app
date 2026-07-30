@@ -6,7 +6,7 @@ from telethon.sessions import StringSession
 
 CHANNEL_INVITE = "https://t.me/+QPr885dQgl0wNDgx"
 CHANNEL_NAME = "GallOli Builds"
-APK_PATH = "android/app/build/outputs/apk/debug/GallOli-Native.apk"
+APK_PATH = "android/app/build/outputs/apk/release/GallOli-Native.apk"
 
 
 async def get_channel(client):
@@ -51,14 +51,15 @@ async def main():
         channel = await get_channel(client)
 
         caption = (
-            f"GallOli APK Nativo - Build #{run_number}\n\n"
-            f"Version: {app_version}\n"
-            f"Archivo: GallOli-Native.apk ({apk_size_mb:.1f} MB)\n"
-            f"Branch: apk-native\n"
-            f"Commit: {commit_sha}\n"
-            f"Mensaje: {commit_msg}\n\n"
-            f"APK con: BLE background, GPS geofence, venta automatica, BootReceiver\n"
-            f"Instalar: Habilitar fuentes desconocidas en Android y abrir el APK"
+            f"🤖 GallOli APK Nativo — Build #{run_number}\n\n"
+            f"📦 Versión: {app_version}\n"
+            f"📁 Archivo: GallOli-Native.apk ({apk_size_mb:.1f} MB)\n"
+            f"🔑 Tipo: Release (firmado con keystore)\n"
+            f"🌿 Branch: apk-native\n"
+            f"📝 Commit: {commit_sha}\n"
+            f"💬 Mensaje: {commit_msg}\n\n"
+            f"✅ Incluye: BLE background, GPS geofence, venta automática, BootReceiver\n"
+            f"📲 Instalar: Habilitar fuentes desconocidas en Android y abrir el APK"
         )
 
         await client.send_file(channel, APK_PATH, caption=caption)
